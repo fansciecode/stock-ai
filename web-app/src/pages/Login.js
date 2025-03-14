@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import "./Auth.css";
 import { Form } from 'antd';
+import api from '../services/api';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -10,6 +11,7 @@ const Login = () => {
   });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -21,29 +23,22 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError("");
+    setMessage("");
     
     try {
-      const response = await fetch("http://localhost:5000/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        localStorage.setItem("token", data.token);
-        setMessage("Login successful! Redirecting...");
-        setTimeout(() => {
-          navigate("/dashboard");
-        }, 2000);
-      } else {
-        setError(data.message || "Login failed");
-      }
+      const response = await api.post("/auth/login", formData);
+      localStorage.setItem("token", response.data.token);
+      setMessage("Login successful! Redirecting...");
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 2000);
     } catch (err) {
-      setError("An error occurred. Please try again later.");
+      console.error('Login error:', err);
+      setError(err.response?.data?.message || "An error occurred. Please try again later.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -53,39 +48,32 @@ const Login = () => {
       return;
     }
 
+    setLoading(true);
+    setError("");
+    setMessage("");
+
     try {
-      const response = await fetch("http://localhost:5000/api/auth/forgot-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email: formData.email }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setMessage("Password reset email sent! Please check your inbox.");
-      } else {
-        setError(data.message || "Failed to send reset email");
-      }
+      await api.post("/auth/forgot-password", { email: formData.email });
+      setMessage("Password reset email sent! Please check your inbox.");
     } catch (err) {
-      setError("An error occurred. Please try again later.");
+      console.error('Forgot password error:', err);
+      setError(err.response?.data?.message || "Failed to send reset email. Please try again later.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="auth-container">
-      <div className="auth-card">
+      <div className="auth-box">
         <h2>Login</h2>
         {message && <div className="success-message">{message}</div>}
         {error && <div className="error-message">{error}</div>}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label>Email:</label>
             <input
               type="email"
-              id="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
@@ -93,30 +81,25 @@ const Login = () => {
             />
           </div>
           <div className="form-group">
-            <label htmlFor="password">Password</label>
+            <label>Password:</label>
             <input
               type="password"
-              id="password"
               name="password"
               value={formData.password}
               onChange={handleChange}
               required
             />
           </div>
-          <Form.Item>
-            <Link to="/forgot-password">Forgot password?</Link>
-          </Form.Item>
-          <button type="submit" className="auth-button">Login</button>
+          <button type="submit" disabled={loading}>
+            {loading ? "Logging in..." : "Login"}
+          </button>
         </form>
-        <button 
-          onClick={handleForgotPassword}
-          className="forgot-password-button"
-        >
-          Forgot Password?
-        </button>
-        <p className="auth-link">
-          Don't have an account? <Link to="/register">Register here</Link>
-        </p>
+        <div className="auth-links">
+          <Link to="/register">Register</Link>
+          <button onClick={handleForgotPassword} disabled={loading}>
+            Forgot Password?
+          </button>
+        </div>
       </div>
     </div>
   );

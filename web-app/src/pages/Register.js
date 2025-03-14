@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import './Auth.css';
+import api from '../services/api';
 
 function Register() {
   const [formData, setFormData] = useState({
@@ -11,6 +12,7 @@ function Register() {
   });
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -26,67 +28,53 @@ function Register() {
     // Clear previous messages
     setMessage('');
     setError('');
+    setLoading(true);
 
     // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
+      setLoading(false);
       return;
     }
 
     try {
-      console.log('Sending registration request with data:', {
+      console.log('Sending registration request...');
+      const response = await api.post('/auth/register', {
         name: formData.name,
         email: formData.email,
-        password: '[HIDDEN]'
+        password: formData.password
       });
-
-      const response = await fetch('http://localhost:5000/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password
-        }),
-      });
-
-      const data = await response.json();
-      console.log('Registration response:', data);
-
-      if (response.ok) {
-        setMessage('Registration successful! Redirecting to login...');
-        setTimeout(() => {
-          navigate('/login');
-        }, 2000);
-      } else {
-        if (data.errors) {
-          // Handle validation errors
-          const errorMessages = data.errors.map(err => err.msg).join(', ');
-          setError(errorMessages);
-        } else {
-          setError(data.message || 'Registration failed. Please check your input and try again.');
-        }
-      }
+      
+      console.log('Registration successful:', response.data);
+      setMessage('Registration successful! Redirecting to login...');
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
     } catch (err) {
       console.error('Registration error:', err);
-      setError('An error occurred. Please try again later.');
+      if (err.response?.data?.errors) {
+        // Handle validation errors
+        const errorMessages = err.response.data.errors.map(err => err.msg).join(', ');
+        setError(errorMessages);
+      } else {
+        setError(err.response?.data?.message || 'Registration failed. Please check your input and try again.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="auth-container">
-      <div className="auth-card">
+      <div className="auth-box">
         <h2>Register</h2>
         {message && <div className="success-message">{message}</div>}
         {error && <div className="error-message">{error}</div>}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="name">Name</label>
+            <label>Name:</label>
             <input
               type="text"
-              id="name"
               name="name"
               value={formData.name}
               onChange={handleChange}
@@ -94,10 +82,9 @@ function Register() {
             />
           </div>
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label>Email:</label>
             <input
               type="email"
-              id="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
@@ -105,34 +92,32 @@ function Register() {
             />
           </div>
           <div className="form-group">
-            <label htmlFor="password">Password</label>
+            <label>Password:</label>
             <input
               type="password"
-              id="password"
               name="password"
               value={formData.password}
               onChange={handleChange}
               required
-              minLength="6"
             />
           </div>
           <div className="form-group">
-            <label htmlFor="confirmPassword">Confirm Password</label>
+            <label>Confirm Password:</label>
             <input
               type="password"
-              id="confirmPassword"
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
               required
-              minLength="6"
             />
           </div>
-          <button type="submit" className="auth-button">Register</button>
+          <button type="submit" disabled={loading}>
+            {loading ? "Registering..." : "Register"}
+          </button>
         </form>
-        <p className="auth-link">
-          Already have an account? <Link to="/login">Login here</Link>
-        </p>
+        <div className="auth-links">
+          <Link to="/login">Already have an account? Login</Link>
+        </div>
       </div>
     </div>
   );

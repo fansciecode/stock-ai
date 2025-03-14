@@ -1,50 +1,44 @@
-const API_URL = process.env.REACT_APP_API_URL;
+import api from './api';
 
 export const loginUser = async (credentials) => {
   try {
-    const response = await fetch(`${API_URL}/users/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(credentials),
-    });
-    const data = await response.json();
-    if (response.ok) {
-      localStorage.setItem("token", data.token);
-      return true;
-    }
-    return false;
+    const response = await api.post('/users/login', credentials);
+    localStorage.setItem('token', response.data.token);
+    return true;
   } catch (error) {
-    console.error("Login error:", error);
+    console.error('Login error:', error);
     return false;
   }
 };
 
 export const registerUser = async (userData) => {
   try {
-    const response = await fetch(`${API_URL}/users/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(userData),
-    });
-    return response.ok;
+    const response = await api.post('/users/register', userData);
+    return response.data;
   } catch (error) {
-    console.error("Registration error:", error);
-    return false;
+    console.error('Registration error:', error);
+    throw error;
   }
 };
 
 // const API_URL = "/api/users";
 
 export const getUser = async () => {
-  const response = await fetch(`${API_URL}/me`, { credentials: "include" });
-  return response.json();
+  try {
+    const response = await api.get('/users/me');
+    return response.data;
+  } catch (error) {
+    console.error('Get user error:', error);
+    throw error;
+  }
 };
 
 export const updateUser = async (userData) => {
-  const response = await fetch(`${API_URL}/update`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(userData),
-  });
-  return response.json();
+  try {
+    const response = await api.put('/users/update', userData);
+    return response.data;
+  } catch (error) {
+    console.error('Update user error:', error);
+    throw error;
+  }
 };
