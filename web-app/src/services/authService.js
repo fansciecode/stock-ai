@@ -1,14 +1,36 @@
 import api from './api';
-import { fetchData } from './api';
 
 const authService = {
-  login: (credentials) => fetchData("/users/login", { method: "POST", body: JSON.stringify(credentials) }),
-  register: (userData) => fetchData("/users/register", { method: "POST", body: JSON.stringify(userData) }),
-  getCurrentUser: () => fetchData("/users/me"),
-};
+  login: async (credentials) => {
+    try {
+      const response = await api.post('/auth/login', credentials);
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        return response.data;
+      }
+      throw new Error('No token received');
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
+  },
 
-class AuthService {
-  static async resetPassword(token, newPassword) {
+  register: async (userData) => {
+    try {
+      const response = await api.post('/auth/register', userData);
+      return response.data;
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw error;
+    }
+  },
+
+  logout: () => {
+    localStorage.removeItem('token');
+    window.location.href = '/login';
+  },
+
+  resetPassword: async (token, newPassword) => {
     try {
       const response = await api.post('/auth/reset-password', {
         token,
@@ -16,20 +38,44 @@ class AuthService {
       });
       return response.data;
     } catch (error) {
+      console.error('Reset password error:', error);
       throw error;
     }
-  }
+  },
 
-  static async forgotPassword(email) {
+  forgotPassword: async (email) => {
     try {
       const response = await api.post('/auth/forgot-password', { email });
       return response.data;
     } catch (error) {
+      console.error('Forgot password error:', error);
+      throw error;
+    }
+  },
+
+  verifyToken: async (token) => {
+    try {
+      const response = await api.post('/auth/verify-token', { token });
+      return response.data;
+    } catch (error) {
+      console.error('Token verification error:', error);
+      throw error;
+    }
+  },
+
+  refreshToken: async () => {
+    try {
+      const response = await api.post('/auth/refresh-token');
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        return response.data;
+      }
+      throw new Error('No token received');
+    } catch (error) {
+      console.error('Token refresh error:', error);
       throw error;
     }
   }
-}
-
-export const { resetPassword, forgotPassword } = AuthService;
+};
 
 export default authService;

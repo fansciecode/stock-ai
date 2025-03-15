@@ -1,44 +1,89 @@
 import api from './api';
 
-export const loginUser = async (credentials) => {
-  try {
-    const response = await api.post('/users/login', credentials);
-    localStorage.setItem('token', response.data.token);
-    return true;
-  } catch (error) {
-    console.error('Login error:', error);
-    return false;
+const userService = {
+  getCurrentUser: async () => {
+    try {
+      const response = await api.get('/users/me');
+      return response.data;
+    } catch (error) {
+      console.error('Get current user error:', error);
+      throw error;
+    }
+  },
+
+  updateProfile: async (userData) => {
+    try {
+      const response = await api.put('/users/profile', userData);
+      return response.data;
+    } catch (error) {
+      console.error('Update profile error:', error);
+      throw error;
+    }
+  },
+
+  updatePassword: async (passwords) => {
+    try {
+      const response = await api.put('/users/password', passwords);
+      return response.data;
+    } catch (error) {
+      console.error('Update password error:', error);
+      throw error;
+    }
+  },
+
+  uploadAvatar: async (formData) => {
+    try {
+      const response = await api.post('/users/avatar', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Upload avatar error:', error);
+      throw error;
+    }
+  },
+
+  getNotifications: async () => {
+    try {
+      const response = await api.get('/users/notifications');
+      return response.data;
+    } catch (error) {
+      console.error('Get notifications error:', error);
+      throw error;
+    }
+  },
+
+  markNotificationRead: async (notificationId) => {
+    try {
+      const response = await api.put(`/users/notifications/${notificationId}/read`);
+      return response.data;
+    } catch (error) {
+      console.error('Mark notification read error:', error);
+      throw error;
+    }
+  },
+
+  getPreferences: async () => {
+    try {
+      const response = await api.get('/users/preferences');
+      return response.data;
+    } catch (error) {
+      console.error('Get preferences error:', error);
+      throw error;
+    }
+  },
+
+  updatePreferences: async (preferences) => {
+    try {
+      const response = await api.put('/users/preferences', preferences);
+      return response.data;
+    } catch (error) {
+      console.error('Update preferences error:', error);
+      throw error;
+    }
   }
 };
 
-export const registerUser = async (userData) => {
-  try {
-    const response = await api.post('/users/register', userData);
-    return response.data;
-  } catch (error) {
-    console.error('Registration error:', error);
-    throw error;
-  }
-};
-
-// const API_URL = "/api/users";
-
-export const getUser = async () => {
-  try {
-    const response = await api.get('/users/me');
-    return response.data;
-  } catch (error) {
-    console.error('Get user error:', error);
-    throw error;
-  }
-};
-
-export const updateUser = async (userData) => {
-  try {
-    const response = await api.put('/users/update', userData);
-    return response.data;
-  } catch (error) {
-    console.error('Update user error:', error);
-    throw error;
-  }
-};
+export default userService;
