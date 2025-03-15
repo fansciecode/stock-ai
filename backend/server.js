@@ -38,6 +38,7 @@ import { createLogger, morganStream } from './utils/logger.js';
 import adminAIRoutes from './routes/adminAIRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import businessRoutes from './routes/businessRoutes.js';
+import growthRoutes from './routes/growthRoutes.js';
 
 dotenv.config();
 const app = express();
@@ -105,6 +106,7 @@ app.use('/api/admin/ai', adminAIRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/business', businessRoutes);
 app.use("/api/external", externalRoutes);
+app.use('/api/growth', growthRoutes);
 
 // Serve uploaded files with correct path
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
