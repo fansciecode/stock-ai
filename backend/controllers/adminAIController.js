@@ -5,7 +5,7 @@ import { UserModel } from '../models/userModel.js';
 import { OrderModel } from '../models/orderModel.js';
 import { EventModel } from '../models/eventModel.js';
 import { BusinessModel } from '../models/businessModel.js';
-import  asyncHandler  from '../middleware/asyncHandler.js';
+import { asyncHandler } from '../middleware/asyncHandler.js';
 
 const logger = createLogger('adminAIController');
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
