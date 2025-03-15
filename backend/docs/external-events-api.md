@@ -225,6 +225,119 @@ Toggle like on a review (requires authentication).
 }
 ```
 
+### 7. Search by Category
+Search for events and places by specific categories and subcategories.
+
+**Endpoint:** `GET /events/category`
+
+**Query Parameters:**
+- `latitude` (required): User's latitude (float)
+- `longitude` (required): User's longitude (float)
+- `radius` (optional): Search radius in kilometers (default: 5)
+- `category` (required): Main category
+- `subcategory` (optional): Specific subcategory
+
+**Available Categories:**
+
+1. **Sports & Recreation** (`sports`)
+   - Racing
+   - Badminton
+   - Horse Riding
+   - Cycling
+   - Online Gaming
+   - Football
+   - Basketball
+   - Swimming
+   - Cricket
+   - Tennis
+   - Adventure Sports
+
+2. **Cultural & Arts** (`culture`)
+   - Visual Arts
+   - Dance Performances
+   - Music Concerts
+   - Literature & Poetry
+   - Traditional & Folk Events
+
+3. **Entertainment & Nightlife** (`entertainment`)
+   - Comedy Shows
+   - Movie Screenings
+   - Theatre & Drama
+   - Music Festivals
+   - Clubbing & Nightlife
+   - DJ Nights
+
+4. **Health & Fitness** (`health`)
+   - Gym & Personal Training
+   - Yoga & Meditation
+   - Martial Arts
+   - CrossFit & HIIT
+   - Nutrition Consultation
+   - Alternative Healing
+
+5. **Fashion & Beauty** (`fashion`)
+   - Salons & Haircuts
+   - Spa & Wellness
+   - Fashion Exhibitions
+   - Beauty Services
+   - Jewelry & Accessories
+
+6. **Hospitality & Tourism** (`hospitality`)
+   - Hotels & Resorts
+   - Guest Houses
+   - Travel Agencies
+   - Transport Services
+
+7. **Food & Beverages** (`food`)
+   - Restaurants
+   - Food Festivals
+   - Cooking Classes
+   - Local Food
+   - Wine & Beer Tasting
+
+8. **Education & Professional** (`education`)
+   - Schools & Colleges
+   - Courses & Training
+   - Workshops & Seminars
+   - Professional Services
+
+9. **Services** (`services`)
+   - Home Services
+   - Pet Services
+   - Transport & Logistics
+   - Financial Services
+
+**Example Request:**
+```
+GET /api/external/events/category?latitude=19.0760&longitude=72.8777&category=sports&subcategory=cricket
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "place123",
+      "source": "google",
+      "type": "stadium",
+      "title": "Cricket Ground Name",
+      "address": "Full Address",
+      "location": {
+        "latitude": 19.0760,
+        "longitude": 72.8777
+      },
+      "rating": 4.5,
+      "totalRatings": 1000,
+      "photos": ["photo_url1", "photo_url2"],
+      "openNow": true,
+      "category": "sports",
+      "types": ["stadium", "sports_complex"]
+    }
+  ]
+}
+```
+
 ## Error Responses
 All endpoints follow the same error response format:
 

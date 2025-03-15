@@ -9,12 +9,204 @@ class ExternalEventService {
     constructor() {
         this.googleApiKey = process.env.GOOGLE_MAPS_API_KEY;
         this.googlePlacesBaseUrl = process.env.GOOGLE_PLACES_API_BASE_URL;
-        this.eventTypes = [
+        
+        // Category to Google Places type and keyword mapping
+        this.categoryMapping = {
+            // Sports & Recreation
+            sports: {
+                types: ['stadium', 'gym', 'park'],
+                subcategories: {
+                    racing: { keywords: ['racing track', 'motorsport', 'race course'] },
+                    badminton: { keywords: ['badminton court', 'sports center'] },
+                    horseRiding: { keywords: ['horse riding', 'equestrian', 'stable'] },
+                    cycling: { keywords: ['cycling track', 'bicycle rental', 'bike trail'] },
+                    onlineGaming: { keywords: ['gaming cafe', 'esports center'] },
+                    football: { keywords: ['football ground', 'soccer field'] },
+                    basketball: { keywords: ['basketball court'] },
+                    swimming: { keywords: ['swimming pool', 'aquatic center'] },
+                    cricket: { keywords: ['cricket ground', 'cricket stadium'] },
+                    tennis: { keywords: ['tennis court'] },
+                    adventureSports: { keywords: ['paragliding', 'bungee jumping', 'skydiving', 'adventure sports'] }
+                }
+            },
+
+            // Cultural & Arts
+            culture: {
+                types: ['art_gallery', 'museum', 'painter'],
+                subcategories: {
+                    visualArts: { keywords: ['art gallery', 'exhibition', 'painting', 'sculpture'] },
+                    dance: { keywords: ['dance studio', 'ballet', 'dance class'] },
+                    music: { keywords: ['concert hall', 'live music', 'band'] },
+                    literature: { keywords: ['library', 'book reading', 'poetry'] },
+                    traditional: { keywords: ['cultural center', 'folk art', 'traditional'] }
+                }
+            },
+
+            // Entertainment & Nightlife
+            entertainment: {
+                types: ['night_club', 'movie_theater', 'casino'],
+                subcategories: {
+                    comedy: { keywords: ['comedy club', 'stand up comedy'] },
+                    movies: { keywords: ['cinema', 'movie screening'] },
+                    theatre: { keywords: ['theatre', 'drama', 'performing arts'] },
+                    musicFestival: { keywords: ['music festival', 'concert'] },
+                    nightlife: { keywords: ['club', 'bar', 'nightlife'] },
+                    djNights: { keywords: ['dj', 'party', 'nightclub'] }
+                }
+            },
+
+            // Health & Fitness
+            health: {
+                types: ['gym', 'health', 'spa'],
+                subcategories: {
+                    gym: { keywords: ['gym', 'fitness center', 'personal training'] },
+                    yoga: { keywords: ['yoga studio', 'meditation center'] },
+                    martialArts: { keywords: ['martial arts', 'dojo', 'self defense'] },
+                    crossfit: { keywords: ['crossfit', 'hiit', 'boot camp'] },
+                    nutrition: { keywords: ['nutritionist', 'dietitian', 'health coach'] },
+                    alternativeHealing: { keywords: ['ayurveda', 'reiki', 'holistic health'] }
+                }
+            },
+
+            // Fashion & Beauty
+            fashion: {
+                types: ['beauty_salon', 'spa', 'shopping_mall'],
+                subcategories: {
+                    salon: { keywords: ['salon', 'haircut', 'beauty parlor'] },
+                    spa: { keywords: ['spa', 'wellness center', 'massage'] },
+                    fashion: { keywords: ['fashion store', 'boutique', 'clothing'] },
+                    beauty: { keywords: ['beauty salon', 'makeup artist', 'cosmetics'] },
+                    jewelry: { keywords: ['jewelry store', 'accessories'] }
+                }
+            },
+
+            // Hospitality & Tourism
+            hospitality: {
+                types: ['lodging', 'travel_agency'],
+                subcategories: {
+                    hotels: { keywords: ['hotel', 'resort', 'accommodation'] },
+                    guestHouses: { keywords: ['guest house', 'hostel', 'bnb'] },
+                    travel: { keywords: ['travel agency', 'tour operator', 'tourist information'] },
+                    transport: { keywords: ['airport shuttle', 'taxi service', 'car rental'] }
+                }
+            },
+
+            // Food & Beverages
+            food: {
+                types: ['restaurant', 'cafe', 'bar'],
+                subcategories: {
+                    restaurants: { keywords: ['restaurant', 'dining'] },
+                    foodFestivals: { keywords: ['food festival', 'food fair', 'tasting'] },
+                    cookingClasses: { keywords: ['cooking class', 'culinary school'] },
+                    localFood: { keywords: ['street food', 'food stall', 'local cuisine'] },
+                    wineTasting: { keywords: ['wine tasting', 'brewery', 'wine bar'] }
+                }
+            },
+
+            // Education & Professional
+            education: {
+                types: ['school', 'university', 'library'],
+                subcategories: {
+                    schools: { keywords: ['school', 'college', 'university'] },
+                    courses: { keywords: ['training center', 'coaching', 'institute'] },
+                    workshops: { keywords: ['workshop', 'seminar', 'conference'] },
+                    professional: { keywords: ['business center', 'coworking space'] }
+                }
+            },
+
+            // Services
+            services: {
+                types: ['store', 'point_of_interest'],
+                subcategories: {
+                    homeServices: { keywords: ['cleaning service', 'repair', 'maintenance'] },
+                    petServices: { keywords: ['pet store', 'veterinary', 'pet grooming'] },
+                    transport: { keywords: ['moving service', 'courier', 'logistics'] },
+                    financial: { keywords: ['bank', 'loan service', 'financial advisor'] }
+                }
+            }
+        };
+
+        // Default event types for general searches
+        this.defaultEventTypes = [
             'amusement_park', 'aquarium', 'art_gallery', 'museum',
             'night_club', 'park', 'restaurant', 'shopping_mall',
             'stadium', 'movie_theater', 'theater', 'tourist_attraction'
         ];
-        this.offerKeywords = ['discount', 'sale', 'offer', 'deal', 'promotion'];
+    }
+
+    async searchByCategory(params) {
+        const {
+            latitude,
+            longitude,
+            radius = 5000,
+            category,
+            subcategory
+        } = params;
+
+        const cacheKey = `category_${latitude}_${longitude}_${radius}_${category}_${subcategory}`;
+        const cachedResults = cache.get(cacheKey);
+        if (cachedResults) {
+            logger.info('Returning cached category results');
+            return cachedResults;
+        }
+
+        try {
+            let searchPromises = [];
+            
+            if (category && this.categoryMapping[category]) {
+                const categoryConfig = this.categoryMapping[category];
+                
+                // If subcategory is specified
+                if (subcategory && categoryConfig.subcategories[subcategory]) {
+                    const keywords = categoryConfig.subcategories[subcategory].keywords;
+                    searchPromises = keywords.map(keyword =>
+                        this.searchPlaces({ latitude, longitude, radius, keyword })
+                    );
+                } else {
+                    // Search all types and keywords for the category
+                    searchPromises = [
+                        ...categoryConfig.types.map(type =>
+                            this.searchPlaces({ latitude, longitude, radius, type })
+                        )
+                    ];
+                }
+            }
+
+            const responses = await Promise.all(searchPromises);
+            const allResults = responses.flatMap(response => response || []);
+
+            // Remove duplicates
+            const uniqueResults = Array.from(
+                new Map(allResults.map(item => [item.place_id, item])).values()
+            );
+
+            const formattedResults = this.formatGoogleResults(uniqueResults);
+            cache.set(cacheKey, formattedResults);
+
+            return formattedResults;
+        } catch (error) {
+            logger.error('Error in category search:', error);
+            throw error;
+        }
+    }
+
+    async searchPlaces(params) {
+        const { latitude, longitude, radius, type, keyword } = params;
+        try {
+            const response = await axios.get(`${this.googlePlacesBaseUrl}/nearbysearch/json`, {
+                params: {
+                    location: `${latitude},${longitude}`,
+                    radius,
+                    type,
+                    keyword,
+                    key: this.googleApiKey
+                }
+            });
+            return response.data.results;
+        } catch (error) {
+            logger.error('Error in places search:', error);
+            return [];
+        }
     }
 
     async searchNearbyEvents(params) {
@@ -37,7 +229,7 @@ class ExternalEventService {
             const promises = [];
             
             // Search for specific type if provided, otherwise search all event types
-            const typesToSearch = type ? [type] : this.eventTypes;
+            const typesToSearch = type ? [type] : this.defaultEventTypes;
             
             for (const eventType of typesToSearch) {
                 promises.push(
@@ -129,7 +321,7 @@ class ExternalEventService {
     }
 
     async searchLocalOffers({ latitude, longitude, radius }) {
-        const promises = this.offerKeywords.map(keyword =>
+        const promises = this.defaultEventTypes.map(keyword =>
             axios.get(`${this.googlePlacesBaseUrl}/nearbysearch/json`, {
                 params: {
                     location: `${latitude},${longitude}`,
@@ -240,7 +432,7 @@ class ExternalEventService {
         return results.map(result => ({
             id: result.place_id,
             source: 'google',
-            type: 'local_event',
+            type: result.types?.[0] || 'place',
             title: result.name,
             address: result.vicinity,
             location: {
@@ -252,7 +444,8 @@ class ExternalEventService {
             photos: result.photos?.map(photo => photo.photo_reference),
             priceLevel: result.price_level,
             openNow: result.opening_hours?.open_now,
-            types: result.types
+            types: result.types,
+            category: this.determineCategoryFromTypes(result.types)
         }));
     }
 
@@ -273,6 +466,17 @@ class ExternalEventService {
             openingHours: result.opening_hours,
             types: result.types
         };
+    }
+
+    determineCategoryFromTypes(types) {
+        if (!types) return 'other';
+        
+        const categoryMatches = Object.entries(this.categoryMapping)
+            .find(([_, config]) => 
+                config.types.some(type => types.includes(type))
+            );
+
+        return categoryMatches ? categoryMatches[0] : 'other';
     }
 }
 
