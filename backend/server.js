@@ -18,6 +18,7 @@ import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
+import externalRoutes from "./config/routes.js";
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsDoc from 'swagger-jsdoc';
 import { requestLogger } from './middleware/requestLogger.js';
@@ -37,6 +38,7 @@ import { createLogger, morganStream } from './utils/logger.js';
 import adminAIRoutes from './routes/adminAIRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import businessRoutes from './routes/businessRoutes.js';
+import growthRoutes from './routes/growthRoutes.js';
 
 dotenv.config();
 const app = express();
@@ -91,11 +93,10 @@ app.use("/api/events", eventRoutes);
 app.use("/api/chats", chatRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/follow", followRoutes);
-app.use("/api/events", eventReviewRoutes);
+app.use("/api/events/reviews", eventReviewRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/user-activity", userActivityRoutes);
 app.use("/api/admin-analytics", adminAnalyticsRoutes);
-// Inside app initialization
 app.use("/api/search", searchRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/auth", authRoutes);
@@ -104,6 +105,8 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/admin/ai', adminAIRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/business', businessRoutes);
+app.use("/api/external", externalRoutes);
+app.use('/api/growth', growthRoutes);
 
 // Serve uploaded files with correct path
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

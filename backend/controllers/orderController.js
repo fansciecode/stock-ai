@@ -7,7 +7,7 @@ import { processPayment, initiateRefund } from '../utils/paymentUtils.js';
 import { calculateDeliveryCost, findDeliveryPartner } from '../utils/deliveryUtils.js';
 import { sendOrderNotification } from '../utils/notificationUtils.js';
 import { createLogger } from '../utils/logger.js';
-import asyncHandler from '../middleware/asyncHandler.js';
+import { asyncHandler } from '../middleware/asyncHandler.js';
 import { AppError } from '../middleware/errorMiddleware.js';
 
 const logger = createLogger('orderController');
