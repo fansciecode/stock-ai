@@ -11,17 +11,20 @@ import java.util.Date
 
 @Serializable
 data class Event(
-    val id: String = "",
-    val title: String = "",
-    val description: String = "",
-    val category: String = "",
-    val date: String = "",
-    val time: String = "",
-    val location: String = "",
-    val maxAttendees: Int = 0,
-    val creatorId: String = "",
+    val id: String,
+    val title: String,
+    val description: String,
+    val category: String,
+    val imageUrl: String,
+    val date: Long,
+    val location: String,
+    val latitude: Double,
+    val longitude: Double,
     val attendees: List<String> = emptyList(),
-    val createdAt: Long = System.currentTimeMillis()
+    val maxAttendees: Int,
+    val status: String = "UPCOMING",
+    val creatorId: String,
+    val isRegistered: Boolean = false
 ) {
     @Serializable
     data class Comment(
@@ -47,13 +50,16 @@ data class Event(
         "title" to title,
         "description" to description,
         "category" to category,
+        "imageUrl" to imageUrl,
         "date" to date,
-        "time" to time,
         "location" to location,
-        "maxAttendees" to maxAttendees,
-        "creatorId" to creatorId,
+        "latitude" to latitude,
+        "longitude" to longitude,
         "attendees" to attendees,
-        "createdAt" to createdAt
+        "maxAttendees" to maxAttendees,
+        "status" to status,
+        "creatorId" to creatorId,
+        "isRegistered" to isRegistered
     )
 }
 

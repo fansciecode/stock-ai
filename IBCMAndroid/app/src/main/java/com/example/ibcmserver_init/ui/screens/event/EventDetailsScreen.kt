@@ -22,6 +22,7 @@ import com.example.ibcmserver_init.ui.components.*
 import java.text.SimpleDateFormat
 import java.util.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EventDetailsScreen(
     eventId: String,
@@ -32,6 +33,7 @@ fun EventDetailsScreen(
     val event by viewModel.event.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
+    var showReportDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(eventId) {
         viewModel.loadEventDetails(eventId)
@@ -40,10 +42,15 @@ fun EventDetailsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Event Details") },
+                title = { Text(event.title) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showReportDialog = true }) {
+                        Icon(Icons.Default.Flag, contentDescription = "Report Event")
                     }
                 }
             )
@@ -87,6 +94,17 @@ fun EventDetailsScreen(
                 )
             }
         }
+    }
+
+    if (showReportDialog) {
+        ReportDialog(
+            type = "Event",
+            onDismiss = { showReportDialog = false },
+            onReport = { reason ->
+                viewModel.reportEvent(reason)
+                showReportDialog = false
+            }
+        )
     }
 }
 

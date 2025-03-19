@@ -29,6 +29,7 @@ fun UserProfileScreen(
     viewModel: UserProfileViewModel = hiltViewModel()
 ) {
     var showEditDialog by remember { mutableStateOf(false) }
+    var showReportDialog by remember { mutableStateOf(false) }
     val createdEvents by viewModel.createdEvents.collectAsState()
     val attendingEvents by viewModel.attendingEvents.collectAsState()
 
@@ -37,6 +38,11 @@ fun UserProfileScreen(
             TopAppBar(
                 title = { Text("Profile") },
                 actions = {
+                    if (viewModel.isOtherUserProfile) {
+                        IconButton(onClick = { showReportDialog = true }) {
+                            Icon(Icons.Default.Flag, contentDescription = "Report User")
+                        }
+                    }
                     IconButton(onClick = { showEditDialog = true }) {
                         Icon(Icons.Default.Edit, contentDescription = "Edit Profile")
                     }
@@ -165,6 +171,18 @@ fun UserProfileScreen(
                 TextButton(onClick = { viewModel.clearError() }) {
                     Text("OK")
                 }
+            }
+        )
+    }
+
+    // Report Dialog
+    if (showReportDialog) {
+        ReportDialog(
+            type = "User",
+            onDismiss = { showReportDialog = false },
+            onReport = { reason ->
+                viewModel.reportUser(reason)
+                showReportDialog = false
             }
         )
     }

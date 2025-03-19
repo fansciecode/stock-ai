@@ -44,6 +44,13 @@ sealed class Screen(val route: String) {
     object EventCreatorDashboard : Screen("event_creator_dashboard") {
         fun createRoute() = route
     }
+    object CreateEvent : Screen("create-event")
+    object Profile : Screen("profile")
+    object CategoryEvents : Screen("category/{categoryId}") {
+        fun createRoute(categoryId: String) = "category/$categoryId"
+    }
+    object LocationPicker : Screen("location-picker")
+    object Notifications : Screen("notifications")
 }
 
 @Composable
@@ -77,11 +84,30 @@ fun AppNavigation(
 
         composable(Screen.Dashboard.route) {
             DashboardScreen(
-                onEventClick = { eventId -> navController.navigate("${Screen.EventDetails.route}/$eventId") },
-                onEventCreationClick = { navController.navigate(Screen.EventCreation.route) },
-                onEventSearchClick = { navController.navigate(Screen.EventSearch.route) },
-                onProfileClick = { navController.navigate(Screen.UserProfile.route) },
-                onSettingsClick = { navController.navigate(Screen.Settings.route) }
+                onEventClick = { eventId ->
+                    navController.navigate(Screen.EventDetails.createRoute(eventId))
+                },
+                onEventCreationClick = {
+                    navController.navigate(Screen.CreateEvent.route)
+                },
+                onEventSearchClick = {
+                    navController.navigate(Screen.EventSearch.route)
+                },
+                onProfileClick = {
+                    navController.navigate(Screen.Profile.route)
+                },
+                onCategoryClick = { category ->
+                    navController.navigate(Screen.CategoryEvents.createRoute(category))
+                },
+                onLocationClick = {
+                    navController.navigate(Screen.LocationPicker.route)
+                },
+                onNotificationClick = {
+                    navController.navigate(Screen.Notifications.route)
+                },
+                onMapMarkerClick = { eventId ->
+                    navController.navigate(Screen.EventDetails.createRoute(eventId))
+                }
             )
         }
 
@@ -178,6 +204,26 @@ fun AppNavigation(
                 onAnalyticsClick = { eventId -> navController.navigate("${Screen.EventAnalytics.route}/$eventId") },
                 onSettingsClick = { navController.navigate(Screen.Settings.route) }
             )
+        }
+
+        composable(Screen.CreateEvent.route) {
+            // Implementation of CreateEvent screen
+        }
+
+        composable(Screen.Profile.route) {
+            // Implementation of Profile screen
+        }
+
+        composable(Screen.CategoryEvents.route) {
+            // Implementation of CategoryEvents screen
+        }
+
+        composable(Screen.LocationPicker.route) {
+            // Implementation of LocationPicker screen
+        }
+
+        composable(Screen.Notifications.route) {
+            // Implementation of Notifications screen
         }
     }
 } 

@@ -26,6 +26,8 @@ fun ChatDetailScreen(
     val messages by viewModel.messages.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
+    var showReportDialog by remember { mutableStateOf(false) }
+    var reportedMessageId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(chatId) {
         viewModel.loadMessages(chatId)
@@ -38,6 +40,11 @@ fun ChatDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showReportDialog = true }) {
+                        Icon(Icons.Default.Flag, contentDescription = "Report Chat")
                     }
                 }
             )
@@ -101,10 +108,35 @@ fun ChatDetailScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(messages.reversed()) { message ->
-                        MessageItem(message = message)
+                        MessageItem(
+                            message = message,
+                            onLongPress = { 
+                                reportedMessageId = message.id
+                                showReportDialog = true 
+                            }
+                        )
                     }
                 }
             }
         }
+    }
+
+    if (showReportDialog) {
+        ReportDialog(
+            type = if (reportedMessageId != null) "Message" else "Chat",
+            onDismiss = { 
+                showReportDialog = false
+                reportedMessageId = null
+            },
+            onReport = { reason ->
+                if (reportedMessageId != null) {
+                    viewModel.reportMessage(reportedMessageId!!, reason)
+                } else {
+                    viewModel.reportChat(chatId, reason)
+                }
+                showReportDialog = false
+                reportedMessageId = null
+            }
+        )
     }
 }
