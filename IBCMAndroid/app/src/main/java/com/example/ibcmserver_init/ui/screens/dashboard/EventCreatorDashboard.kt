@@ -1,3 +1,4 @@
+// Event Creator Dashboard - Manages event creation and analytics
 package com.example.ibcmserver_init.ui.screens.dashboard
 
 import androidx.compose.foundation.layout.*
