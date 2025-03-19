@@ -16,6 +16,8 @@ import com.example.ibcmserver_init.ui.screens.event.EventSearchScreen
 import com.example.ibcmserver_init.ui.screens.profile.UserProfileScreen
 import com.example.ibcmserver_init.ui.screens.settings.SettingsScreen
 import com.example.ibcmserver_init.ui.screens.product.ProductDetailsScreen
+import com.example.ibcmserver_init.ui.screens.order.OrderScreen
+import com.example.ibcmserver_init.ui.screens.order.OrderDetailsScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -32,6 +34,12 @@ sealed class Screen(val route: String) {
     object EventSearch : Screen("event_search")
     object UserProfile : Screen("user_profile")
     object Settings : Screen("settings")
+    object Orders : Screen("orders/{userId}") {
+        fun createRoute(userId: String) = "orders/$userId"
+    }
+    object OrderDetails : Screen("orders/{userId}/order/{orderId}") {
+        fun createRoute(userId: String, orderId: String) = "orders/$userId/order/$orderId"
+    }
 }
 
 @Composable
@@ -127,6 +135,35 @@ fun AppNavigation(
         composable(Screen.Settings.route) {
             SettingsScreen(
                 onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.Orders.route,
+            arguments = listOf(
+                navArgument("userId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: return@composable
+            OrderScreen(
+                userId = userId,
+                onNavigateToOrderDetails = { orderId ->
+                    navController.navigate(Screen.OrderDetails.createRoute(userId, orderId))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.OrderDetails.route,
+            arguments = listOf(
+                navArgument("userId") { type = NavType.StringType },
+                navArgument("orderId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val orderId = backStackEntry.arguments?.getString("orderId") ?: return@composable
+            OrderDetailsScreen(
+                orderId = orderId,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }
