@@ -53,6 +53,19 @@ class EnhancedEventViewModel @Inject constructor(
     private val _catalogState = MutableStateFlow<NetworkResult<Catalog>>(NetworkResult.Initial())
     val catalogState: StateFlow<NetworkResult<Catalog>> = _catalogState
 
+    // AI-powered event states
+    private val _eventSuggestionState = MutableStateFlow<NetworkResult<EnhancedEvent>>(NetworkResult.Initial())
+    val eventSuggestionState: StateFlow<NetworkResult<EnhancedEvent>> = _eventSuggestionState
+
+    private val _eventOptimizationState = MutableStateFlow<NetworkResult<EventOptimization>>(NetworkResult.Initial())
+    val eventOptimizationState: StateFlow<NetworkResult<EventOptimization>> = _eventOptimizationState
+
+    private val _eventAnalyticsState = MutableStateFlow<NetworkResult<EventAnalytics>>(NetworkResult.Initial())
+    val eventAnalyticsState: StateFlow<NetworkResult<EventAnalytics>> = _eventAnalyticsState
+
+    private val _marketingMaterialsState = MutableStateFlow<NetworkResult<MarketingMaterials>>(NetworkResult.Initial())
+    val marketingMaterialsState: StateFlow<NetworkResult<MarketingMaterials>> = _marketingMaterialsState
+
     // Event creation
     fun createEvent(event: EnhancedEvent) {
         viewModelScope.launch {
@@ -220,8 +233,42 @@ class EnhancedEventViewModel @Inject constructor(
         }
     }
 
+    // AI-powered event operations
+    fun generateEventSuggestion(basicInfo: EventBasicInfo) {
+        viewModelScope.launch {
+            repository.generateEventSuggestion(basicInfo).collectLatest { result ->
+                _eventSuggestionState.value = result
+            }
+        }
+    }
+
+    fun optimizeEvent(eventId: String) {
+        viewModelScope.launch {
+            repository.optimizeEvent(eventId).collectLatest { result ->
+                _eventOptimizationState.value = result
+            }
+        }
+    }
+
+    fun getEventAnalytics(eventId: String) {
+        viewModelScope.launch {
+            repository.getEventAnalytics(eventId).collectLatest { result ->
+                _eventAnalyticsState.value = result
+            }
+        }
+    }
+
+    fun generateMarketingMaterials(eventId: String) {
+        viewModelScope.launch {
+            repository.generateMarketingMaterials(eventId).collectLatest { result ->
+                _marketingMaterialsState.value = result
+            }
+        }
+    }
+
     // Helper function to reset states
-    fun resetStates() {
+    override fun resetStates() {
+        super.resetStates()
         _eventCreationState.value = NetworkResult.Initial()
         _eventsState.value = NetworkResult.Initial()
         _ticketTypesState.value = NetworkResult.Initial()
@@ -231,5 +278,9 @@ class EnhancedEventViewModel @Inject constructor(
         _venuesState.value = NetworkResult.Initial()
         _mediaState.value = NetworkResult.Initial()
         _catalogState.value = NetworkResult.Initial()
+        _eventSuggestionState.value = NetworkResult.Initial()
+        _eventOptimizationState.value = NetworkResult.Initial()
+        _eventAnalyticsState.value = NetworkResult.Initial()
+        _marketingMaterialsState.value = NetworkResult.Initial()
     }
 } 

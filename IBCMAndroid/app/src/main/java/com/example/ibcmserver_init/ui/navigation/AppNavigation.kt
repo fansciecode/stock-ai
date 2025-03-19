@@ -15,6 +15,7 @@ import com.example.ibcmserver_init.ui.screens.event.EventDetailsScreen
 import com.example.ibcmserver_init.ui.screens.event.EventSearchScreen
 import com.example.ibcmserver_init.ui.screens.profile.UserProfileScreen
 import com.example.ibcmserver_init.ui.screens.settings.SettingsScreen
+import com.example.ibcmserver_init.ui.screens.product.ProductDetailsScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -24,6 +25,9 @@ sealed class Screen(val route: String) {
     object EventCreation : Screen("event_creation")
     object EventDetails : Screen("event_details/{eventId}") {
         fun createRoute(eventId: String) = "event_details/$eventId"
+    }
+    object ProductDetails : Screen("event/{eventId}/product/{productId}") {
+        fun createRoute(eventId: String, productId: String) = "event/$eventId/product/$productId"
     }
     object EventSearch : Screen("event_search")
     object UserProfile : Screen("user_profile")
@@ -91,7 +95,26 @@ fun AppNavigation(
             EventDetailsScreen(
                 eventId = eventId,
                 onBackClick = { navController.popBackStack() },
-                onNavigateToUserProfile = { userId -> navController.navigate("${Screen.UserProfile.route}/$userId") }
+                onNavigateToUserProfile = { userId -> navController.navigate("${Screen.UserProfile.route}/$userId") },
+                onNavigateToProduct = { productId -> 
+                    navController.navigate(Screen.ProductDetails.createRoute(eventId, productId))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.ProductDetails.route,
+            arguments = listOf(
+                navArgument("eventId") { type = NavType.StringType },
+                navArgument("productId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val eventId = backStackEntry.arguments?.getString("eventId") ?: return@composable
+            val productId = backStackEntry.arguments?.getString("productId") ?: return@composable
+            ProductDetailsScreen(
+                eventId = eventId,
+                productId = productId,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 

@@ -290,4 +290,127 @@ class EnhancedEventRepository @Inject constructor(
             emit(NetworkResult.Error("Network error: ${e.message}"))
         }
     }
+
+    // AI-powered event operations
+    suspend fun generateEventSuggestion(basicInfo: EventBasicInfo): Flow<NetworkResult<EnhancedEvent>> = flow {
+        emit(NetworkResult.Loading())
+        try {
+            val response = apiService.generateEventSuggestion(basicInfo)
+            if (response.isSuccessful && response.body() != null) {
+                emit(NetworkResult.Success(response.body()!!))
+            } else {
+                emit(NetworkResult.Error("Failed to generate event suggestion: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            emit(NetworkResult.Error("Network error: ${e.message}"))
+        }
+    }
+
+    suspend fun optimizeEvent(eventId: String): Flow<NetworkResult<EventOptimization>> = flow {
+        emit(NetworkResult.Loading())
+        try {
+            val response = apiService.optimizeEvent(eventId)
+            if (response.isSuccessful && response.body() != null) {
+                emit(NetworkResult.Success(response.body()!!))
+            } else {
+                emit(NetworkResult.Error("Failed to optimize event: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            emit(NetworkResult.Error("Network error: ${e.message}"))
+        }
+    }
+
+    suspend fun getEventAnalytics(eventId: String): Flow<NetworkResult<EventAnalytics>> = flow {
+        emit(NetworkResult.Loading())
+        try {
+            val response = apiService.getEventAnalytics(eventId)
+            if (response.isSuccessful && response.body() != null) {
+                emit(NetworkResult.Success(response.body()!!))
+            } else {
+                emit(NetworkResult.Error("Failed to fetch event analytics: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            emit(NetworkResult.Error("Network error: ${e.message}"))
+        }
+    }
+
+    suspend fun generateMarketingMaterials(eventId: String): Flow<NetworkResult<MarketingMaterials>> = flow {
+        emit(NetworkResult.Loading())
+        try {
+            val response = apiService.generateMarketingMaterials(eventId)
+            if (response.isSuccessful && response.body() != null) {
+                emit(NetworkResult.Success(response.body()!!))
+            } else {
+                emit(NetworkResult.Error("Failed to generate marketing materials: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            emit(NetworkResult.Error("Network error: ${e.message}"))
+        }
+    }
+
+    // Add these new functions for AI-powered features
+
+    suspend fun generateSeatingRecommendations(eventId: String): Flow<NetworkResult<List<List<SeatInfo>>>> = flow {
+        emit(NetworkResult.Loading())
+        try {
+            val response = apiService.generateSeatingRecommendations(eventId)
+            emit(NetworkResult.Success(response.recommendations))
+        } catch (e: Exception) {
+            emit(NetworkResult.Error("Failed to generate seating recommendations: ${e.message}"))
+        }
+    }
+
+    suspend fun bookTickets(eventId: String, seats: List<SeatBooking>): Flow<NetworkResult<BookingResponse>> = flow {
+        emit(NetworkResult.Loading())
+        try {
+            val response = apiService.bookTickets(eventId, seats)
+            emit(NetworkResult.Success(response))
+        } catch (e: Exception) {
+            emit(NetworkResult.Error("Failed to book tickets: ${e.message}"))
+        }
+    }
+
+    suspend fun processEventMedia(eventId: String, mediaFiles: List<MediaFile>): Flow<NetworkResult<ProcessedMedia>> = flow {
+        emit(NetworkResult.Loading())
+        try {
+            // Process images with AI
+            val processedImages = mediaFiles.filter { it.type == MediaType.IMAGE }.map { file ->
+                apiService.analyzeEventImage(file).also { analysis ->
+                    // Apply AI recommendations for image optimization
+                    if (analysis.quality.improvements.isNotEmpty()) {
+                        apiService.optimizeImage(file, analysis.quality.improvements)
+                    }
+                }
+            }
+
+            // Process videos with AI
+            val processedVideos = mediaFiles.filter { it.type == MediaType.VIDEO }.map { file ->
+                apiService.analyzeVideo(file).also { analysis ->
+                    // Generate video highlights and optimize
+                    if (analysis.recommendations.improvements.isNotEmpty()) {
+                        apiService.optimizeVideo(file, analysis.recommendations.improvements)
+                    }
+                }
+            }
+
+            emit(NetworkResult.Success(
+                ProcessedMedia(
+                    images = processedImages,
+                    videos = processedVideos
+                )
+            ))
+        } catch (e: Exception) {
+            emit(NetworkResult.Error("Failed to process media: ${e.message}"))
+        }
+    }
+
+    suspend fun generateEventHighlights(eventId: String): Flow<NetworkResult<EventHighlights>> = flow {
+        emit(NetworkResult.Loading())
+        try {
+            val response = apiService.generateEventHighlights(eventId)
+            emit(NetworkResult.Success(response))
+        } catch (e: Exception) {
+            emit(NetworkResult.Error("Failed to generate event highlights: ${e.message}"))
+        }
+    }
 } 

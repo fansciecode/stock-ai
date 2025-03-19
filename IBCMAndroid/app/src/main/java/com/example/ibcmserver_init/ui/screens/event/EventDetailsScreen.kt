@@ -3,6 +3,8 @@ package com.example.ibcmserver_init.ui.screens.event
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.lazyRow
+import androidx.compose.foundation.lazy.lazyVerticalGrid
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -13,6 +15,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.ibcmserver_init.data.model.Event
+import com.example.ibcmserver_init.data.model.Product
+import com.example.ibcmserver_init.data.model.MediaContent
+import com.example.ibcmserver_init.data.model.Document
 import com.example.ibcmserver_init.ui.components.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -75,6 +80,7 @@ fun EventDetailsScreen(
                         viewModel.deleteComment(commentId)
                     },
                     onNavigateToUserProfile = onNavigateToUserProfile,
+                    onNavigateToProduct = { productId -> /* Implement navigation to product */ },
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
@@ -93,6 +99,7 @@ private fun EventContent(
     onAddComment: (String) -> Unit,
     onDeleteComment: (String) -> Unit,
     onNavigateToUserProfile: (String) -> Unit,
+    onNavigateToProduct: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showReviewDialog by remember { mutableStateOf(false) }
@@ -100,6 +107,7 @@ private fun EventContent(
     var rating by remember { mutableStateOf(0) }
     var reviewComment by remember { mutableStateOf("") }
     var commentText by remember { mutableStateOf("") }
+    var selectedCategory: String? by remember { mutableStateOf<String?>(null) }
 
     LazyColumn(
         modifier = modifier,
@@ -187,6 +195,80 @@ private fun EventContent(
                     onDelete = onDeleteComment
                 )
             }
+        }
+
+        // Catalog Section
+        item {
+            Text(
+                text = "Product Catalog",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
+
+        // Categories
+        item {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp)
+            ) {
+                items(event.catalog?.categories ?: emptyList()) { category ->
+                    CategoryChip(
+                        category = category,
+                        selected = selectedCategory == category,
+                        onSelected = { selectedCategory = it }
+                    )
+                }
+            }
+        }
+
+        // Products Grid
+        items(
+            items = event.catalog?.products?.filter { 
+                selectedCategory == null || it.category == selectedCategory 
+            } ?: emptyList(),
+            key = { it.id }
+        ) { product ->
+            ProductCard(
+                product = product,
+                onClick = { onNavigateToProduct(product.id) }
+            )
+        }
+
+        // Media Section
+        item {
+            Text(
+                text = "Event Media",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
+
+        // Media Grid
+        item {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.height(200.dp)
+            ) {
+                items(event.media) { media ->
+                    MediaItem(media = media)
+                }
+            }
+        }
+
+        // Documents Section
+        item {
+            Text(
+                text = "Event Documents",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
+
+        items(event.documents) { document ->
+            DocumentItem(document = document)
         }
     }
 
@@ -278,5 +360,145 @@ private fun EventContent(
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun CategoryChip(
+    category: String,
+    selected: Boolean,
+    onSelected: (String) -> Unit
+) {
+    FilterChip(
+        selected = selected,
+        onClick = { onSelected(category) },
+        label = { Text(category) },
+        modifier = Modifier.padding(end = 8.dp)
+    )
+}
+
+@Composable
+private fun ProductCard(
+    product: Product,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (product.images.isNotEmpty()) {
+                    AsyncImage(
+                        model = product.images[0],
+                        contentDescription = product.name,
+                        modifier = Modifier
+                            .size(60.dp)
+                            .clip(MaterialTheme.shapes.small),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                Column {
+                    Text(
+                        text = product.name,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = "$${product.price}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+            IconButton(onClick = onClick) {
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = "View details"
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MediaItem(
+    media: MediaContent
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        AsyncImage(
+            model = media.url,
+            contentDescription = media.description,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+    }
+}
+
+@Composable
+private fun DocumentItem(
+    document: Document
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = when (document.type) {
+                        "pdf" -> Icons.Default.PictureAsPdf
+                        "doc" -> Icons.Default.Description
+                        else -> Icons.Default.InsertDriveFile
+                    },
+                    contentDescription = document.type,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Column {
+                    Text(
+                        text = document.name,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = document.type.uppercase(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            IconButton(onClick = { /* Download document */ }) {
+                Icon(
+                    imageVector = Icons.Default.Download,
+                    contentDescription = "Download"
+                )
+            }
+        }
     }
 } 
