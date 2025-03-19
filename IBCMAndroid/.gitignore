@@ -1,0 +1,69 @@
+# JDK files
+.java/
+jdk-*/
+
+# Gradle files
+.gradle/
+build/
+gradle-app.setting
+!gradle-wrapper.jar
+.gradletasknamecache
+
+# Android Studio files
+.idea/
+*.iml
+*.iws
+*.ipr
+local.properties
+
+# Build files
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Logs
+*.log
+hs_err_pid*
+replay_pid*
+
+# Generated files
+bin/
+gen/
+out/
+
+# Local configuration
+local.properties
+
+# Keystore files
+*.jks
+*.keystore
+
+# Google Services (e.g. APIs or Firebase)
+google-services.json
+
+# Version control
+vcs.xml
+
+# lint
+lint/intermediates/
+lint/generated/
+lint/outputs/
+lint/tmp/
+
+# Android Profiling
+*.hprof
+
+# Backup files
+*.bak
+*.swp
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
