@@ -37,4 +37,10 @@ export const handleError = (err, req, res, next) => {
         error: error.message || 'Server Error',
         errors: error.errors || []
     });
-}; 
+};
+
+const errorResponse = (message, code = 500) => ({
+    success: false,
+    message,
+    code
+}); 

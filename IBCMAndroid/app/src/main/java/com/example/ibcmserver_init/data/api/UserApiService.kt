@@ -40,8 +40,8 @@ interface UserApiService {
     @PUT("users/me/profile-picture")
     suspend fun updateProfilePicture(@Body data: Map<String, String>): Response<String>
 
-    @GET("users/{userId}")
-    suspend fun getUserById(@Path("userId") userId: String): Response<User>
+    @GET("users/{id}")
+    suspend fun getUserById(@Path("id") userId: String): Response<User>
 
     @GET("users/search")
     suspend fun searchUsers(@Query("q") query: String): List<User>
@@ -64,11 +64,11 @@ interface UserApiService {
     @POST("users")
     suspend fun createUser(@Body user: User): User
 
-    @PUT("users/{userId}")
+    @PUT("users/{id}")
     suspend fun updateUser(
-        @Path("userId") userId: String,
-        @Body user: User
-    ): User
+        @Path("id") userId: String,
+        @Body user: UserUpdateRequest
+    ): Response<User>
 
     @DELETE("users/{userId}")
     suspend fun deleteUser(@Path("userId") userId: String)
@@ -130,4 +130,23 @@ interface UserApiService {
         @Path("userId") userId: String,
         @Body preferences: Map<String, Any>
     ): User
-} 
+
+    @POST("users/{id}/follow")
+    suspend fun followUser(@Path("id") userId: String): Response<Unit>
+
+    @POST("users/{id}/unfollow")
+    suspend fun unfollowUser(@Path("id") userId: String): Response<Unit>
+
+    @GET("users/{id}/followers")
+    suspend fun getUserFollowers(@Path("id") userId: String): Response<List<User>>
+
+    @GET("users/{id}/following")
+    suspend fun getUserFollowing(@Path("id") userId: String): Response<List<User>>
+}
+
+data class UserUpdateRequest(
+    val displayName: String?,
+    val email: String?,
+    val bio: String?,
+    val profilePictureUrl: String?
+) 

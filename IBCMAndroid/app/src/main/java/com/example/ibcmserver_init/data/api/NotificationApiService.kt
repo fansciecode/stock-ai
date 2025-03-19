@@ -5,22 +5,20 @@ import retrofit2.Response
 import retrofit2.http.*
 
 interface NotificationApiService {
-    @GET("users/{userId}/notifications")
-    suspend fun getNotifications(@Path("userId") userId: String): Response<List<Notification>>
+    @GET("notifications")
+    suspend fun getUserNotifications(): Response<List<Notification>>
 
-    @POST("users/{userId}/notifications/{notificationId}/read")
+    @PUT("notifications/{id}/read")
     suspend fun markNotificationAsRead(
-        @Path("userId") userId: String,
-        @Path("notificationId") notificationId: String
+        @Path("id") notificationId: String
     ): Response<Unit>
 
-    @POST("users/{userId}/notifications/read-all")
-    suspend fun markAllNotificationsAsRead(@Path("userId") userId: String): Response<Unit>
+    @PUT("notifications/read-all")
+    suspend fun markAllNotificationsAsRead(): Response<Unit>
 
-    @DELETE("users/{userId}/notifications/{notificationId}")
+    @DELETE("notifications/{id}")
     suspend fun deleteNotification(
-        @Path("userId") userId: String,
-        @Path("notificationId") notificationId: String
+        @Path("id") notificationId: String
     ): Response<Unit>
 
     @POST("notifications/register")

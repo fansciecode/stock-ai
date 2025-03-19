@@ -8,30 +8,39 @@ import retrofit2.Response
 import retrofit2.http.*
 
 interface EventApiService {
+    @GET("events")
+    suspend fun getEvents(): Response<List<Event>>
+
+    @GET("events/{id}")
+    suspend fun getEventById(@Path("id") eventId: String): Response<Event>
+
     @POST("events")
-    suspend fun createEvent(@Body event: Event): Event
+    suspend fun createEvent(@Body event: EventRequest): Response<Event>
 
-    @GET("events/{eventId}")
-    suspend fun getEvent(@Path("eventId") eventId: String): Event
-
-    @PUT("events/{eventId}")
+    @PUT("events/{id}")
     suspend fun updateEvent(
-        @Path("eventId") eventId: String,
-        @Body event: Event
-    ): Event
+        @Path("id") eventId: String, 
+        @Body event: EventUpdateRequest
+    ): Response<Event>
 
-    @DELETE("events/{eventId}")
-    suspend fun deleteEvent(@Path("eventId") eventId: String)
+    @DELETE("events/{id}")
+    suspend fun deleteEvent(@Path("id") eventId: String): Response<Unit>
 
-    @GET("events/search")
-    suspend fun searchEvents(@Query("query") query: String): List<Event>
+    @POST("events/{id}/register")
+    suspend fun registerForEvent(@Path("id") eventId: String): Response<Event>
+
+    @POST("events/{id}/unregister")
+    suspend fun unregisterFromEvent(@Path("id") eventId: String): Response<Event>
 
     @GET("events/nearby")
     suspend fun getNearbyEvents(
-        @Query("latitude") latitude: Double,
-        @Query("longitude") longitude: Double,
+        @Query("lat") latitude: Double,
+        @Query("lng") longitude: Double,
         @Query("radius") radius: Double
-    ): List<Event>
+    ): Response<List<Event>>
+
+    @GET("events/search")
+    suspend fun searchEvents(@Query("query") query: String): List<Event>
 
     @GET("events/upcoming")
     suspend fun getUpcomingEvents(): List<Event>
@@ -115,4 +124,28 @@ interface EventApiService {
 
     @GET("events/{eventId}/updates")
     suspend fun getEventUpdates(@Path("eventId") eventId: String): Flow<Event>
-} 
+}
+
+data class EventRequest(
+    val title: String,
+    val description: String,
+    val category: String,
+    val date: String,
+    val time: String,
+    val location: String,
+    val maxAttendees: Int,
+    val latitude: Double?,
+    val longitude: Double?,
+    val imageUrl: String?
+)
+
+data class EventUpdateRequest(
+    val title: String?,
+    val description: String?,
+    val category: String?,
+    val date: String?,
+    val time: String?,
+    val location: String?,
+    val maxAttendees: Int?,
+    val status: String?
+) 

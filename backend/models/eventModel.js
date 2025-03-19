@@ -61,15 +61,19 @@ const eventSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['draft', 'published', 'cancelled', 'completed'],
-        default: 'draft'
+        enum: ['draft', 'published', 'cancelled', 'completed', 'ACTIVE'],
+        default: 'ACTIVE'
     },
     tags: [String],
     media: [{
         type: String,
         url: String,
         description: String
-    }]
+    }],
+    time: { type: String, required: true },
+    maxAttendees: { type: Number, required: true },
+    imageUrl: { type: String },
+    attendees: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
 }, {
     timestamps: true
 });
