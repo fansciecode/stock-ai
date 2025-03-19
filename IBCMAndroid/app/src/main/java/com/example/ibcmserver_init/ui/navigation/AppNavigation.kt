@@ -18,6 +18,7 @@ import com.example.ibcmserver_init.ui.screens.settings.SettingsScreen
 import com.example.ibcmserver_init.ui.screens.product.ProductDetailsScreen
 import com.example.ibcmserver_init.ui.screens.order.OrderScreen
 import com.example.ibcmserver_init.ui.screens.order.OrderDetailsScreen
+import com.example.ibcmserver_init.ui.screens.event.EventCreatorDashboard
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -39,6 +40,9 @@ sealed class Screen(val route: String) {
     }
     object OrderDetails : Screen("orders/{userId}/order/{orderId}") {
         fun createRoute(userId: String, orderId: String) = "orders/$userId/order/$orderId"
+    }
+    object EventCreatorDashboard : Screen("event_creator_dashboard") {
+        fun createRoute() = route
     }
 }
 
@@ -164,6 +168,15 @@ fun AppNavigation(
             OrderDetailsScreen(
                 orderId = orderId,
                 onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.EventCreatorDashboard.route) {
+            EventCreatorDashboard(
+                onEventClick = { eventId -> navController.navigate("${Screen.EventDetails.route}/$eventId") },
+                onEventCreationClick = { navController.navigate(Screen.EventCreation.route) },
+                onAnalyticsClick = { eventId -> navController.navigate("${Screen.EventAnalytics.route}/$eventId") },
+                onSettingsClick = { navController.navigate(Screen.Settings.route) }
             )
         }
     }
