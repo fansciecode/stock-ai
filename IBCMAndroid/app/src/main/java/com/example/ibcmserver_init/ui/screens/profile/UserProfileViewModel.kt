@@ -10,16 +10,19 @@ import com.example.ibcmserver_init.data.model.Event
 import com.example.ibcmserver_init.data.model.User
 import com.example.ibcmserver_init.data.repository.EventRepository
 import com.example.ibcmserver_init.data.repository.UserRepository
+import com.example.ibcmserver_init.data.repository.ReportRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import java.util.UUID
 
 @HiltViewModel
 class UserProfileViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val eventRepository: EventRepository,
+    private val reportRepository: ReportRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -113,5 +116,25 @@ class UserProfileViewModel @Inject constructor(
 
     fun clearError() {
         error = null
+    }
+
+    fun reportUser(reason: String) {
+        viewModelScope.launch {
+            try {
+                val report = Report(
+                    id = UUID.randomUUID().toString(),
+                    type = "USER",
+                    targetId = userId,
+                    reason = reason,
+                    reporterId = userRepository.getCurrentUserId(),
+                    timestamp = System.currentTimeMillis(),
+                    status = "PENDING"
+                )
+                reportRepository.submitReport(report)
+                error = null
+            } catch (e: Exception) {
+                error = e.message ?: "Failed to report user"
+            }
+        }
     }
 } 

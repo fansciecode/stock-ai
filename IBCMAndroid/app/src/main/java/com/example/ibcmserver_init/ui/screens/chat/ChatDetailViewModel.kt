@@ -9,14 +9,17 @@ import androidx.lifecycle.viewModelScope
 import com.example.ibcmserver_init.data.model.Chat
 import com.example.ibcmserver_init.data.model.Message
 import com.example.ibcmserver_init.data.repository.ChatRepository
+import com.example.ibcmserver_init.data.repository.ReportRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import javax.inject.Inject
+import java.util.*
 
 @HiltViewModel
 class ChatDetailViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
+    private val reportRepository: ReportRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private val chatId: String = checkNotNull(savedStateHandle["chatId"])
@@ -167,6 +170,50 @@ class ChatDetailViewModel @Inject constructor(
                 .collect { users -> 
                     _typingUsers.value = users
                 }
+        }
+    }
+
+    fun reportChat(chatId: String, reason: String) {
+        viewModelScope.launch {
+            try {
+                _error.value = null
+                val report = Report(
+                    id = UUID.randomUUID().toString(),
+                    type = "CHAT",
+                    targetId = chatId,
+                    reason = reason,
+                    reporterId = currentUserId.value ?: return,
+                    timestamp = System.currentTimeMillis(),
+                    status = "PENDING"
+                )
+                reportRepository.submitReport(report)
+                // Show success message
+                _snackbarMessage.value = "Chat reported successfully"
+            } catch (e: Exception) {
+                _error.value = e.message ?: "Failed to report chat"
+            }
+        }
+    }
+
+    fun reportMessage(messageId: String, reason: String) {
+        viewModelScope.launch {
+            try {
+                _error.value = null
+                val report = Report(
+                    id = UUID.randomUUID().toString(),
+                    type = "MESSAGE",
+                    targetId = messageId,
+                    reason = reason,
+                    reporterId = currentUserId.value ?: return,
+                    timestamp = System.currentTimeMillis(),
+                    status = "PENDING"
+                )
+                reportRepository.submitReport(report)
+                // Show success message
+                _snackbarMessage.value = "Message reported successfully"
+            } catch (e: Exception) {
+                _error.value = e.message ?: "Failed to report message"
+            }
         }
     }
 

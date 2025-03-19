@@ -12,17 +12,20 @@ import com.example.ibcmserver_init.data.model.Event
 import com.example.ibcmserver_init.data.model.Review
 import com.example.ibcmserver_init.data.repository.EventRepository
 import com.example.ibcmserver_init.data.repository.UserRepository
+import com.example.ibcmserver_init.data.repository.ReportRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import java.util.UUID
 
 @HiltViewModel
 class EventDetailsViewModel @Inject constructor(
     private val eventRepository: EventRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val reportRepository: ReportRepository
 ) : ViewModel() {
 
     private val _event = MutableStateFlow<Event?>(null)
@@ -36,6 +39,9 @@ class EventDetailsViewModel @Inject constructor(
 
     private val _currentUserId = MutableStateFlow<String?>(null)
     val currentUserId: StateFlow<String?> = _currentUserId.asStateFlow()
+
+    private val _snackbarMessage = MutableStateFlow<String?>(null)
+    val snackbarMessage: StateFlow<String?> = _snackbarMessage.asStateFlow()
 
     init {
         loadCurrentUserId()
@@ -178,5 +184,30 @@ class EventDetailsViewModel @Inject constructor(
 
     fun clearError() {
         _error.value = null
+    }
+
+    fun reportEvent(reason: String) {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                _error.value = null
+                val report = Report(
+                    id = UUID.randomUUID().toString(),
+                    type = "EVENT",
+                    targetId = event.value?.id ?: return,
+                    reason = reason,
+                    reporterId = currentUserId.value ?: return,
+                    timestamp = System.currentTimeMillis(),
+                    status = "PENDING"
+                )
+                reportRepository.submitReport(report)
+                // Show success message
+                _snackbarMessage.value = "Report submitted successfully"
+            } catch (e: Exception) {
+                _error.value = e.message ?: "Failed to submit report"
+            } finally {
+                _isLoading.value = false
+            }
+        }
     }
 } 
