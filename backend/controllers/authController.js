@@ -40,20 +40,58 @@ const register = expressAsyncHandler(async (req, res) => {
 
 // Login user
 const login = expressAsyncHandler(async (req, res) => {
+  console.log('Login attempt:', { email: req.body.email, time: new Date().toISOString() });
+  
   try {
     const { email, password } = req.body;
+    
+    // Check if email and password are provided
+    if (!email || !password) {
+      console.log('Login failed: Missing email or password');
+      return res.status(400).json({ message: 'Please provide email and password' });
+    }
+    
     const user = await UserModel.findOne({ email });
+    
+    console.log('User lookup result:', { 
+      found: !!user, 
+      email, 
+      userId: user?._id, 
+      isVerified: user?.isVerified 
+    });
 
     if (!user) {
+      console.log('Login failed: User not found', { email });
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log('Password match check:', { isMatch, userId: user._id });
+    
     if (!isMatch) {
+      console.log('Login failed: Invalid password', { email });
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ userId: user._id, id: user._id /* Add id field for backward compatibility */ }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    // Check if user is verified
+    if (user.isVerified === false) {
+      console.log('Login failed: User not verified', { email, userId: user._id });
+      return res.status(400).json({ message: 'Please verify your email first' });
+    }
+
+    // Generate JWT token with both userId and id fields for compatibility
+    const token = jwt.sign({ 
+      userId: user._id,
+      id: user._id // Add id field for backward compatibility
+    }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    
+    console.log('Login successful:', { 
+      userId: user._id, 
+      email, 
+      tokenGenerated: !!token,
+      tokenPayload: { userId: user._id, id: user._id }
+    });
+
     res.json({ 
       token,
       user: {
@@ -63,7 +101,7 @@ const login = expressAsyncHandler(async (req, res) => {
       }
     });
   } catch (err) {
-    console.error(err);
+    console.error('Login error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
