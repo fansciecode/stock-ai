@@ -1,3 +1,4 @@
 # Android build files
 IBCMAndroid/.gradle/
 IBCMAndroid/app/build/
+*.bak
