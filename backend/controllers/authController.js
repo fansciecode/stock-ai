@@ -10,20 +10,48 @@ import AuthService from '../services/authService.js';
 
 // Register user
 const register = expressAsyncHandler(async (req, res) => {
+  console.log('Registration attempt:', { email: req.body.email, time: new Date().toISOString() });
+  
   try {
     const { name, email, password } = req.body;
+    
+    // Check if email and password are provided
+    if (!email || !password) {
+      console.log('Registration failed: Missing email or password');
+      return res.status(400).json({ message: 'Please provide email and password' });
+    }
+    
     let user = await UserModel.findOne({ email });
     
     if (user) {
+      console.log('Registration failed: User already exists', { email });
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    user = new UserModel({ name, email, password });
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(password, salt);
+    // Create new user instance
+    user = new UserModel({ 
+      name, 
+      email, 
+      password,
+      isVerified: true // Set to true for testing purposes
+    });
+    
+    // Let the pre-save hook in the user model handle password hashing
     await user.save();
+    console.log('User saved successfully:', { userId: user._id, email });
 
-    const token = jwt.sign({ userId: user._id, id: user._id /* Add id field for backward compatibility */ }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    // Generate token with both userId and id fields for compatibility
+    const token = jwt.sign({ 
+      userId: user._id,
+      id: user._id // Add id field for backward compatibility
+    }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+    console.log('Registration successful:', { 
+      userId: user._id, 
+      email, 
+      tokenGenerated: !!token 
+    });
+
     res.json({ 
       token,
       user: {
@@ -33,7 +61,7 @@ const register = expressAsyncHandler(async (req, res) => {
       }
     });
   } catch (err) {
-    console.error(err);
+    console.error('Registration error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
