@@ -13,11 +13,11 @@ class AuthService {
   }
 
   static async findUserByEmail(email) {
-    return await User.findOne({ email });
+    return await UserModel.findOne({ email });
   }
 
   static async findUserByResetToken(hashedToken) {
-    return await User.findOne({
+    return await UserModel.findOne({
       resetPasswordToken: hashedToken,
       resetPasswordExpires: { $gt: Date.now() }
     });
