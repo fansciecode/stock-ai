@@ -8,7 +8,8 @@ import {
     forgotPassword, 
     resetPassword, 
     verifyResetToken,
-    logout
+    logout,
+    verifyEmail
 } from '../controllers/authController.js';
 import { validateRequest } from '../middleware/validateRequest.js';
 import { body } from 'express-validator';
@@ -24,6 +25,7 @@ router.post('/login', login);
 router.post('/logout', logout);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password/:token', resetPassword);
+router.get('/verify-email/:token', verifyEmail);
 
 // Validation routes
 router.post(

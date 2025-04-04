@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { validationResult } from 'express-validator';
 import { UserModel } from '../models/userModel.js';
 import crypto from 'crypto';
-import { sendResetPasswordEmail } from '../services/emailService.js';
+import { sendResetPasswordEmail, sendVerificationEmail } from '../services/emailService.js';
 import logger from '../utils/logger.js';
 import expressAsyncHandler from 'express-async-handler';
 import AuthService from '../services/authService.js';
@@ -28,12 +28,23 @@ const register = expressAsyncHandler(async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Create new user instance
+    // Generate verification token
+    const verificationToken = crypto.randomBytes(20).toString('hex');
+    const hashedVerificationToken = crypto
+      .createHash('sha256')
+      .update(verificationToken)
+      .digest('hex');
+      
+    // Create new user instance with verification token
     user = new UserModel({ 
       name, 
       email, 
       password,
-      isVerified: true // Set to true for testing purposes
+      isVerified: process.env.AUTO_VERIFY === 'true', // Auto-verify if enabled in env
+      security: {
+        verificationToken: hashedVerificationToken,
+        verificationExpires: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+      }
     });
     
     // Let the pre-save hook in the user model handle password hashing
@@ -46,10 +57,22 @@ const register = expressAsyncHandler(async (req, res) => {
       id: user._id // Add id field for backward compatibility
     }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
+    // Send verification email if auto-verify is not enabled
+    if (process.env.AUTO_VERIFY !== 'true') {
+      try {
+        await sendVerificationEmail(email, verificationToken);
+        console.log('Verification email sent:', { email });
+      } catch (error) {
+        console.error('Failed to send verification email:', error);
+        // Don't fail registration if email fails, just log it
+      }
+    }
+
     console.log('Registration successful:', { 
       userId: user._id, 
       email, 
-      tokenGenerated: !!token 
+      tokenGenerated: !!token,
+      isVerified: user.isVerified
     });
 
     res.json({ 
@@ -57,12 +80,60 @@ const register = expressAsyncHandler(async (req, res) => {
       user: {
         id: user._id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        isVerified: user.isVerified
       }
     });
   } catch (err) {
     console.error('Registration error:', err);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Email verification
+const verifyEmail = expressAsyncHandler(async (req, res) => {
+  try {
+    const { token } = req.params;
+    
+    if (!token) {
+      return res.status(400).json({ message: 'Verification token is required' });
+    }
+    
+    // Hash the token from the URL
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+      
+    // Find user with matching token
+    const user = await UserModel.findOne({
+      'security.verificationToken': hashedToken,
+      'security.verificationExpires': { $gt: Date.now() }
+    });
+    
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired verification token' });
+    }
+    
+    // Mark user as verified
+    user.isVerified = true;
+    user.security.verificationToken = undefined;
+    user.security.verificationExpires = undefined;
+    user.security.verified = true;
+    user.verifiedAt = Date.now();
+    
+    await user.save();
+    
+    logger.info('User email verified successfully', { userId: user._id, email: user.email });
+    
+    // Redirect to frontend with success message
+    res.json({ 
+      success: true, 
+      message: 'Email verification successful. You may now log in.' 
+    });
+  } catch (err) {
+    console.error('Email verification error:', err);
+    res.status(500).json({ message: 'Server error during email verification' });
   }
 });
 
@@ -219,13 +290,14 @@ const logout = expressAsyncHandler(async (req, res) => {
     }
 });
 
-// Single export statement for all functions
+// Export all controller functions
 export {
   forgotPassword,
   resetPassword,
   login,
   register,
   verifyResetToken,
-  logout
+  logout,
+  verifyEmail
 };
 

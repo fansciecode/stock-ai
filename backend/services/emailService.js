@@ -119,6 +119,34 @@ class EmailService {
       throw new Error('Error sending reset email');
     }
   }
+
+  async sendVerificationEmail(email, verificationToken) {
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+    
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Verify Your Email Address',
+      html: `
+        <h1>Verify Your Email</h1>
+        <p>Thank you for registering! Please click the link below to verify your email address:</p>
+        <a href="${verificationUrl}">Verify Email</a>
+        <p>This link will expire in 24 hours.</p>
+      `
+    };
+
+    try {
+      const info = await this.transporter.sendMail(mailOptions);
+      logger.info('Verification email sent successfully', {
+        messageId: info.messageId,
+        to: email
+      });
+      return info;
+    } catch (error) {
+      logger.error('Verification email sending error:', error);
+      throw new Error('Error sending verification email');
+    }
+  }
 }
 
 export const emailService = new EmailService();
@@ -140,4 +168,7 @@ export const sendPasswordResetEmail = (to, resetToken) =>
   emailService.sendPasswordResetEmail(to, resetToken);
 
 export const sendResetEmail = (email, resetUrl) => 
-  emailService.sendResetEmail(email, resetUrl); 
+  emailService.sendResetEmail(email, resetUrl);
+
+export const sendVerificationEmail = (email, verificationToken) => 
+  emailService.sendVerificationEmail(email, verificationToken); 
