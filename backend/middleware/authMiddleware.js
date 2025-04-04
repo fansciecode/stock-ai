@@ -21,7 +21,24 @@ const protect = asyncHandler(async (req, res, next) => {
         try {
             token = req.headers.authorization.split(' ')[1];
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            req.user = await UserModel.findById(decoded.id).select('-password');
+            
+            // Check for userId first (backward compatibility), then fall back to id
+            const userIdToFind = decoded.userId || decoded.id;
+            
+            if (!userIdToFind) {
+                console.error("Token missing both userId and id fields");
+                res.status(401);
+                throw new Error("Not authorized, invalid token format");
+            }
+            
+            req.user = await UserModel.findById(userIdToFind).select('-password');
+            
+            if (!req.user) {
+                console.error("User not found with ID:", userIdToFind);
+                res.status(401);
+                throw new Error("User not found");
+            }
+            
             logger.info("User authenticated", { userId: req.user._id });
             next();
         } catch (error) {
