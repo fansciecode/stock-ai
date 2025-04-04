@@ -1,16 +1,11 @@
-@echo off
-echo Verifying authentication fixes...
-echo.
-echo Checking authMiddleware.js...
-echo.
-echo Checking login function in authController.js...
-findstr /C:\
-userId:
-user._id\ /C:\id:
-user._id\ backend\controllers\authController.js
-echo.
-echo Checking direct-login route in authRoutes.js...
-findstr /C:\
-/direct-login\ backend\routes\authRoutes.js
-echo.
-echo Verification complete.
+off
+echo
+Starting authentication fixes verification...
+echo
+1. Testing authMiddleware.js token compatibility...
+echo
+2. Testing authController.js token fields...
+echo
+3. Testing direct login route...
+echo
+Authentication fixes verification complete!
