@@ -14,7 +14,7 @@ export const getCategories = async (req, res) => {
 
     // Get user's interests if logged in
     const userInterests = req.user ? 
-        (await User.findById(req.user._id).select('interests')).interests : 
+        (await UserModel.findById(req.user._id).select('interests')).interests : 
         [];
 
     const categories = await Category.aggregate([
@@ -65,7 +65,7 @@ export const updateUserCategories = async (req, res) => {
       return res.status(400).json({ message: "Invalid categories" });
     }
 
-    const user = await User.findById(req.user._id);
+    const user = await UserModel.findById(req.user._id);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
