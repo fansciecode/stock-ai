@@ -32,6 +32,16 @@ const userSchema = mongoose.Schema(
         isBlocked: { type: Boolean, default: false },
         interests: [{ type: mongoose.Schema.Types.ObjectId, ref: "Category" }], // Tracks categories user is interested in
         preferredCategories: [{ type: mongoose.Schema.Types.ObjectId, ref: "Category" }],
+        businessInfo: {
+            businessName: String,
+            businessDescription: String,
+            businessWebsite: String,
+            businessPhone: String,
+            businessEmail: String,
+            businessAddress: String,
+            categories: [{ type: mongoose.Schema.Types.ObjectId, ref: "Category" }],
+            verified: { type: Boolean, default: false }
+        },
         location: {
             type: {
                 type: String,

@@ -98,8 +98,7 @@ const registerUser = asyncHandler(async (req, res) => {
 const getUserProfile = asyncHandler(async (req, res) => {
     const user = await UserModel.findById(req.user._id)
         .select('-password')
-        .populate('interests')
-        .populate('businessInfo.categories');
+        .populate('interests');
 
     if (user) {
         res.json({
