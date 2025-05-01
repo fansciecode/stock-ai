@@ -102,12 +102,12 @@ export const getEvents = asyncHandler(async (req, res) => {
 
         // If old format is requested, return original response
         if (format === 'old') {
-            const events = await Event.find({});
+            const events = await EventModel.find({});
             return res.json(events);
         }
 
         // Rest of the new implementation...
-        const user = await User.findById(req.user._id)
+        const user = await UserModel.findById(req.user._id)
             .populate('interests')
             .select('interests');
 
@@ -132,7 +132,7 @@ export const getEvents = asyncHandler(async (req, res) => {
 // @route GET /api/events/:id
 // @access Public
 export const getEvent = asyncHandler(async (req, res) => {
-    const event = await Event.findById(req.params.id);
+    const event = await EventModel.findById(req.params.id);
 
     if (event) {
         res.json(event);
@@ -145,7 +145,7 @@ export const getEvent = asyncHandler(async (req, res) => {
 export const getEventsByCategory = async (req, res) => {
     try {
       const { categoryId } = req.params;
-      const events = await Event.find({ category: categoryId });
+      const events = await EventModel.find({ category: categoryId });
   
       if (!events.length) {
         return res.status(404).json({ message: "No events found for this category." });
@@ -161,7 +161,7 @@ export const getEventsByCategory = async (req, res) => {
 // @route PUT /api/events/:id
 // @access Private
 export const updateEvent = asyncHandler(async (req, res) => {
-    const event = await Event.findById(req.params.id);
+    const event = await EventModel.findById(req.params.id);
 
     if (event) {
         Object.assign(event, req.body);
@@ -177,7 +177,7 @@ export const updateEvent = asyncHandler(async (req, res) => {
 // @route DELETE /api/events/:id
 // @access Private
 export const deleteEvent = asyncHandler(async (req, res) => {
-    const event = await Event.findById(req.params.id);
+    const event = await EventModel.findById(req.params.id);
 
     if (event) {
         await event.deleteOne();
@@ -192,7 +192,7 @@ export const deleteEvent = asyncHandler(async (req, res) => {
 // @access  Private
 export const addEventReview = asyncHandler(async (req, res) => {
     const { rating, comment } = req.body;
-    const event = await Event.findById(req.params.id);
+    const event = await EventModel.findById(req.params.id);
 
     if (event) {
         const alreadyReviewed = event.reviews.find(
@@ -229,7 +229,7 @@ export const upgradeEvent = async (req, res) => {
     const { eventId, paymentDetails } = req.body;
 
     // Validate event existence
-    const event = await Event.findById(eventId);
+    const event = await EventModel.findById(eventId);
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
     }
@@ -256,7 +256,7 @@ export const upgradeEvent = async (req, res) => {
 export const upgradeEventPayment = async (req, res) => {
   try {
     const { eventId } = req.params;
-    const event = await Event.findById(eventId);
+    const event = await EventModel.findById(eventId);
 
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
@@ -283,7 +283,7 @@ export const confirmUpgradePayment = async (req, res) => {
       return res.status(400).json({ message: "Payment verification failed" });
     }
 
-    const event = await Event.findByIdAndUpdate(eventId, { isPaid: true }, { new: true });
+    const event = await EventModel.findByIdAndUpdate(eventId, { isPaid: true }, { new: true });
 
     res.status(200).json({ message: "Event upgraded successfully", event });
   } catch (error) {
@@ -308,7 +308,7 @@ const uploadEventMedia = asyncHandler(async (req, res) => {
     const { eventId } = req.params;
     const { brochures, flyers } = req.body; // Assume URLs are provided
 
-    const event = await Event.findById(eventId);
+    const event = await EventModel.findById(eventId);
     if (!event) {
         res.status(404);
         throw new Error('Event not found');
@@ -329,7 +329,7 @@ const addEventProducts = asyncHandler(async (req, res) => {
     const { eventId } = req.params;
     const { productIds } = req.body;
 
-    const event = await Event.findById(eventId);
+    const event = await EventModel.findById(eventId);
     if (!event) {
         res.status(404);
         throw new Error('Event not found');
