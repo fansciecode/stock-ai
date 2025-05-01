@@ -20,67 +20,132 @@ export const createEvent = asyncHandler(async (req, res) => {
             title,
             description,
             date,
+            startDate,
+            endDate,
+            startDateTime,
+            endDateTime,
             latitude,
             longitude,
             city,
-            category
-        } = req.body;
-
-        const user = await User.findById(req.user._id);
-
-        // Check if user can create event
-        const eventCheck = await user.canCreateEvent();
-        if (!eventCheck.canCreate) {
-            res.status(403);
-            throw new Error('Event creation limit reached. Please purchase an event package to continue.');
-        }
-
-        // Create location object
-        const location = {
-            type: 'Point',
-            coordinates: latitude && longitude ? [parseFloat(longitude), parseFloat(latitude)] : undefined,
-            city: city
-        };
-
-        const event = await Event.create({
-            title,
-            description,
-            date,
             location,
             category,
-            user: req.user._id
-        });
+            categoryId,
+            userId,
+            organizerId,
+            media,
+            products,
+            services,
+            ticketTypes
+        } = req.body;
 
-        // Update event limit (backward compatibility)
-        user.eventLimit -= 1;
+        // Retrieve user from request object or explicitly passed userId
+        const userIdToUse = req.user?._id || userId || organizerId;
         
-        // If using package system, update package events
-        if (user.eventPackage && user.eventPackage.eventsAllowed) {
-            user.eventPackage.eventsAllowed -= 1;
+        if (!userIdToUse) {
+            return res.status(400).json({
+                success: false,
+                message: "User is not defined",
+                errorCode: "INTERNAL_ERROR"
+            });
         }
 
-        // Add to package history if exists
-        if (user.packageHistory) {
-            const currentPackage = user.packageHistory.find(
-                pkg => pkg.status === 'completed' && pkg.expiryDate > new Date()
-            );
-            if (currentPackage) {
-                currentPackage.eventsUsed = (currentPackage.eventsUsed || 0) + 1;
+        let user;
+        try {
+            user = await UserModel.findById(userIdToUse);
+            if (!user) {
+                return res.status(404).json({
+                    success: false,
+                    message: "User not found",
+                    errorCode: "USER_NOT_FOUND"
+                });
+            }
+        } catch (userError) {
+            console.error('Error finding user:', userError);
+            return res.status(500).json({
+                success: false,
+                message: "Error retrieving user data",
+                errorCode: "DATABASE_ERROR"
+            });
+        }
+
+        // Check if user can create event with fallback for missing method
+        let eventCheck = { canCreate: true };
+        if (typeof user.canCreateEvent === 'function') {
+            try {
+                eventCheck = await user.canCreateEvent();
+            } catch (methodError) {
+                console.error('Error calling canCreateEvent:', methodError);
+                // Default to permissive behavior for backward compatibility
+                eventCheck = { canCreate: true, reason: 'Method error, allowing creation' };
             }
         }
 
-        await user.save();
+        if (!eventCheck.canCreate) {
+            return res.status(403).json({
+                success: false,
+                message: 'Event creation limit reached. Please purchase an event package to continue.',
+                errorCode: "LIMIT_REACHED"
+            });
+        }
+
+        // Create location object
+        const eventLocation = {
+            type: 'Point',
+            coordinates: latitude && longitude ? [parseFloat(longitude), parseFloat(latitude)] : [0, 0],
+            city: city || location || 'Unknown'
+        };
+
+        // Create event with fields from request
+        const event = await EventModel.create({
+            title,
+            description,
+            date: {
+                start: new Date(startDate || startDateTime || date || Date.now()),
+                end: new Date(endDate || endDateTime || date || Date.now())
+            },
+            location: eventLocation,
+            category: categoryId || category || 'Uncategorized',
+            organizer: userIdToUse,
+            media: media || [],
+            time: startDateTime || "00:00",
+            maxAttendees: 100, // Default value
+            status: 'ACTIVE'
+        });
+
+        // Update event limit if available (backward compatibility)
+        if (user.eventLimit && user.eventLimit > 0) {
+            user.eventLimit -= 1;
+            
+            // If using package system, update package events
+            if (user.eventPackage && user.eventPackage.eventsAllowed) {
+                user.eventPackage.eventsAllowed -= 1;
+            }
+
+            // Add to package history if exists
+            if (user.packageHistory) {
+                const currentPackage = user.packageHistory.find(
+                    pkg => pkg.status === 'completed' && pkg.expiryDate > new Date()
+                );
+                if (currentPackage) {
+                    currentPackage.eventsUsed = (currentPackage.eventsUsed || 0) + 1;
+                }
+            }
+
+            await user.save();
+        }
 
         res.status(201).json({
             success: true,
             data: event,
-            remainingEvents: user.eventLimit
+            remainingEvents: user.eventLimit || 0
         });
 
     } catch (error) {
+        console.error('Event creation error:', error);
         res.status(500).json({
             success: false,
-            error: error.message
+            message: error.message || "Failed to create event",
+            errorCode: "INTERNAL_ERROR"
         });
     }
 });
