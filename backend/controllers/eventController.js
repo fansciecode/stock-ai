@@ -8,6 +8,8 @@ import { UserModel } from '../models/userModel.js';
 import Category from '../models/categoryModel.js';
 import EventOptimizer from '../services/ai/events/eventOptimizer.js';
 import EventAutoGenerator from '../services/ai/events/eventAutoGenerator.js';
+import mongoose from 'mongoose';
+import { processMediaUrls } from '../utils/mediaUtils.js';
 
 
 
@@ -43,19 +45,56 @@ export const createEvent = asyncHandler(async (req, res) => {
         
         // Ensure media is properly formatted as an array
         let formattedMedia = [];
+        
+        // For now, since we're getting a validation error, just store the URLs as placeholders
+        // This is a temporary fix until we implement proper media upload
         if (media) {
             if (typeof media === 'string') {
                 try {
                     // Try to parse if it's a stringified JSON
-                    formattedMedia = JSON.parse(media);
+                    const parsedMedia = JSON.parse(media);
+                    if (Array.isArray(parsedMedia)) {
+                        formattedMedia = parsedMedia.map(item => ({
+                            id: item.id || new mongoose.Types.ObjectId().toString(),
+                            caption: item.caption || '',
+                            type: item.type || 'image',
+                            url: item.url || ''
+                        }));
+                    }
                 } catch (e) {
                     console.error("Error parsing media string:", e);
-                    formattedMedia = [];
+                    // If parsing fails, store as a single item with the string as URL
+                    formattedMedia = [{ 
+                        id: new mongoose.Types.ObjectId().toString(),
+                        caption: 'Media',
+                        type: 'unknown',
+                        url: media
+                    }];
                 }
             } else if (Array.isArray(media)) {
-                formattedMedia = media;
+                // If it's already an array, map each item to ensure proper format
+                formattedMedia = media.map(item => ({
+                    id: item.id || new mongoose.Types.ObjectId().toString(),
+                    caption: item.caption || '',
+                    type: item.type || 'image',
+                    url: item.url || ''
+                }));
+            } else if (media && typeof media === 'object') {
+                // If it's a single object, convert to array with one item
+                formattedMedia = [{
+                    id: media.id || new mongoose.Types.ObjectId().toString(),
+                    caption: media.caption || '',
+                    type: media.type || 'image',
+                    url: media.url || ''
+                }];
             }
         }
+        
+        console.log("Formatted media:", JSON.stringify(formattedMedia));
+        
+        // Process the media URLs to handle Android content URIs
+        const processedMedia = await processMediaUrls(formattedMedia);
+        console.log("Processed media:", JSON.stringify(processedMedia));
 
         // Retrieve user from request object or explicitly passed userId
         const userIdToUse = req.user?._id || userId || organizerId;
@@ -125,7 +164,7 @@ export const createEvent = asyncHandler(async (req, res) => {
             location: eventLocation,
             category: categoryId || category || 'Uncategorized',
             organizer: userIdToUse,
-            media: formattedMedia,
+            media: processedMedia,
             time: startDateTime || "00:00",
             maxAttendees: 100, // Default value
             status: 'ACTIVE'
