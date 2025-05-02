@@ -1,7 +1,7 @@
 import { OrderModel } from '../models/orderModel.js';
 import { ProductModel } from '../models/productModel.js';
 import { BusinessModel } from '../models/businessModel.js';
-import { generateOTP, sendSMS } from '../utils/otpService.js';
+import { generateOTP, sendOTPViaSMS } from '../utils/otpService.js';
 import { createPaymentIntent } from '../services/paymentService.js';
 import { processPayment, initiateRefund } from '../utils/paymentUtils.js';
 import { calculateDeliveryCost, findDeliveryPartner } from '../utils/deliveryUtils.js';

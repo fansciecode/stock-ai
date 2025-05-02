@@ -68,7 +68,11 @@ const eventSchema = new mongoose.Schema({
     media: [{
         id: String,
         caption: String,
-        type: String,
+        type: {
+            type: String,
+            enum: ['image', 'video', 'document'],
+            default: 'image'
+        },
         url: String
     }],
     time: { type: String, required: true },

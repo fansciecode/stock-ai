@@ -3,11 +3,27 @@ import twilio from 'twilio';
 
 const logger = createLogger('otpService');
 
-// Initialize Twilio client
-const twilioClient = twilio(
-    process.env.TWILIO_ACCOUNT_SID,
-    process.env.TWILIO_AUTH_TOKEN
-);
+// Initialize Twilio client conditionally
+let twilioClient;
+let smsDisabled = false;
+
+try {
+    if (process.env.SKIP_SMS_NOTIFICATIONS === 'true') {
+        logger.info('NOTICE: SMS/OTP services are disabled for testing');
+        smsDisabled = true;
+    } else if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+        logger.warn('WARNING: Twilio configuration missing, SMS/OTP services will be disabled');
+        smsDisabled = true;
+    } else {
+        twilioClient = twilio(
+            process.env.TWILIO_ACCOUNT_SID,
+            process.env.TWILIO_AUTH_TOKEN
+        );
+    }
+} catch (error) {
+    logger.error('Error initializing Twilio client:', error);
+    smsDisabled = true;
+}
 
 /**
  * Generate a random OTP
@@ -25,26 +41,29 @@ export const generateOTP = (length = 6) => {
 
 /**
  * Send OTP via SMS
- * @param {string} phoneNumber - Recipient's phone number
+ * @param {string} phoneNumber - Recipient phone number
  * @param {string} otp - OTP to send
- * @returns {Promise} Result of SMS sending
+ * @returns {Promise<object>} Twilio response
  */
-export const sendSMS = async (phoneNumber, otp) => {
+export const sendOTPViaSMS = async (phoneNumber, otp) => {
     try {
+        // If SMS is disabled, just log and return success
+        if (smsDisabled) {
+            logger.info(`OTP SMS [DISABLED] To: ${phoneNumber}, OTP: ${otp}`);
+            return { success: true, disabled: true };
+        }
+        
         const message = await twilioClient.messages.create({
-            body: `Your OTP for order verification is: ${otp}. Valid for 10 minutes.`,
+            body: `Your IBCM verification code is: ${otp}. Valid for 10 minutes.`,
             from: process.env.TWILIO_PHONE_NUMBER,
             to: phoneNumber
         });
-
-        logger.info(`SMS sent successfully to ${phoneNumber}. SID: ${message.sid}`);
-        return {
-            success: true,
-            messageId: message.sid
-        };
+        
+        logger.info(`OTP sent to ${phoneNumber}`);
+        return { success: true, sid: message.sid };
     } catch (error) {
-        logger.error(`Failed to send SMS to ${phoneNumber}:`, error);
-        throw new Error(`SMS sending failed: ${error.message}`);
+        logger.error(`Failed to send OTP to ${phoneNumber}:`, error);
+        throw error;
     }
 };
 

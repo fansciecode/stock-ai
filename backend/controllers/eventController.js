@@ -42,74 +42,51 @@ export const createEvent = asyncHandler(async (req, res) => {
         } = req.body;
 
         // Log the incoming media for debugging
-        logger.info(`Received media: ${typeof media === 'string' ? media : JSON.stringify(media)}`);
+        logger.info(`Received media: ${JSON.stringify(media)}`);
         
         // Ensure media is properly formatted as an array of objects
         let formattedMedia = [];
         
         if (media) {
-            if (typeof media === 'string') {
-                try {
+            try {
+                if (typeof media === 'string') {
                     // Try to parse if it's a stringified JSON
-                    const parsedMedia = JSON.parse(media);
-                    if (Array.isArray(parsedMedia)) {
-                        formattedMedia = parsedMedia;
-                    } else {
-                        formattedMedia = [parsedMedia];
+                    try {
+                        const parsedMedia = JSON.parse(media);
+                        formattedMedia = Array.isArray(parsedMedia) ? parsedMedia : [parsedMedia];
+                    } catch (e) {
+                        // If parsing fails, treat as a single URL
+                        formattedMedia = [{ 
+                            id: new mongoose.Types.ObjectId().toString(),
+                            caption: 'Media',
+                            type: 'image',
+                            url: media
+                        }];
                     }
-                } catch (e) {
-                    logger.error(`Error parsing media string: ${e.message}`);
-                    // If parsing fails, store as a single item with the string as URL
-                    formattedMedia = [{ 
-                        id: new mongoose.Types.ObjectId().toString(),
-                        caption: 'Media',
-                        type: 'image',
-                        url: media
-                    }];
+                } else if (Array.isArray(media)) {
+                    formattedMedia = media;
+                } else if (typeof media === 'object') {
+                    formattedMedia = [media];
                 }
-            } else if (Array.isArray(media)) {
-                formattedMedia = media;
-            } else if (media && typeof media === 'object') {
-                formattedMedia = [media];
+                
+                // Ensure each media item has all required fields
+                formattedMedia = formattedMedia.map(item => ({
+                    id: item.id || new mongoose.Types.ObjectId().toString(),
+                    caption: item.caption || '',
+                    type: item.type || 'image',
+                    url: item.url || ''
+                }));
+            } catch (mediaError) {
+                logger.error(`Error processing media: ${mediaError.message}`);
+                formattedMedia = [];
             }
         }
         
         logger.info(`Formatted media: ${JSON.stringify(formattedMedia)}`);
         
-        // Process content URIs and prepare actual media array
-        let finalMediaItems = [];
-        
-        for (const item of formattedMedia) {
-            const url = item.url || '';
-            
-            // For content URIs, create placeholder URLs for now
-            // In a production environment, these should be actual uploaded files
-            if (url.startsWith('content://')) {
-                const mediaType = item.type === 'video' ? 'video' : 'image';
-                const mediaId = item.id || new mongoose.Types.ObjectId().toString();
-                
-                // Instead of generating placeholder URLs, store the content URI
-                // The Android app will need to upload these files separately
-                finalMediaItems.push({
-                    id: mediaId,
-                    caption: item.caption || '',
-                    type: mediaType,
-                    url: `/uploads/${mediaType}s/placeholder_${mediaId}.jpg` // Use a simple placeholder
-                });
-                
-                logger.info(`Content URI detected: ${url}. Using placeholder until file is uploaded.`);
-            } else if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/uploads/')) {
-                // For web URLs or server paths, use them directly
-                finalMediaItems.push({
-                    id: item.id || new mongoose.Types.ObjectId().toString(),
-                    caption: item.caption || '',
-                    type: item.type || 'image',
-                    url: url
-                });
-            }
-        }
-        
-        logger.info(`Final media items: ${JSON.stringify(finalMediaItems)}`);
+        // Process media URLs (especially content URIs from Android)
+        const processedMedia = await processMediaUrls(formattedMedia);
+        logger.info(`Processed media: ${JSON.stringify(processedMedia)}`);
 
         // Retrieve user from request object or explicitly passed userId
         const userIdToUse = req.user?._id || userId || organizerId;
@@ -179,7 +156,7 @@ export const createEvent = asyncHandler(async (req, res) => {
             location: eventLocation,
             category: categoryId || category || 'Uncategorized',
             organizer: userIdToUse,
-            media: finalMediaItems,
+            media: processedMedia,
             time: startDateTime || "00:00",
             maxAttendees: 100, // Default value
             status: 'ACTIVE'
@@ -187,7 +164,7 @@ export const createEvent = asyncHandler(async (req, res) => {
         
         logger.info(`Creating event with data: ${JSON.stringify({
             ...eventData,
-            media: `${finalMediaItems.length} items` // Log media length to keep output reasonable
+            media: `${processedMedia.length} items` // Log media length to keep output reasonable
         })}`);
         
         const event = await EventModel.create(eventData);

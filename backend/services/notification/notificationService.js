@@ -5,25 +5,53 @@ import { NotificationModel } from '../../models/notificationModel.js';
 
 export class NotificationService {
     constructor() {
-        // Email configuration
-        this.emailTransporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: process.env.SMTP_PORT,
-            secure: true,
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS
+        // Email configuration - make it optional for testing
+        try {
+            if (process.env.SKIP_EMAIL_NOTIFICATIONS === 'true') {
+                console.log('NOTICE: Email notifications are disabled for testing');
+                this.emailDisabled = true;
+            } else if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+                console.warn('WARNING: Email configuration missing, email notifications will be disabled');
+                this.emailDisabled = true;
+            } else {
+                this.emailTransporter = nodemailer.createTransport({
+                    host: process.env.SMTP_HOST,
+                    port: process.env.SMTP_PORT,
+                    secure: true,
+                    auth: {
+                        user: process.env.SMTP_USER,
+                        pass: process.env.SMTP_PASS
+                    }
+                });
+                this.emailDisabled = false;
             }
-        });
+        } catch (error) {
+            console.error('Error setting up email service:', error);
+            this.emailDisabled = true;
+        }
 
-        // SMS configuration
-        this.smsClient = twilio(
-            process.env.TWILIO_ACCOUNT_SID,
-            process.env.TWILIO_AUTH_TOKEN
-        );
+        // SMS configuration - make it optional for testing
+        try {
+            if (process.env.SKIP_SMS_NOTIFICATIONS === 'true') {
+                console.log('NOTICE: SMS notifications are disabled for testing');
+                this.smsDisabled = true;
+            } else if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+                console.warn('WARNING: Twilio configuration missing, SMS notifications will be disabled');
+                this.smsDisabled = true;
+            } else {
+                this.smsClient = twilio(
+                    process.env.TWILIO_ACCOUNT_SID,
+                    process.env.TWILIO_AUTH_TOKEN
+                );
+                this.smsDisabled = false;
+            }
+        } catch (error) {
+            console.error('Error setting up SMS service:', error);
+            this.smsDisabled = true;
+        }
 
-        // Web Push configuration
-        this.webPush = new WebPushService();
+        // Web Push configuration is handled by the WebPushService class
+        this.webPushService = new WebPushService();
     }
 
     async sendNotification(userId, notification) {
@@ -70,6 +98,12 @@ export class NotificationService {
     }
 
     async sendEmail(userId, notification) {
+        // If disabled, just log the message and return success
+        if (this.emailDisabled) {
+            console.log(`EMAIL [DISABLED] To: ${userId}, Subject: ${notification.subject}`);
+            return { success: true, disabled: true };
+        }
+
         try {
             const user = await this.getUserDetails(userId);
             const mailOptions = {
@@ -79,7 +113,8 @@ export class NotificationService {
                 html: this.generateEmailTemplate(notification)
             };
 
-            return await this.emailTransporter.sendMail(mailOptions);
+            const result = await this.emailTransporter.sendMail(mailOptions);
+            return { success: true, result };
         } catch (error) {
             console.error('Email sending error:', error);
             throw error;
@@ -87,13 +122,20 @@ export class NotificationService {
     }
 
     async sendSMS(userId, notification) {
+        // If disabled, just log the message and return success
+        if (this.smsDisabled) {
+            console.log(`SMS [DISABLED] To: ${userId}, Body: ${notification.content}`);
+            return { success: true, disabled: true };
+        }
+
         try {
             const user = await this.getUserDetails(userId);
-            return await this.smsClient.messages.create({
+            const result = await this.smsClient.messages.create({
                 body: notification.content,
                 from: process.env.TWILIO_PHONE_NUMBER,
                 to: user.phone
             });
+            return { success: true, result };
         } catch (error) {
             console.error('SMS sending error:', error);
             throw error;
@@ -105,7 +147,7 @@ export class NotificationService {
             const subscription = await this.getWebPushSubscription(userId);
             if (!subscription) return null;
 
-            return await this.webPush.sendNotification(
+            return await this.webPushService.sendNotification(
                 subscription,
                 JSON.stringify({
                     title: notification.subject,

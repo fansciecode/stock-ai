@@ -23,16 +23,27 @@ export const handleContentUris = asyncHandler(async (req, res) => {
             });
         }
         
+        logger.info(`Processing ${contentUris.length} content URIs for Android app`);
+        
         // Process the content URIs
-        const processedItems = contentUris.map(uri => {
+        const processedItems = contentUris.map(item => {
+            // Handle both string URIs and objects with uri property
+            const uri = typeof item === 'string' ? item : item.uri || '';
+            const providedId = typeof item === 'object' ? item.id : null;
+            const providedCaption = typeof item === 'object' ? item.caption : null;
+            
             const isVideo = uri.toLowerCase().includes('video');
             const mediaType = isVideo ? 'video' : 'image';
-            const mediaId = new mongoose.Types.ObjectId().toString();
+            const mediaId = providedId || new mongoose.Types.ObjectId().toString();
+            const caption = providedCaption || (isVideo ? 'Video' : 'Image');
+            
+            logger.info(`Processing ${mediaType} with URI: ${uri.substring(0, 50)}...`);
             
             return {
                 id: mediaId,
                 uri: uri,
                 type: mediaType,
+                caption: caption,
                 placeholder: `/uploads/${mediaType}s/placeholder_${mediaId}.jpg`,
                 uploadUrl: `/api/media/upload`
             };
@@ -46,7 +57,7 @@ export const handleContentUris = asyncHandler(async (req, res) => {
                 // Add placeholder media items to the event
                 const placeholderMedia = processedItems.map(item => ({
                     id: item.id,
-                    caption: 'Pending upload',
+                    caption: item.caption,
                     type: item.type,
                     url: item.placeholder,
                 }));
@@ -56,6 +67,8 @@ export const handleContentUris = asyncHandler(async (req, res) => {
                 await event.save();
                 
                 logger.info(`Added ${placeholderMedia.length} media placeholders to event ${eventId}`);
+            } else {
+                logger.warn(`Event ${eventId} not found when processing content URIs`);
             }
         }
         
