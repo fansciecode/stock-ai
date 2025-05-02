@@ -66,9 +66,10 @@ const eventSchema = new mongoose.Schema({
     },
     tags: [String],
     media: [{
+        id: String,
+        caption: String,
         type: String,
-        url: String,
-        description: String
+        url: String
     }],
     time: { type: String, required: true },
     maxAttendees: { type: Number, required: true },

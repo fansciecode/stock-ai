@@ -38,6 +38,25 @@ export const createEvent = asyncHandler(async (req, res) => {
             ticketTypes
         } = req.body;
 
+        // Log the incoming media for debugging
+        console.log("Received media:", JSON.stringify(media));
+        
+        // Ensure media is properly formatted as an array
+        let formattedMedia = [];
+        if (media) {
+            if (typeof media === 'string') {
+                try {
+                    // Try to parse if it's a stringified JSON
+                    formattedMedia = JSON.parse(media);
+                } catch (e) {
+                    console.error("Error parsing media string:", e);
+                    formattedMedia = [];
+                }
+            } else if (Array.isArray(media)) {
+                formattedMedia = media;
+            }
+        }
+
         // Retrieve user from request object or explicitly passed userId
         const userIdToUse = req.user?._id || userId || organizerId;
         
@@ -106,7 +125,7 @@ export const createEvent = asyncHandler(async (req, res) => {
             location: eventLocation,
             category: categoryId || category || 'Uncategorized',
             organizer: userIdToUse,
-            media: media || [],
+            media: formattedMedia,
             time: startDateTime || "00:00",
             maxAttendees: 100, // Default value
             status: 'ACTIVE'
