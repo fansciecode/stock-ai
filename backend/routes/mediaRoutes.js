@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { protect } from '../middleware/authMiddleware.js';
-import { uploadMedia, getMediaById } from '../controllers/mediaController.js';
+import { uploadMedia, getMediaById, updateEventMedia } from '../controllers/mediaController.js';
 
 const router = express.Router();
 
@@ -65,5 +65,6 @@ const upload = multer({
 // Routes
 router.post('/upload', protect, upload.single('file'), uploadMedia);
 router.get('/:id', getMediaById);
+router.put('/event/:eventId', protect, updateEventMedia);
 
 export default router; 

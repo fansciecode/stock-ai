@@ -29,6 +29,7 @@ import cookieParser from 'cookie-parser';
 // import { rateLimiter } from './middleware/rateLimiter.js'; // Temporarily disabled
 import bookingRoutes from './routes/bookingRoutes.js';
 import mediaRoutes from './routes/mediaRoutes.js';
+import androidRoutes from './routes/androidRoutes.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import morgan from 'morgan';
@@ -109,6 +110,7 @@ app.use('/api/business', businessRoutes);
 app.use("/api/external", externalRoutes);
 app.use('/api/growth', growthRoutes);
 app.use('/api/media', mediaRoutes);
+app.use('/api/android', androidRoutes);
 
 // Serve uploaded files with correct path
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

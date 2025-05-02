@@ -44,7 +44,7 @@ export const createEvent = asyncHandler(async (req, res) => {
         // Log the incoming media for debugging
         logger.info(`Received media: ${typeof media === 'string' ? media : JSON.stringify(media)}`);
         
-        // Ensure media is properly formatted as an array
+        // Ensure media is properly formatted as an array of objects
         let formattedMedia = [];
         
         if (media) {
@@ -62,27 +62,54 @@ export const createEvent = asyncHandler(async (req, res) => {
                     // If parsing fails, store as a single item with the string as URL
                     formattedMedia = [{ 
                         id: new mongoose.Types.ObjectId().toString(),
+                        caption: 'Media',
                         type: 'image',
                         url: media
                     }];
                 }
             } else if (Array.isArray(media)) {
-                // If it's already an array, use it directly
                 formattedMedia = media;
             } else if (media && typeof media === 'object') {
-                // If it's a single object, convert to array with one item
                 formattedMedia = [media];
             }
         }
         
         logger.info(`Formatted media: ${JSON.stringify(formattedMedia)}`);
         
-        // Determine base URL for media processing
-        const baseUrl = process.env.BASE_URL || 'https://api.yourdomain.com';
+        // Process content URIs and prepare actual media array
+        let finalMediaItems = [];
         
-        // Process the media URLs to handle Android content URIs
-        const processedMedia = await processMediaUrls(formattedMedia, { baseUrl });
-        logger.info(`Processed media: ${JSON.stringify(processedMedia)}`);
+        for (const item of formattedMedia) {
+            const url = item.url || '';
+            
+            // For content URIs, create placeholder URLs for now
+            // In a production environment, these should be actual uploaded files
+            if (url.startsWith('content://')) {
+                const mediaType = item.type === 'video' ? 'video' : 'image';
+                const mediaId = item.id || new mongoose.Types.ObjectId().toString();
+                
+                // Instead of generating placeholder URLs, store the content URI
+                // The Android app will need to upload these files separately
+                finalMediaItems.push({
+                    id: mediaId,
+                    caption: item.caption || '',
+                    type: mediaType,
+                    url: `/uploads/${mediaType}s/placeholder_${mediaId}.jpg` // Use a simple placeholder
+                });
+                
+                logger.info(`Content URI detected: ${url}. Using placeholder until file is uploaded.`);
+            } else if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/uploads/')) {
+                // For web URLs or server paths, use them directly
+                finalMediaItems.push({
+                    id: item.id || new mongoose.Types.ObjectId().toString(),
+                    caption: item.caption || '',
+                    type: item.type || 'image',
+                    url: url
+                });
+            }
+        }
+        
+        logger.info(`Final media items: ${JSON.stringify(finalMediaItems)}`);
 
         // Retrieve user from request object or explicitly passed userId
         const userIdToUse = req.user?._id || userId || organizerId;
@@ -142,7 +169,7 @@ export const createEvent = asyncHandler(async (req, res) => {
         };
 
         // Create event with fields from request
-        const event = await EventModel.create({
+        const eventData = {
             title,
             description,
             date: {
@@ -152,11 +179,18 @@ export const createEvent = asyncHandler(async (req, res) => {
             location: eventLocation,
             category: categoryId || category || 'Uncategorized',
             organizer: userIdToUse,
-            media: processedMedia,
+            media: finalMediaItems,
             time: startDateTime || "00:00",
             maxAttendees: 100, // Default value
             status: 'ACTIVE'
-        });
+        };
+        
+        logger.info(`Creating event with data: ${JSON.stringify({
+            ...eventData,
+            media: `${finalMediaItems.length} items` // Log media length to keep output reasonable
+        })}`);
+        
+        const event = await EventModel.create(eventData);
 
         // Update event limit if available (backward compatibility)
         if (user.eventLimit && user.eventLimit > 0) {
@@ -179,6 +213,9 @@ export const createEvent = asyncHandler(async (req, res) => {
 
             await user.save();
         }
+        
+        // Get the base URL for API
+        const baseUrl = process.env.BASE_URL || req.protocol + '://' + req.get('host');
 
         // Include media upload instructions for Android client in the response
         res.status(201).json({
@@ -186,11 +223,11 @@ export const createEvent = asyncHandler(async (req, res) => {
             data: event,
             remainingEvents: user.eventLimit || 0,
             mediaUploadUrl: `${baseUrl}/api/media/upload`,
-            mediaInstructions: "For media items with content:// URIs, please upload via the media API endpoint and update event"
+            mediaInstructions: "For media items with content:// URIs, please upload via the media API endpoint and update the event"
         });
 
     } catch (error) {
-        console.error('Event creation error:', error);
+        logger.error(`Event creation error: ${error}`);
         res.status(500).json({
             success: false,
             message: error.message || "Failed to create event",
