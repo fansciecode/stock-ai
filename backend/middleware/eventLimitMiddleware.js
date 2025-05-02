@@ -2,7 +2,7 @@ import asyncHandler from "express-async-handler";
 import { UserModel } from "../models/userModel.js";
 
 export const checkEventLimit = asyncHandler(async (req, res, next) => {
-  const user = await User.findById(req.user._id);
+  const user = await UserModel.findById(req.user._id);
   
   if (!user) {
     res.status(401);
