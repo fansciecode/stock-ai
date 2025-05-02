@@ -10,8 +10,9 @@ import EventOptimizer from '../services/ai/events/eventOptimizer.js';
 import EventAutoGenerator from '../services/ai/events/eventAutoGenerator.js';
 import mongoose from 'mongoose';
 import { processMediaUrls } from '../utils/mediaUtils.js';
+import { createLogger } from '../utils/logger.js';
 
-
+const logger = createLogger('eventController');
 
 // @desc Create a new event
 // @route POST /api/events
@@ -41,60 +42,47 @@ export const createEvent = asyncHandler(async (req, res) => {
         } = req.body;
 
         // Log the incoming media for debugging
-        console.log("Received media:", JSON.stringify(media));
+        logger.info(`Received media: ${typeof media === 'string' ? media : JSON.stringify(media)}`);
         
         // Ensure media is properly formatted as an array
         let formattedMedia = [];
         
-        // For now, since we're getting a validation error, just store the URLs as placeholders
-        // This is a temporary fix until we implement proper media upload
         if (media) {
             if (typeof media === 'string') {
                 try {
                     // Try to parse if it's a stringified JSON
                     const parsedMedia = JSON.parse(media);
                     if (Array.isArray(parsedMedia)) {
-                        formattedMedia = parsedMedia.map(item => ({
-                            id: item.id || new mongoose.Types.ObjectId().toString(),
-                            caption: item.caption || '',
-                            type: item.type || 'image',
-                            url: item.url || ''
-                        }));
+                        formattedMedia = parsedMedia;
+                    } else {
+                        formattedMedia = [parsedMedia];
                     }
                 } catch (e) {
-                    console.error("Error parsing media string:", e);
+                    logger.error(`Error parsing media string: ${e.message}`);
                     // If parsing fails, store as a single item with the string as URL
                     formattedMedia = [{ 
                         id: new mongoose.Types.ObjectId().toString(),
-                        caption: 'Media',
-                        type: 'unknown',
+                        type: 'image',
                         url: media
                     }];
                 }
             } else if (Array.isArray(media)) {
-                // If it's already an array, map each item to ensure proper format
-                formattedMedia = media.map(item => ({
-                    id: item.id || new mongoose.Types.ObjectId().toString(),
-                    caption: item.caption || '',
-                    type: item.type || 'image',
-                    url: item.url || ''
-                }));
+                // If it's already an array, use it directly
+                formattedMedia = media;
             } else if (media && typeof media === 'object') {
                 // If it's a single object, convert to array with one item
-                formattedMedia = [{
-                    id: media.id || new mongoose.Types.ObjectId().toString(),
-                    caption: media.caption || '',
-                    type: media.type || 'image',
-                    url: media.url || ''
-                }];
+                formattedMedia = [media];
             }
         }
         
-        console.log("Formatted media:", JSON.stringify(formattedMedia));
+        logger.info(`Formatted media: ${JSON.stringify(formattedMedia)}`);
+        
+        // Determine base URL for media processing
+        const baseUrl = process.env.BASE_URL || 'https://api.yourdomain.com';
         
         // Process the media URLs to handle Android content URIs
-        const processedMedia = await processMediaUrls(formattedMedia);
-        console.log("Processed media:", JSON.stringify(processedMedia));
+        const processedMedia = await processMediaUrls(formattedMedia, { baseUrl });
+        logger.info(`Processed media: ${JSON.stringify(processedMedia)}`);
 
         // Retrieve user from request object or explicitly passed userId
         const userIdToUse = req.user?._id || userId || organizerId;
@@ -118,7 +106,7 @@ export const createEvent = asyncHandler(async (req, res) => {
                 });
             }
         } catch (userError) {
-            console.error('Error finding user:', userError);
+            logger.error(`Error finding user: ${userError.message}`);
             return res.status(500).json({
                 success: false,
                 message: "Error retrieving user data",
@@ -132,7 +120,7 @@ export const createEvent = asyncHandler(async (req, res) => {
             try {
                 eventCheck = await user.canCreateEvent();
             } catch (methodError) {
-                console.error('Error calling canCreateEvent:', methodError);
+                logger.error(`Error calling canCreateEvent: ${methodError.message}`);
                 // Default to permissive behavior for backward compatibility
                 eventCheck = { canCreate: true, reason: 'Method error, allowing creation' };
             }
@@ -192,10 +180,13 @@ export const createEvent = asyncHandler(async (req, res) => {
             await user.save();
         }
 
+        // Include media upload instructions for Android client in the response
         res.status(201).json({
             success: true,
             data: event,
-            remainingEvents: user.eventLimit || 0
+            remainingEvents: user.eventLimit || 0,
+            mediaUploadUrl: `${baseUrl}/api/media/upload`,
+            mediaInstructions: "For media items with content:// URIs, please upload via the media API endpoint and update event"
         });
 
     } catch (error) {
