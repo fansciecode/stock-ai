@@ -38,7 +38,10 @@ const storage = multer.diskStorage({
 
 // File filter to accept only images and videos
 const fileFilter = (req, file, cb) => {
-    console.log('Received file:', file.originalname, 'Mimetype:', file.mimetype);
+    console.log('Received file:', file.originalname, 'Mimetype:', file.mimetype, 'Size:', file.size);
+    
+    // Log request headers for debugging
+    console.log('Request headers:', JSON.stringify(req.headers));
     
     // Check if fileType is explicitly specified in request body
     const explicitFileType = req.body.fileType;
@@ -68,32 +71,69 @@ const upload = multer({
     storage: storage,
     fileFilter: fileFilter,
     limits: {
-        fileSize: 100 * 1024 * 1024 // 100MB limit
-    }
+        fileSize: 100 * 1024 * 1024, // 100MB limit
+        files: 1 // Allow only one file
+    },
+    preservePath: true
 });
 
-// Custom error handler for multer errors
-const handleMulterError = (err, req, res, next) => {
-    if (err instanceof multer.MulterError) {
-        // A Multer error occurred when uploading
-        console.error('Multer error:', err);
-        return res.status(400).json({
-            success: false,
-            message: `File upload error: ${err.message}`,
-            errorCode: 'UPLOAD_ERROR'
-        });
-    } else if (err) {
-        // An unknown error occurred
-        console.error('Upload error:', err);
-        return res.status(500).json({
-            success: false,
-            message: err.message || 'An unknown error occurred during file upload',
-            errorCode: 'UPLOAD_ERROR'
-        });
-    }
+// Custom middleware for debugging file upload issues
+const logUpload = (req, res, next) => {
+    console.log('Upload middleware called with body:', req.body);
     
-    // No error occurred, continue
-    next();
+    upload.single('file')(req, res, (err) => {
+        if (err) {
+            console.error('File upload error:', err.message, err.stack);
+            return res.status(500).json({
+                success: false,
+                message: err.message || 'Error uploading file',
+                errorCode: 'UPLOAD_ERROR'
+            });
+        }
+        
+        // No file attached
+        if (!req.file) {
+            console.error('No file in request or file was rejected');
+            return res.status(400).json({
+                success: false,
+                message: 'No file uploaded or file was rejected',
+                errorCode: 'NO_FILE'
+            });
+        }
+        
+        console.log('File successfully received:', {
+            filename: req.file.filename,
+            originalname: req.file.originalname,
+            path: req.file.path,
+            size: req.file.size,
+            mimetype: req.file.mimetype
+        });
+        
+        // Check if file exists and is readable
+        if (!fs.existsSync(req.file.path)) {
+            console.error('File was uploaded but does not exist on disk:', req.file.path);
+            return res.status(500).json({
+                success: false,
+                message: 'File upload issue: File was processed but not found on disk',
+                errorCode: 'FILE_NOT_FOUND'
+            });
+        }
+        
+        // Check file size to ensure it's not empty
+        const stats = fs.statSync(req.file.path);
+        console.log('Uploaded file size:', stats.size, 'bytes');
+        
+        if (stats.size === 0) {
+            console.error('Uploaded file is empty:', req.file.path);
+            return res.status(400).json({
+                success: false,
+                message: 'Uploaded file is empty',
+                errorCode: 'EMPTY_FILE'
+            });
+        }
+        
+        next();
+    });
 };
 
 /**
@@ -131,27 +171,7 @@ const handleMulterError = (err, req, res, next) => {
  *       401:
  *         description: Unauthorized
  */
-router.post('/upload', protect, (req, res, next) => {
-    upload.single('file')(req, res, (err) => {
-        if (err) {
-            console.error('File upload error:', err.message);
-            return res.status(500).json({
-                success: false,
-                message: err.message || 'Error uploading file',
-                errorCode: 'UPLOAD_ERROR'
-            });
-        }
-        // No file attached
-        if (!req.file) {
-            return res.status(400).json({
-                success: false,
-                message: 'No file uploaded or file was rejected',
-                errorCode: 'NO_FILE'
-            });
-        }
-        next();
-    });
-}, uploadMedia);
+router.post('/upload', protect, logUpload, uploadMedia);
 
 /**
  * @swagger

@@ -52,11 +52,39 @@ export const uploadToFirebase = async (file, options = {}) => {
         const { fileType = 'image', originalname = 'file', mimetype = 'image/jpeg' } = options;
         const tempFilePath = typeof file === 'string' ? file : path.join(os.tmpdir(), `${uuidv4()}-${originalname}`);
         
-        // If file is a buffer, write it to a temp file
-        if (typeof file !== 'string') {
+        logger.info(`Original file path: ${file}`);
+        logger.info(`Using temp file path: ${tempFilePath}`);
+        logger.info(`File type: ${fileType}, MIME type: ${mimetype}`);
+        
+        // Validate source file exists if it's a path
+        if (typeof file === 'string') {
+            if (!fs.existsSync(file)) {
+                throw new Error(`Source file does not exist: ${file}`);
+            }
+            
+            // Check file size to ensure it's not empty
+            const stats = fs.statSync(file);
+            logger.info(`Source file size: ${stats.size} bytes`);
+            
+            if (stats.size === 0) {
+                throw new Error('Source file is empty');
+            }
+            
+            // For string paths, we need to make sure the file is actually readable
+            await fs.promises.access(file, fs.constants.R_OK);
+        } else {
+            // If file is a buffer, write it to a temp file
             await fs.promises.writeFile(tempFilePath, file);
+            
+            // Verify the temp file was written correctly
+            const stats = fs.statSync(tempFilePath);
+            logger.info(`Temp file created with size: ${stats.size} bytes`);
+            
+            if (stats.size === 0) {
+                throw new Error('Failed to write data to temp file');
+            }
         }
-
+        
         // Determine file extension
         const fileExtension = path.extname(originalname) || 
                              (mimetype.includes('png') ? '.png' : 
@@ -64,12 +92,12 @@ export const uploadToFirebase = async (file, options = {}) => {
                               mimetype.includes('gif') ? '.gif' :
                               mimetype.includes('mp4') ? '.mp4' :
                               mimetype.includes('mov') ? '.mov' : '.dat');
-
+        
         // Generate a unique filename with the correct extension
         const uniqueFilename = `${fileType}s/${uuidv4()}${fileExtension}`;
         
         logger.info(`Uploading file to path: ${uniqueFilename}`);
-
+        
         // Upload to Firebase Storage
         const uploadOptions = {
             destination: uniqueFilename,
@@ -78,16 +106,31 @@ export const uploadToFirebase = async (file, options = {}) => {
                 metadata: {
                     firebaseStorageDownloadTokens: uuidv4(),
                 }
-            }
+            },
+            resumable: true,
+            validation: 'crc32c'
         };
-
+        
+        // Log the file that will be uploaded
+        logger.info(`Attempting to upload file ${tempFilePath} (exists: ${fs.existsSync(tempFilePath)}) to ${uniqueFilename}`);
+        
         const [uploadedFile] = await bucket.upload(tempFilePath, uploadOptions);
+        
+        // Validate the upload was successful by checking the file exists in bucket
+        const [exists] = await bucket.file(uniqueFilename).exists();
+        if (!exists) {
+            throw new Error('Upload appeared successful but file does not exist in bucket');
+        }
+        
+        // Make the file publicly accessible
+        await bucket.file(uniqueFilename).makePublic();
         
         // If we created a temp file, clean it up
         if (typeof file !== 'string') {
             await fs.promises.unlink(tempFilePath);
+            logger.info(`Temp file deleted: ${tempFilePath}`);
         }
-
+        
         // Get the public URL
         const publicUrl = `https://storage.googleapis.com/${bucketName}/${uniqueFilename}`;
         logger.info(`File uploaded successfully: ${publicUrl}`);
