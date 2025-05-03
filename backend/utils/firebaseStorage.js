@@ -122,18 +122,37 @@ export const uploadToFirebase = async (file, options = {}) => {
             throw new Error('Upload appeared successful but file does not exist in bucket');
         }
         
-        // Make the file publicly accessible
-        await bucket.file(uniqueFilename).makePublic();
-        
-        // If we created a temp file, clean it up
+        // Clean up the temp file if we created one
         if (typeof file !== 'string') {
-            await fs.promises.unlink(tempFilePath);
-            logger.info(`Temp file deleted: ${tempFilePath}`);
+            try {
+                await fs.promises.unlink(tempFilePath);
+                logger.info(`Temp file deleted: ${tempFilePath}`);
+            } catch (cleanupError) {
+                logger.warn(`Failed to clean up temp file: ${cleanupError.message}`);
+                // Continue despite cleanup error
+            }
         }
         
-        // Get the public URL
+        // Get the public URL - for uniform bucket-level access, we don't need to make individual files public
+        // The bucket itself should be configured for public access
         const publicUrl = `https://storage.googleapis.com/${bucketName}/${uniqueFilename}`;
         logger.info(`File uploaded successfully: ${publicUrl}`);
+        
+        // Check if we need to verify public access
+        try {
+            // Try to make the file public - this will fail on uniform bucket-level access but we'll catch it
+            await bucket.file(uniqueFilename).makePublic().catch(err => {
+                if (err.message.includes('uniform bucket-level access is enabled')) {
+                    logger.info('Bucket has uniform access control - file inherits bucket permissions');
+                } else {
+                    // Log other types of errors but continue
+                    logger.warn(`Note: Could not explicitly make file public: ${err.message}`);
+                }
+            });
+        } catch (aclError) {
+            // Just log the error but don't fail - if bucket has public access the file will be available
+            logger.warn(`Note: Error configuring file permissions: ${aclError.message}`);
+        }
         
         return publicUrl;
     } catch (error) {
