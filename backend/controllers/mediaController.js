@@ -5,6 +5,8 @@ import { createLogger } from '../utils/logger.js';
 import { MediaModel } from '../models/mediaModel.js';
 import { EventModel } from '../models/eventModel.js';
 import asyncHandler from 'express-async-handler';
+import { uploadToFirebase, deleteFileFromFirebase } from '../utils/firebaseStorage.js';
+import { v4 as uuidv4 } from 'uuid';
 
 const logger = createLogger('mediaController');
 
@@ -23,34 +25,47 @@ export const uploadMedia = asyncHandler(async (req, res) => {
             });
         }
 
-        logger.info(`File uploaded: ${req.file.originalname}, saved as ${req.file.filename}`);
+        logger.info(`File upload initiated: ${req.file.originalname}`);
 
         // Get additional parameters
-        const { eventId, mediaId, caption, replaceContentUri } = req.body;
+        const { eventId, mediaId, caption, replaceContentUri, fileType: explicitFileType } = req.body;
 
         // Determine media type from mimetype
-        const type = req.file.mimetype.startsWith('video') ? 'video' : 'image';
+        const fileType = explicitFileType || (req.file.mimetype.startsWith('video') ? 'video' : 'image');
 
-        // Create relative URL path
-        const urlPath = `/uploads/${type}s/${req.file.filename}`;
-        
+        // Upload file to Firebase Storage
+        const firebaseUrl = await uploadToFirebase(req.file.path, {
+            fileType,
+            originalname: req.file.originalname,
+            mimetype: req.file.mimetype
+        });
+
         // Create media entry in database
         const media = await MediaModel.create({
-            filename: req.file.filename,
+            filename: path.basename(firebaseUrl),
             originalname: req.file.originalname,
             mimetype: req.file.mimetype,
             size: req.file.size,
-            path: req.file.path,
-            url: urlPath,
-            type: type,
+            path: firebaseUrl,
+            url: firebaseUrl, // Use the Firebase URL directly
+            type: fileType,
             uploader: req.user._id,
             caption: caption || '',
             metadata: {
                 eventId: eventId || null,
                 mediaId: mediaId || null,
-                replaceContentUri: replaceContentUri || null
+                replaceContentUri: replaceContentUri || null,
+                firebaseStorage: true
             }
         });
+
+        // Clean up the local temporary file
+        try {
+            fs.unlinkSync(req.file.path);
+            logger.info(`Temporary file deleted: ${req.file.path}`);
+        } catch (err) {
+            logger.warn(`Failed to delete temporary file: ${err.message}`);
+        }
 
         // If eventId and mediaId are provided, update the event's media
         if (eventId && mediaId) {
@@ -64,7 +79,7 @@ export const uploadMedia = asyncHandler(async (req, res) => {
                     
                     if (mediaIndex !== -1) {
                         // Update the media URL
-                        event.media[mediaIndex].url = urlPath;
+                        event.media[mediaIndex].url = firebaseUrl;
                         
                         // If caption was provided, update it too
                         if (caption) {
@@ -77,8 +92,8 @@ export const uploadMedia = asyncHandler(async (req, res) => {
                         // If the mediaId doesn't exist, add it as a new media item
                         event.media.push({
                             id: mediaId,
-                            url: urlPath,
-                            type: type,
+                            url: firebaseUrl,
+                            type: fileType,
                             caption: caption || ''
                         });
                         
@@ -97,11 +112,11 @@ export const uploadMedia = asyncHandler(async (req, res) => {
             success: true,
             data: {
                 id: media._id,
-                url: urlPath,
-                type: type,
-                filename: req.file.filename
+                url: firebaseUrl,
+                type: fileType,
+                filename: path.basename(firebaseUrl)
             },
-            message: eventId ? 'File uploaded and event updated' : 'File uploaded successfully'
+            message: eventId ? 'File uploaded to Firebase Storage and event updated' : 'File uploaded to Firebase Storage successfully'
         });
     } catch (error) {
         logger.error(`Media upload error: ${error}`);
@@ -212,6 +227,72 @@ export const updateEventMedia = asyncHandler(async (req, res) => {
             success: false,
             message: error.message || 'Error updating event media',
             errorCode: 'UPDATE_ERROR'
+        });
+    }
+});
+
+/**
+ * @desc    Delete media file
+ * @route   DELETE /api/media/:id
+ * @access  Private
+ */
+export const deleteMedia = asyncHandler(async (req, res) => {
+    try {
+        const media = await MediaModel.findById(req.params.id);
+        
+        if (!media) {
+            return res.status(404).json({
+                success: false,
+                message: 'Media not found',
+                errorCode: 'NOT_FOUND'
+            });
+        }
+
+        // Check if user has permission (is uploader or admin)
+        if (media.uploader.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'You do not have permission to delete this media',
+                errorCode: 'PERMISSION_DENIED'
+            });
+        }
+
+        // Delete from Firebase Storage if stored there
+        if (media.metadata?.firebaseStorage || media.url.includes('storage.googleapis.com')) {
+            try {
+                await deleteFileFromFirebase(media.url);
+                logger.info(`Firebase file deleted: ${media.url}`);
+            } catch (error) {
+                logger.error(`Error deleting file from Firebase: ${error.message}`);
+                // Continue with database deletion even if file deletion fails
+            }
+        } else {
+            // Try to delete from local filesystem
+            try {
+                const filePath = path.resolve(process.cwd(), '..', media.url.replace(/^\//, ''));
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                    logger.info(`Local file deleted: ${filePath}`);
+                }
+            } catch (error) {
+                logger.error(`Error deleting local file: ${error.message}`);
+                // Continue with database deletion even if file deletion fails
+            }
+        }
+
+        // Delete from database
+        await MediaModel.findByIdAndDelete(req.params.id);
+
+        res.json({
+            success: true,
+            message: 'Media deleted successfully'
+        });
+    } catch (error) {
+        logger.error(`Error deleting media: ${error}`);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Error deleting media',
+            errorCode: 'DELETE_ERROR'
         });
     }
 }); 
