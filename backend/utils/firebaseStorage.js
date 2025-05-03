@@ -6,14 +6,27 @@ import fs from 'fs';
 import os from 'os';
 
 const logger = createLogger('firebaseStorage');
-const bucketName = 'ibcmserver_init';
+const bucketName = process.env.FIREBASE_STORAGE_BUCKET || 'ibcmserver_init';
 
 // Initialize Firebase Storage
 let bucket = null;
 try {
     if (admin.apps.length) {
         bucket = admin.storage().bucket(bucketName);
-        logger.info('Firebase Storage initialized successfully');
+        logger.info(`Firebase Storage initialized successfully with bucket: ${bucketName}`);
+        
+        // Test bucket access
+        bucket.getMetadata()
+            .then(() => {
+                logger.info('Firebase Storage bucket access confirmed');
+            })
+            .catch((error) => {
+                logger.error(`Firebase Storage bucket access error: ${error.message}`);
+                if (error.message.includes('Permission')) {
+                    logger.error(`Firebase Storage permission error. Please ensure the service account has Storage Admin role for bucket ${bucketName}.`);
+                    logger.error('You may need to run: gsutil iam ch serviceAccount:firebase-adminsdk-fbsvc@ibcm-28799.iam.gserviceaccount.com:objectCreator gs://ibcmserver_init');
+                }
+            });
     } else {
         logger.warn('Firebase Admin not initialized, Storage features may not work');
     }

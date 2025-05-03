@@ -22,7 +22,8 @@ let messaging = null;
 if (!admin.apps.length && process.env.NODE_ENV !== 'development') {
     try {
         admin.initializeApp({
-            credential: admin.credential.cert(firebaseConfig)
+            credential: admin.credential.cert(firebaseConfig),
+            storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'ibcmserver_init'
         });
         console.log('Firebase Admin initialized successfully');
         db = admin.firestore();
