@@ -81,6 +81,12 @@ const upload = multer({
 const logUpload = (req, res, next) => {
     console.log('Upload middleware called with body:', req.body);
     
+    // Check for content type to ensure we're getting a multipart form
+    console.log('Content-Type:', req.headers['content-type']);
+    if (!req.headers['content-type'] || !req.headers['content-type'].includes('multipart/form-data')) {
+        console.error('Invalid Content-Type, expected multipart/form-data but got:', req.headers['content-type']);
+    }
+    
     upload.single('file')(req, res, (err) => {
         if (err) {
             console.error('File upload error:', err.message, err.stack);
@@ -129,6 +135,33 @@ const logUpload = (req, res, next) => {
                 success: false,
                 message: 'Uploaded file is empty',
                 errorCode: 'EMPTY_FILE'
+            });
+        }
+        
+        // Add extra check to verify file data integrity
+        try {
+            // Read first few bytes to verify file is properly written
+            const fd = fs.openSync(req.file.path, 'r');
+            const buffer = Buffer.alloc(1024);
+            const bytesRead = fs.readSync(fd, buffer, 0, 1024, 0);
+            fs.closeSync(fd);
+            
+            console.log(`Verified file integrity: Read ${bytesRead} bytes successfully`);
+            
+            if (bytesRead === 0) {
+                console.error('File exists but cannot be read properly');
+                return res.status(400).json({
+                    success: false,
+                    message: 'File exists but cannot be read properly',
+                    errorCode: 'FILE_READ_ERROR'
+                });
+            }
+        } catch (readError) {
+            console.error('Error verifying file integrity:', readError);
+            return res.status(400).json({
+                success: false,
+                message: `Error verifying file integrity: ${readError.message}`,
+                errorCode: 'FILE_READ_ERROR'
             });
         }
         

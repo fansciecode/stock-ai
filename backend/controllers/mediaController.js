@@ -38,6 +38,51 @@ export const uploadMedia = asyncHandler(async (req, res) => {
             path: req.file.path
         })}`);
 
+        // Validate file size
+        if (req.file.size === 0) {
+            logger.error('Uploaded file has zero size');
+            return res.status(400).json({
+                success: false,
+                message: 'Uploaded file has zero size',
+                errorCode: 'EMPTY_FILE'
+            });
+        }
+
+        // Double-check file existence and size on disk
+        if (!fs.existsSync(req.file.path)) {
+            logger.error(`File does not exist at path: ${req.file.path}`);
+            return res.status(400).json({
+                success: false,
+                message: 'File does not exist on disk',
+                errorCode: 'FILE_NOT_FOUND'
+            });
+        }
+
+        const fileStats = fs.statSync(req.file.path);
+        logger.info(`File stats from disk: Size ${fileStats.size} bytes, Created: ${fileStats.birthtime}`);
+
+        if (fileStats.size === 0) {
+            logger.error('File exists but has zero size on disk');
+            return res.status(400).json({
+                success: false,
+                message: 'File exists but has zero size',
+                errorCode: 'EMPTY_FILE'
+            });
+        }
+
+        // Verify file is readable by reading a small portion
+        try {
+            const testData = fs.readFileSync(req.file.path, { encoding: null, flag: 'r', length: 1024 });
+            logger.info(`Successfully read ${testData.length} bytes from file for validation`);
+        } catch (readError) {
+            logger.error(`Error reading uploaded file: ${readError.message}`);
+            return res.status(400).json({
+                success: false,
+                message: `Error reading uploaded file: ${readError.message}`,
+                errorCode: 'FILE_READ_ERROR'
+            });
+        }
+
         // Get additional parameters
         const { eventId, mediaId, caption, replaceContentUri, fileType: explicitFileType } = req.body;
 
@@ -46,7 +91,7 @@ export const uploadMedia = asyncHandler(async (req, res) => {
         logger.info(`Determined file type: ${fileType}`);
 
         // Upload file to Firebase Storage
-        logger.info(`Attempting to upload file to Firebase Storage: ${req.file.path}`);
+        logger.info(`Attempting to upload file to Firebase Storage: ${req.file.path} (${fileStats.size} bytes)`);
         const firebaseUrl = await uploadToFirebase(req.file.path, {
             fileType,
             originalname: req.file.originalname,
@@ -58,7 +103,7 @@ export const uploadMedia = asyncHandler(async (req, res) => {
             filename: path.basename(firebaseUrl),
             originalname: req.file.originalname,
             mimetype: req.file.mimetype,
-            size: req.file.size,
+            size: fileStats.size, // Use actual file size from disk
             path: firebaseUrl,
             url: firebaseUrl, // Use the Firebase URL directly
             type: fileType,
@@ -127,7 +172,8 @@ export const uploadMedia = asyncHandler(async (req, res) => {
                 id: media._id,
                 url: firebaseUrl,
                 type: fileType,
-                filename: path.basename(firebaseUrl)
+                filename: path.basename(firebaseUrl),
+                size: fileStats.size // Include actual file size in response
             },
             message: eventId ? 'File uploaded to Firebase Storage and event updated' : 'File uploaded to Firebase Storage successfully'
         });

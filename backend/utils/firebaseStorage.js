@@ -56,51 +56,91 @@ export const uploadToFirebase = async (file, options = {}) => {
         
         logger.info(`Original file source: ${typeof file === 'string' ? 'filepath' : 'buffer'}`);
         
-        // Create a temporary file if file is a buffer, or use the provided path
+        // Verify source file exists and is readable
         if (typeof file === 'string') {
             tempFilePath = file;
             logger.info(`Using provided file path: ${tempFilePath}`);
             
-            // Validate source file exists
             if (!fs.existsSync(tempFilePath)) {
                 throw new Error(`Source file does not exist: ${tempFilePath}`);
             }
             
-            // Check file permissions and size
+            // Check file size and readability
+            const stats = fs.statSync(tempFilePath);
+            logger.info(`Source file size: ${stats.size} bytes`);
+            
+            if (stats.size === 0) {
+                throw new Error('Source file is empty');
+            }
+
+            // Try to read the file directly to verify it's readable
             try {
-                await fs.promises.access(tempFilePath, fs.constants.R_OK);
-                const stats = fs.statSync(tempFilePath);
-                logger.info(`Source file size: ${stats.size} bytes`);
+                const testData = fs.readFileSync(tempFilePath, { encoding: null, flag: 'r' });
+                logger.info(`Successfully read ${testData.length} bytes directly from file`);
                 
-                if (stats.size === 0) {
-                    throw new Error('Source file is empty');
+                if (testData.length === 0) {
+                    throw new Error('File appears to be empty or corrupted');
                 }
                 
-                // Verify file contents are readable by reading a small chunk
-                const fd = await fs.promises.open(tempFilePath, 'r');
-                const buffer = Buffer.alloc(1024);
-                const { bytesRead } = await fd.read(buffer, 0, 1024, 0);
-                await fd.close();
-                
-                if (bytesRead <= 0) {
-                    throw new Error('Could not read file contents');
+                // For small files (< 5MB), use the file content directly
+                if (stats.size < 5 * 1024 * 1024) {
+                    logger.info(`Small file detected (${stats.size} bytes), using direct content upload`);
+                    
+                    // Determine file extension
+                    const fileExtension = path.extname(originalname) || 
+                                     (mimetype.includes('png') ? '.png' : 
+                                      mimetype.includes('jpeg') || mimetype.includes('jpg') ? '.jpg' :
+                                      mimetype.includes('gif') ? '.gif' :
+                                      mimetype.includes('mp4') ? '.mp4' :
+                                      mimetype.includes('mov') ? '.mov' : '.dat');
+                    
+                    // Generate a unique filename with the correct extension
+                    const uniqueFilename = `${fileType}s/${uuidv4()}${fileExtension}`;
+                    logger.info(`Uploading file to path: ${uniqueFilename}`);
+                    
+                    // Create a file in the bucket
+                    const bucketFile = bucket.file(uniqueFilename);
+                    
+                    // Upload the file content directly
+                    await bucketFile.save(testData, {
+                        metadata: {
+                            contentType: mimetype,
+                            metadata: {
+                                firebaseStorageDownloadTokens: uuidv4(),
+                            }
+                        },
+                        resumable: false
+                    });
+                    
+                    logger.info(`Direct content upload successful for: ${uniqueFilename}`);
+                    
+                    // Try to make the file public
+                    try {
+                        await bucketFile.makePublic().catch(err => {
+                            if (err.message.includes('uniform bucket-level access is enabled')) {
+                                logger.info('Bucket has uniform access control - file inherits bucket permissions');
+                            } else {
+                                logger.warn(`Could not make file public: ${err.message}`);
+                            }
+                        });
+                    } catch (err) {
+                        logger.warn(`Error making file public: ${err.message}`);
+                    }
+                    
+                    // Return the public URL
+                    const publicUrl = `https://storage.googleapis.com/${bucketName}/${uniqueFilename}`;
+                    logger.info(`File uploaded successfully via direct method: ${publicUrl}`);
+                    return publicUrl;
                 }
-                
-                logger.info(`Successfully read ${bytesRead} bytes from file`);
             } catch (e) {
+                logger.error(`Error reading file: ${e.message}`);
                 throw new Error(`File access error: ${e.message}`);
             }
         } else {
-            // For buffer input, create a temporary file
-            tempFilePath = path.join(os.tmpdir(), `${uuidv4()}-${originalname}`);
-            shouldDeleteTempFile = true;
-            
-            logger.info(`Creating temp file for buffer: ${tempFilePath}`);
-            
-            // Ensure buffer is valid
+            // Handle buffer input
             if (!Buffer.isBuffer(file)) {
+                logger.warn(`Input is not a buffer, attempting to convert`);
                 if (typeof file === 'object') {
-                    // If it's an object but not a Buffer, try to convert
                     file = Buffer.from(file);
                 } else {
                     throw new Error('Invalid file input: Not a buffer or string path');
@@ -111,101 +151,141 @@ export const uploadToFirebase = async (file, options = {}) => {
                 throw new Error('Input buffer is empty');
             }
             
-            // Write the buffer to the temp file
-            await fs.promises.writeFile(tempFilePath, file);
+            logger.info(`Buffer size: ${file.length} bytes`);
             
-            // Verify file was written correctly
-            const stats = fs.statSync(tempFilePath);
-            logger.info(`Temp file created with size: ${stats.size} bytes`);
+            // For buffer input, we can upload directly to Firebase
+            // Determine file extension
+            const fileExtension = path.extname(originalname) || 
+                             (mimetype.includes('png') ? '.png' : 
+                              mimetype.includes('jpeg') || mimetype.includes('jpg') ? '.jpg' :
+                              mimetype.includes('gif') ? '.gif' :
+                              mimetype.includes('mp4') ? '.mp4' :
+                              mimetype.includes('mov') ? '.mov' : '.dat');
             
-            if (stats.size === 0) {
-                throw new Error('Failed to write data to temp file');
+            // Generate a unique filename with the correct extension
+            const uniqueFilename = `${fileType}s/${uuidv4()}${fileExtension}`;
+            logger.info(`Uploading buffer to path: ${uniqueFilename}`);
+            
+            // Create a file in the bucket
+            const bucketFile = bucket.file(uniqueFilename);
+            
+            // Upload the buffer directly
+            await bucketFile.save(file, {
+                metadata: {
+                    contentType: mimetype,
+                    metadata: {
+                        firebaseStorageDownloadTokens: uuidv4(),
+                    }
+                },
+                resumable: false
+            });
+            
+            logger.info(`Direct buffer upload successful for: ${uniqueFilename}`);
+            
+            // Try to make the file public
+            try {
+                await bucketFile.makePublic().catch(err => {
+                    if (err.message.includes('uniform bucket-level access is enabled')) {
+                        logger.info('Bucket has uniform access control - file inherits bucket permissions');
+                    } else {
+                        logger.warn(`Could not make file public: ${err.message}`);
+                    }
+                });
+            } catch (err) {
+                logger.warn(`Error making file public: ${err.message}`);
             }
+            
+            // Return the public URL
+            const publicUrl = `https://storage.googleapis.com/${bucketName}/${uniqueFilename}`;
+            logger.info(`Buffer uploaded successfully via direct method: ${publicUrl}`);
+            return publicUrl;
         }
         
+        // For larger files, use streaming upload
         // Determine file extension
         const fileExtension = path.extname(originalname) || 
-                            (mimetype.includes('png') ? '.png' : 
-                            mimetype.includes('jpeg') || mimetype.includes('jpg') ? '.jpg' :
-                            mimetype.includes('gif') ? '.gif' :
-                            mimetype.includes('mp4') ? '.mp4' :
-                            mimetype.includes('mov') ? '.mov' : '.dat');
+                         (mimetype.includes('png') ? '.png' : 
+                          mimetype.includes('jpeg') || mimetype.includes('jpg') ? '.jpg' :
+                          mimetype.includes('gif') ? '.gif' :
+                          mimetype.includes('mp4') ? '.mp4' :
+                          mimetype.includes('mov') ? '.mov' : '.dat');
         
         // Generate a unique filename with the correct extension
         const uniqueFilename = `${fileType}s/${uuidv4()}${fileExtension}`;
         
-        logger.info(`Uploading file to path: ${uniqueFilename}`);
+        logger.info(`Uploading large file via stream to path: ${uniqueFilename}`);
         
-        // Upload to Firebase Storage
-        const uploadOptions = {
-            destination: uniqueFilename,
+        // Create a file in the bucket
+        const bucketFile = bucket.file(uniqueFilename);
+        
+        // Create a write stream to the bucket file
+        const writeStream = bucketFile.createWriteStream({
             metadata: {
                 contentType: mimetype,
                 metadata: {
                     firebaseStorageDownloadTokens: uuidv4(),
                 }
             },
-            resumable: false, // Disable resumable uploads for small files to avoid timeout issues
-            validation: 'crc32c'
-        };
+            resumable: false
+        });
         
-        // Log the file that will be uploaded
-        logger.info(`Attempting to upload file ${tempFilePath} (size: ${fs.statSync(tempFilePath).size} bytes, exists: ${fs.existsSync(tempFilePath)}) to ${uniqueFilename}`);
+        // Create a readable stream from the file
+        const readStream = fs.createReadStream(tempFilePath);
         
-        const [uploadedFile] = await bucket.upload(tempFilePath, uploadOptions);
+        // Stream data and handle completion or errors
+        await new Promise((resolve, reject) => {
+            let bytesSent = 0;
+            
+            readStream.on('data', (chunk) => {
+                bytesSent += chunk.length;
+                if (bytesSent % (512 * 1024) === 0) { // Log every 512KB
+                    logger.info(`Streamed ${bytesSent / 1024 / 1024} MB so far...`);
+                }
+            });
+            
+            readStream.on('error', (error) => {
+                logger.error(`Read stream error: ${error.message}`);
+                reject(error);
+            });
+            
+            writeStream.on('error', (error) => {
+                logger.error(`Write stream error: ${error.message}`);
+                reject(error);
+            });
+            
+            writeStream.on('finish', () => {
+                logger.info(`Stream upload complete, total bytes: ${bytesSent}`);
+                resolve();
+            });
+            
+            // Pipe the read stream to the write stream
+            readStream.pipe(writeStream);
+        });
         
-        // Validate the upload was successful by checking the file exists in bucket
-        const [exists] = await bucket.file(uniqueFilename).exists();
-        if (!exists) {
-            throw new Error('Upload appeared successful but file does not exist in bucket');
-        }
+        logger.info(`File stream upload successful for: ${uniqueFilename}`);
         
-        // Clean up the temp file if we created one
-        if (shouldDeleteTempFile && tempFilePath) {
-            try {
-                await fs.promises.unlink(tempFilePath);
-                logger.info(`Temp file deleted: ${tempFilePath}`);
-            } catch (cleanupError) {
-                logger.warn(`Failed to clean up temp file: ${cleanupError.message}`);
-                // Continue despite cleanup error
-            }
-        }
-        
-        // Get the public URL - for uniform bucket-level access, we don't need to make individual files public
-        // The bucket itself should be configured for public access
-        const publicUrl = `https://storage.googleapis.com/${bucketName}/${uniqueFilename}`;
-        logger.info(`File uploaded successfully: ${publicUrl}`);
-        
-        // Check if we need to verify public access
+        // Try to make the file public
         try {
-            // Try to make the file public - this will fail on uniform bucket-level access but we'll catch it
-            await bucket.file(uniqueFilename).makePublic().catch(err => {
+            await bucketFile.makePublic().catch(err => {
                 if (err.message.includes('uniform bucket-level access is enabled')) {
                     logger.info('Bucket has uniform access control - file inherits bucket permissions');
                 } else {
-                    // Log other types of errors but continue
-                    logger.warn(`Note: Could not explicitly make file public: ${err.message}`);
+                    logger.warn(`Could not make file public: ${err.message}`);
                 }
             });
-        } catch (aclError) {
-            // Just log the error but don't fail - if bucket has public access the file will be available
-            logger.warn(`Note: Error configuring file permissions: ${aclError.message}`);
+        } catch (err) {
+            logger.warn(`Error making file public: ${err.message}`);
         }
         
+        // Return the public URL
+        const publicUrl = `https://storage.googleapis.com/${bucketName}/${uniqueFilename}`;
+        logger.info(`File uploaded successfully via streaming: ${publicUrl}`);
         return publicUrl;
     } catch (error) {
         logger.error(`Error uploading file to Firebase Storage: ${error.message}`);
         throw error;
     } finally {
-        // Ensure temp file gets cleaned up in error scenarios
-        if (shouldDeleteTempFile && tempFilePath && fs.existsSync(tempFilePath)) {
-            try {
-                fs.unlinkSync(tempFilePath);
-                logger.info(`Cleaned up temp file in finally block: ${tempFilePath}`);
-            } catch (e) {
-                logger.warn(`Failed to clean up temp file in finally block: ${e.message}`);
-            }
-        }
+        // No temp file cleanup needed as we're using streams or direct upload
     }
 };
 
