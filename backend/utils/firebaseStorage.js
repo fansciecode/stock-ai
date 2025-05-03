@@ -68,7 +68,7 @@ export const uploadToFirebase = async (file, options = {}) => {
             }
         };
 
-        const [file] = await bucket.upload(tempFilePath, uploadOptions);
+        const [uploadedFile] = await bucket.upload(tempFilePath, uploadOptions);
         
         // If we created a temp file, clean it up
         if (typeof file !== 'string') {
