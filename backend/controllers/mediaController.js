@@ -17,7 +17,13 @@ const logger = createLogger('mediaController');
  */
 export const uploadMedia = asyncHandler(async (req, res) => {
     try {
+        logger.info('Starting media upload process');
+        
+        // Log the request body and file information
+        logger.info(`Request body: ${JSON.stringify(req.body)}`);
+        
         if (!req.file) {
+            logger.error('No file in request');
             return res.status(400).json({
                 success: false,
                 message: 'No file uploaded',
@@ -25,15 +31,22 @@ export const uploadMedia = asyncHandler(async (req, res) => {
             });
         }
 
-        logger.info(`File upload initiated: ${req.file.originalname}`);
+        logger.info(`File details: ${JSON.stringify({
+            originalname: req.file.originalname,
+            mimetype: req.file.mimetype,
+            size: req.file.size,
+            path: req.file.path
+        })}`);
 
         // Get additional parameters
         const { eventId, mediaId, caption, replaceContentUri, fileType: explicitFileType } = req.body;
 
-        // Determine media type from mimetype
+        // Determine media type from mimetype or explicit fileType
         const fileType = explicitFileType || (req.file.mimetype.startsWith('video') ? 'video' : 'image');
+        logger.info(`Determined file type: ${fileType}`);
 
         // Upload file to Firebase Storage
+        logger.info(`Attempting to upload file to Firebase Storage: ${req.file.path}`);
         const firebaseUrl = await uploadToFirebase(req.file.path, {
             fileType,
             originalname: req.file.originalname,

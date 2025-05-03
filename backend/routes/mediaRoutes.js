@@ -38,10 +38,28 @@ const storage = multer.diskStorage({
 
 // File filter to accept only images and videos
 const fileFilter = (req, file, cb) => {
-    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
+    console.log('Received file:', file.originalname, 'Mimetype:', file.mimetype);
+    
+    // Check if fileType is explicitly specified in request body
+    const explicitFileType = req.body.fileType;
+    console.log('Explicit fileType from request:', explicitFileType);
+    
+    // Accept the file if:
+    // 1. The mimetype starts with image/ or video/
+    // 2. OR if fileType is explicitly set to 'image' or 'video' in the request
+    // 3. OR the originalname ends with common image/video extensions
+    if (
+        file.mimetype.startsWith('image/') || 
+        file.mimetype.startsWith('video/') ||
+        explicitFileType === 'image' || 
+        explicitFileType === 'video' ||
+        /\.(jpg|jpeg|png|gif|bmp|webp|mp4|mov|avi|webm|mkv)$/i.test(file.originalname)
+    ) {
+        console.log('File accepted:', file.originalname);
         cb(null, true);
     } else {
-        cb(new Error('Only images and videos are allowed'), false);
+        console.log('File rejected:', file.originalname, 'Mimetype:', file.mimetype);
+        cb(new Error(`Only images and videos are allowed. Received: ${file.mimetype}`), false);
     }
 };
 
@@ -53,6 +71,30 @@ const upload = multer({
         fileSize: 100 * 1024 * 1024 // 100MB limit
     }
 });
+
+// Custom error handler for multer errors
+const handleMulterError = (err, req, res, next) => {
+    if (err instanceof multer.MulterError) {
+        // A Multer error occurred when uploading
+        console.error('Multer error:', err);
+        return res.status(400).json({
+            success: false,
+            message: `File upload error: ${err.message}`,
+            errorCode: 'UPLOAD_ERROR'
+        });
+    } else if (err) {
+        // An unknown error occurred
+        console.error('Upload error:', err);
+        return res.status(500).json({
+            success: false,
+            message: err.message || 'An unknown error occurred during file upload',
+            errorCode: 'UPLOAD_ERROR'
+        });
+    }
+    
+    // No error occurred, continue
+    next();
+};
 
 /**
  * @swagger
@@ -89,7 +131,27 @@ const upload = multer({
  *       401:
  *         description: Unauthorized
  */
-router.post('/upload', protect, upload.single('file'), uploadMedia);
+router.post('/upload', protect, (req, res, next) => {
+    upload.single('file')(req, res, (err) => {
+        if (err) {
+            console.error('File upload error:', err.message);
+            return res.status(500).json({
+                success: false,
+                message: err.message || 'Error uploading file',
+                errorCode: 'UPLOAD_ERROR'
+            });
+        }
+        // No file attached
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: 'No file uploaded or file was rejected',
+                errorCode: 'NO_FILE'
+            });
+        }
+        next();
+    });
+}, uploadMedia);
 
 /**
  * @swagger
