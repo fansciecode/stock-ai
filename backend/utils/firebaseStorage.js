@@ -48,35 +48,73 @@ export const uploadToFirebase = async (file, options = {}) => {
         throw new Error('Firebase Storage not initialized');
     }
 
+    let tempFilePath = null;
+    let shouldDeleteTempFile = false;
+
     try {
         const { fileType = 'image', originalname = 'file', mimetype = 'image/jpeg' } = options;
-        const tempFilePath = typeof file === 'string' ? file : path.join(os.tmpdir(), `${uuidv4()}-${originalname}`);
         
-        logger.info(`Original file path: ${file}`);
-        logger.info(`Using temp file path: ${tempFilePath}`);
-        logger.info(`File type: ${fileType}, MIME type: ${mimetype}`);
+        logger.info(`Original file source: ${typeof file === 'string' ? 'filepath' : 'buffer'}`);
         
-        // Validate source file exists if it's a path
+        // Create a temporary file if file is a buffer, or use the provided path
         if (typeof file === 'string') {
-            if (!fs.existsSync(file)) {
-                throw new Error(`Source file does not exist: ${file}`);
+            tempFilePath = file;
+            logger.info(`Using provided file path: ${tempFilePath}`);
+            
+            // Validate source file exists
+            if (!fs.existsSync(tempFilePath)) {
+                throw new Error(`Source file does not exist: ${tempFilePath}`);
             }
             
-            // Check file size to ensure it's not empty
-            const stats = fs.statSync(file);
-            logger.info(`Source file size: ${stats.size} bytes`);
-            
-            if (stats.size === 0) {
-                throw new Error('Source file is empty');
+            // Check file permissions and size
+            try {
+                await fs.promises.access(tempFilePath, fs.constants.R_OK);
+                const stats = fs.statSync(tempFilePath);
+                logger.info(`Source file size: ${stats.size} bytes`);
+                
+                if (stats.size === 0) {
+                    throw new Error('Source file is empty');
+                }
+                
+                // Verify file contents are readable by reading a small chunk
+                const fd = await fs.promises.open(tempFilePath, 'r');
+                const buffer = Buffer.alloc(1024);
+                const { bytesRead } = await fd.read(buffer, 0, 1024, 0);
+                await fd.close();
+                
+                if (bytesRead <= 0) {
+                    throw new Error('Could not read file contents');
+                }
+                
+                logger.info(`Successfully read ${bytesRead} bytes from file`);
+            } catch (e) {
+                throw new Error(`File access error: ${e.message}`);
             }
-            
-            // For string paths, we need to make sure the file is actually readable
-            await fs.promises.access(file, fs.constants.R_OK);
         } else {
-            // If file is a buffer, write it to a temp file
+            // For buffer input, create a temporary file
+            tempFilePath = path.join(os.tmpdir(), `${uuidv4()}-${originalname}`);
+            shouldDeleteTempFile = true;
+            
+            logger.info(`Creating temp file for buffer: ${tempFilePath}`);
+            
+            // Ensure buffer is valid
+            if (!Buffer.isBuffer(file)) {
+                if (typeof file === 'object') {
+                    // If it's an object but not a Buffer, try to convert
+                    file = Buffer.from(file);
+                } else {
+                    throw new Error('Invalid file input: Not a buffer or string path');
+                }
+            }
+            
+            if (file.length === 0) {
+                throw new Error('Input buffer is empty');
+            }
+            
+            // Write the buffer to the temp file
             await fs.promises.writeFile(tempFilePath, file);
             
-            // Verify the temp file was written correctly
+            // Verify file was written correctly
             const stats = fs.statSync(tempFilePath);
             logger.info(`Temp file created with size: ${stats.size} bytes`);
             
@@ -87,11 +125,11 @@ export const uploadToFirebase = async (file, options = {}) => {
         
         // Determine file extension
         const fileExtension = path.extname(originalname) || 
-                             (mimetype.includes('png') ? '.png' : 
-                              mimetype.includes('jpeg') || mimetype.includes('jpg') ? '.jpg' :
-                              mimetype.includes('gif') ? '.gif' :
-                              mimetype.includes('mp4') ? '.mp4' :
-                              mimetype.includes('mov') ? '.mov' : '.dat');
+                            (mimetype.includes('png') ? '.png' : 
+                            mimetype.includes('jpeg') || mimetype.includes('jpg') ? '.jpg' :
+                            mimetype.includes('gif') ? '.gif' :
+                            mimetype.includes('mp4') ? '.mp4' :
+                            mimetype.includes('mov') ? '.mov' : '.dat');
         
         // Generate a unique filename with the correct extension
         const uniqueFilename = `${fileType}s/${uuidv4()}${fileExtension}`;
@@ -107,12 +145,12 @@ export const uploadToFirebase = async (file, options = {}) => {
                     firebaseStorageDownloadTokens: uuidv4(),
                 }
             },
-            resumable: true,
+            resumable: false, // Disable resumable uploads for small files to avoid timeout issues
             validation: 'crc32c'
         };
         
         // Log the file that will be uploaded
-        logger.info(`Attempting to upload file ${tempFilePath} (exists: ${fs.existsSync(tempFilePath)}) to ${uniqueFilename}`);
+        logger.info(`Attempting to upload file ${tempFilePath} (size: ${fs.statSync(tempFilePath).size} bytes, exists: ${fs.existsSync(tempFilePath)}) to ${uniqueFilename}`);
         
         const [uploadedFile] = await bucket.upload(tempFilePath, uploadOptions);
         
@@ -123,7 +161,7 @@ export const uploadToFirebase = async (file, options = {}) => {
         }
         
         // Clean up the temp file if we created one
-        if (typeof file !== 'string') {
+        if (shouldDeleteTempFile && tempFilePath) {
             try {
                 await fs.promises.unlink(tempFilePath);
                 logger.info(`Temp file deleted: ${tempFilePath}`);
@@ -158,6 +196,16 @@ export const uploadToFirebase = async (file, options = {}) => {
     } catch (error) {
         logger.error(`Error uploading file to Firebase Storage: ${error.message}`);
         throw error;
+    } finally {
+        // Ensure temp file gets cleaned up in error scenarios
+        if (shouldDeleteTempFile && tempFilePath && fs.existsSync(tempFilePath)) {
+            try {
+                fs.unlinkSync(tempFilePath);
+                logger.info(`Cleaned up temp file in finally block: ${tempFilePath}`);
+            } catch (e) {
+                logger.warn(`Failed to clean up temp file in finally block: ${e.message}`);
+            }
+        }
     }
 };
 
