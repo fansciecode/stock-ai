@@ -188,6 +188,18 @@ export const createEvent = asyncHandler(async (req, res) => {
             tagsList.push(eventTypeValue);
         }
 
+        // Process tickets if available
+        const ticketsList = Array.isArray(ticketTypes) ? ticketTypes : [];
+        
+        // Process products if available
+        const productsList = Array.isArray(products) ? products : [];
+        
+        // Process services if available
+        const servicesList = Array.isArray(services) ? services : [];
+        
+        // Process guidelines if available
+        const guidelinesList = Array.isArray(guidelines) ? guidelines : [];
+
         // Create event with fields from request
         const eventData = {
             title,
@@ -207,7 +219,10 @@ export const createEvent = asyncHandler(async (req, res) => {
             status: 'ACTIVE',
             eventType: eventTypeValue,
             tags: tagsList,
-            guidelines: Array.isArray(guidelines) ? guidelines : []
+            guidelines: guidelinesList,
+            ticketTypes: ticketsList,
+            products: productsList,
+            services: servicesList
         };
         
         // Add pricing if available
@@ -215,25 +230,16 @@ export const createEvent = asyncHandler(async (req, res) => {
             eventData.pricing = pricingItems;
         }
         
-        // Add products if available
-        if (products && Array.isArray(products) && products.length > 0) {
-            eventData.products = products;
-        }
-        
-        // Add services if available
-        if (services && Array.isArray(services) && services.length > 0) {
-            eventData.services = services;
-        }
-        
-        // Add ticket types if available
-        if (ticketTypes && Array.isArray(ticketTypes) && ticketTypes.length > 0) {
-            eventData.ticketTypes = ticketTypes;
-        }
-        
-        logger.info(`Creating event with data: ${JSON.stringify({
+        // Log the complete event data being created - include all fields for debugging
+        const logData = {
             ...eventData,
-            media: `${processedMedia.length} items` // Log media length to keep output reasonable
-        })}`);
+            media: `${processedMedia.length} items`, // Log media length to keep output reasonable
+            ticketTypes: ticketsList.length > 0 ? `${ticketsList.length} items` : [],
+            products: productsList.length > 0 ? `${productsList.length} items` : [],
+            services: servicesList.length > 0 ? `${servicesList.length} items` : []
+        };
+        
+        logger.info(`Creating event with data: ${JSON.stringify(logData)}`);
         
         const event = await EventModel.create(eventData);
 
