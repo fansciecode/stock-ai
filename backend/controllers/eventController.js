@@ -188,8 +188,14 @@ export const createEvent = asyncHandler(async (req, res) => {
             tagsList.push(eventTypeValue);
         }
 
-        // Process tickets if available
-        const ticketsList = Array.isArray(ticketTypes) ? ticketTypes : [];
+        // Process tickets if available - handle both 'tickets' and 'ticketTypes' fields for compatibility
+        let ticketsList = [];
+        if (Array.isArray(ticketTypes) && ticketTypes.length > 0) {
+            ticketsList = ticketTypes;
+        } else if (req.body.tickets && Array.isArray(req.body.tickets) && req.body.tickets.length > 0) {
+            ticketsList = req.body.tickets;
+            logger.info(`Found tickets in request body: ${JSON.stringify(req.body.tickets.length)} items`);
+        }
         
         // Process products if available
         const productsList = Array.isArray(products) ? products : [];
