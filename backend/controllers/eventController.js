@@ -38,7 +38,16 @@ export const createEvent = asyncHandler(async (req, res) => {
             media,
             products,
             services,
-            ticketTypes
+            ticketTypes,
+            eventType,
+            startTime,
+            endTime,
+            price,
+            regularPrice,
+            currency,
+            tags,
+            guidelines,
+            maxAttendees
         } = req.body;
 
         // Log the incoming media for debugging
@@ -138,29 +147,88 @@ export const createEvent = asyncHandler(async (req, res) => {
             });
         }
 
+        // Extract coordinates from either top-level fields or location object
+        let coordinates = [0, 0];
+        if (latitude && longitude) {
+            coordinates = [parseFloat(longitude), parseFloat(latitude)];
+        } else if (location && location.coordinates && Array.isArray(location.coordinates) && location.coordinates.length >= 2) {
+            coordinates = location.coordinates;
+        }
+
         // Create location object
         const eventLocation = {
             type: 'Point',
-            coordinates: latitude && longitude ? [parseFloat(longitude), parseFloat(latitude)] : [0, 0],
-            city: city || location || 'Unknown'
+            coordinates: coordinates,
+            city: city || (location && location.city) || 'Unknown'
         };
+
+        // Process pricing information
+        const pricingItems = [];
+        if (price !== undefined) {
+            pricingItems.push({
+                type: 'standard',
+                amount: parseFloat(price),
+                currency: currency || 'USD'
+            });
+        }
+        if (regularPrice !== undefined) {
+            pricingItems.push({
+                type: 'regular',
+                amount: parseFloat(regularPrice),
+                currency: currency || 'USD'
+            });
+        }
+
+        // Process event type
+        const eventTypeValue = eventType || 'INFORMATIVE';
+        
+        // Process tags - ensure eventType is included
+        const tagsList = Array.isArray(tags) ? [...tags] : [];
+        if (!tagsList.includes(eventTypeValue)) {
+            tagsList.push(eventTypeValue);
+        }
 
         // Create event with fields from request
         const eventData = {
             title,
             description,
             date: {
-                start: new Date(startDate || startDateTime || date || Date.now()),
-                end: new Date(endDate || endDateTime || date || Date.now())
+                start: new Date(startDate || startDateTime || date?.start || date || Date.now()),
+                end: new Date(endDate || endDateTime || date?.end || date || Date.now())
             },
+            startTime: startTime || "00:00",
+            endTime: endTime || "00:00",
             location: eventLocation,
             category: categoryId || category || 'Uncategorized',
             organizer: userIdToUse,
             media: processedMedia,
-            time: startDateTime || "00:00",
-            maxAttendees: 100, // Default value
-            status: 'ACTIVE'
+            time: startTime || "00:00",
+            maxAttendees: maxAttendees || 100, // Use provided value or default
+            status: 'ACTIVE',
+            eventType: eventTypeValue,
+            tags: tagsList,
+            guidelines: Array.isArray(guidelines) ? guidelines : []
         };
+        
+        // Add pricing if available
+        if (pricingItems.length > 0) {
+            eventData.pricing = pricingItems;
+        }
+        
+        // Add products if available
+        if (products && Array.isArray(products) && products.length > 0) {
+            eventData.products = products;
+        }
+        
+        // Add services if available
+        if (services && Array.isArray(services) && services.length > 0) {
+            eventData.services = services;
+        }
+        
+        // Add ticket types if available
+        if (ticketTypes && Array.isArray(ticketTypes) && ticketTypes.length > 0) {
+            eventData.ticketTypes = ticketTypes;
+        }
         
         logger.info(`Creating event with data: ${JSON.stringify({
             ...eventData,
@@ -172,25 +240,25 @@ export const createEvent = asyncHandler(async (req, res) => {
         // Update event limit if available (backward compatibility)
         if (user.eventLimit && user.eventLimit > 0) {
             user.eventLimit -= 1;
-            
-            // If using package system, update package events
-            if (user.eventPackage && user.eventPackage.eventsAllowed) {
-                user.eventPackage.eventsAllowed -= 1;
-            }
-
-            // Add to package history if exists
-            if (user.packageHistory) {
-                const currentPackage = user.packageHistory.find(
-                    pkg => pkg.status === 'completed' && pkg.expiryDate > new Date()
-                );
-                if (currentPackage) {
-                    currentPackage.eventsUsed = (currentPackage.eventsUsed || 0) + 1;
-                }
-            }
-
-            await user.save();
-        }
         
+        // If using package system, update package events
+        if (user.eventPackage && user.eventPackage.eventsAllowed) {
+            user.eventPackage.eventsAllowed -= 1;
+        }
+
+        // Add to package history if exists
+        if (user.packageHistory) {
+            const currentPackage = user.packageHistory.find(
+                pkg => pkg.status === 'completed' && pkg.expiryDate > new Date()
+            );
+            if (currentPackage) {
+                currentPackage.eventsUsed = (currentPackage.eventsUsed || 0) + 1;
+            }
+        }
+
+        await user.save();
+        }
+
         // Get the base URL for API
         const baseUrl = process.env.BASE_URL || req.protocol + '://' + req.get('host');
 

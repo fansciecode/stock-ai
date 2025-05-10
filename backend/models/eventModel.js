@@ -16,6 +16,14 @@ const eventSchema = new mongoose.Schema({
             required: true
         }
     },
+    startTime: {
+        type: String,
+        default: "00:00"
+    },
+    endTime: {
+        type: String,
+        default: "00:00"
+    },
     location: {
         type: {
             type: String,
@@ -26,6 +34,7 @@ const eventSchema = new mongoose.Schema({
             type: [Number],
             required: true
         },
+        city: String,
         venue: String,
         address: String
     },
@@ -54,6 +63,11 @@ const eventSchema = new mongoose.Schema({
             default: 'USD'
         }
     }],
+    eventType: {
+        type: String,
+        enum: ['INFORMATIVE', 'BOOKING', 'PRODUCT', 'SERVICE', 'CONFERENCE', 'WORKSHOP', 'SEMINAR', 'EXHIBITION', 'CONCERT', 'FESTIVAL', 'SPORTING', 'CHARITY', 'NETWORKING', 'MEETING', 'OTHER'],
+        default: 'INFORMATIVE'
+    },
     organizer: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -78,7 +92,55 @@ const eventSchema = new mongoose.Schema({
     time: { type: String, required: true },
     maxAttendees: { type: Number, required: true },
     imageUrl: { type: String },
-    attendees: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
+    attendees: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    guidelines: [String],
+    products: [{
+        id: String,
+        name: String,
+        description: String,
+        price: Number,
+        regularPrice: Number,
+        currency: {
+            type: String,
+            default: 'USD'
+        },
+        quantity: Number,
+        imageUrl: String
+    }],
+    services: [{
+        id: String,
+        name: String,
+        description: String,
+        price: Number,
+        duration: Number,
+        currency: {
+            type: String,
+            default: 'USD'
+        },
+        imageUrl: String,
+        availabilitySchedule: {
+            availableTimeSlots: [{
+                startTime: String,
+                endTime: String,
+                availableSpots: Number,
+                dayOfWeek: String
+            }]
+        }
+    }],
+    ticketTypes: [{
+        name: String,
+        description: String,
+        price: Number,
+        quantity: Number,
+        currency: {
+            type: String,
+            default: 'USD'
+        },
+        available: {
+            type: Boolean,
+            default: true
+        }
+    }]
 }, {
     timestamps: true
 });
