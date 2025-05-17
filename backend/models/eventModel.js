@@ -105,7 +105,8 @@ const eventSchema = new mongoose.Schema({
             default: 'USD'
         },
         quantity: Number,
-        imageUrl: String
+        imageUrl: String,
+        category: String
     }],
     services: [{
         id: String,
@@ -118,6 +119,7 @@ const eventSchema = new mongoose.Schema({
             default: 'USD'
         },
         imageUrl: String,
+        category: String,
         availabilitySchedule: {
             availableTimeSlots: [{
                 startTime: String,
