@@ -314,12 +314,14 @@ export const getEvents = asyncHandler(async (req, res) => {
             return res.json(events);
         }
 
-        // Rest of the new implementation...
-        const user = await UserModel.findById(req.user._id)
-            .populate('interests')
-            .select('interests');
-
-        // ... (rest of the new logic)
+        // --- PATCH: Use userId from query if req.user is not set ---
+        let user;
+        if (req.user && req.user._id) {
+            user = await UserModel.findById(req.user._id).populate('interests').select('interests');
+        } else if (req.query.userId) {
+            user = await UserModel.findById(req.query.userId).populate('interests').select('interests');
+        }
+        // ...rest of the new logic
 
         res.json({
             success: true,
