@@ -298,38 +298,12 @@ export const createEvent = asyncHandler(async (req, res) => {
 // @access Public
 export const getEvents = asyncHandler(async (req, res) => {
     try {
-        const {
-            latitude,
-            longitude,
-            city,
-            radius = 20,
-            page = 1,
-            limit = 20,
-            format = 'new' // Add format parameter to distinguish between old and new response
-        } = req.query;
-
-        // If old format is requested, return original response
-        if (format === 'old') {
-            const events = await EventModel.find({});
-            return res.json(events);
-        }
-
-        // --- PATCH: Use userId from query if req.user is not set ---
-        let user;
-        if (req.user && req.user._id) {
-            user = await UserModel.findById(req.user._id).populate('interests').select('interests');
-        } else if (req.query.userId) {
-            user = await UserModel.findById(req.query.userId).populate('interests').select('interests');
-        }
-        // ...rest of the new logic
-
+        // Query events from the database (add filters as needed)
+        const events = await EventModel.find({ status: 'ACTIVE' }); // Add filters if needed
         res.json({
             success: true,
-            data: {
-                // ... new format data
-            }
+            data: { events }
         });
-
     } catch (error) {
         res.status(500).json({
             success: false,
