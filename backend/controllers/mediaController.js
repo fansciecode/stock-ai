@@ -97,7 +97,7 @@ export const uploadMedia = asyncHandler(async (req, res) => {
             originalname: req.file.originalname,
             mimetype: req.file.mimetype
         });
-
+        
         // Create media entry in database
         const media = await MediaModel.create({
             filename: path.basename(firebaseUrl),

@@ -4,6 +4,6 @@ import externalEventRoutes from '../routes/external/eventRoutes.js';
 const router = express.Router();
 
 // External Events Module Routes
-router.use('/api/external', externalEventRoutes);
+router.use('/', externalEventRoutes);
 
 export default router; 
