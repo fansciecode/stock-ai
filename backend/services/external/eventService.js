@@ -246,6 +246,9 @@ class ExternalEventService {
             }
 
             const responses = await Promise.all(promises);
+            responses.forEach((response, idx) => {
+                logger.info(`Google API raw response [${idx}]:`, JSON.stringify(response.data));
+            });
             const allResults = responses.flatMap(response => 
                 response.data.results || []
             );
