@@ -125,6 +125,7 @@ const userSchema = mongoose.Schema(
             avatar: String,
             bio: String,
             phone: String,
+            education: [String],
             dateOfBirth: Date,
             gender: {
                 type: String,

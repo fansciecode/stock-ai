@@ -63,4 +63,6 @@ router.post('/users/interaction', userController.handleUserInteraction);
 
 router.get('/business-verification/:userId', userController.checkBusinessVerification);
 
+router.get('/public/:userId', userController.getPublicProfile);
+
 export default router;

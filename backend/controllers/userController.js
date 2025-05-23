@@ -111,7 +111,8 @@ const getUserProfile = asyncHandler(async (req, res) => {
             interests: user.interests,
             businessInfo: user.businessInfo,
             location: user.location,
-            fcmTokens: user.fcmTokens
+            fcmTokens: user.fcmTokens,
+            profile: user.profile
         });
     } else {
         res.status(404);
@@ -148,6 +149,13 @@ const updateUserProfile = asyncHandler(async (req, res) => {
             };
         }
 
+        if (req.body.profile) {
+            user.profile = {
+                ...user.profile,
+                ...req.body.profile
+            };
+        }
+
         const updatedUser = await user.save();
 
         res.json({
@@ -160,7 +168,8 @@ const updateUserProfile = asyncHandler(async (req, res) => {
             verificationBadge: updatedUser.verificationBadge,
             interests: updatedUser.interests,
             businessInfo: updatedUser.businessInfo,
-            location: updatedUser.location
+            location: updatedUser.location,
+            profile: updatedUser.profile
         });
     } else {
         res.status(404);
@@ -606,6 +615,26 @@ export const manageUserRoles = async (req, res) => {
     }
 };
 
+// Add public profile endpoint:
+export const getPublicProfile = asyncHandler(async (req, res) => {
+    const user = await UserModel.findById(req.params.userId)
+        .select('name profile followers following businessInfo location');
+    if (user) {
+        res.json({
+            _id: user._id,
+            name: user.name,
+            profile: user.profile,
+            followers: user.followers,
+            following: user.following,
+            businessInfo: user.businessInfo,
+            location: user.location
+        });
+    } else {
+        res.status(404);
+        throw new Error('User not found');
+    }
+});
+
 // Export all functions
 export const userController = {
     authUser,
@@ -628,6 +657,7 @@ export const userController = {
     updateUserSecurity,
     updateUserPreferences,
     fetchUserActivity,
-    manageUserRoles
+    manageUserRoles,
+    getPublicProfile
 };
   
