@@ -65,4 +65,8 @@ router.get('/business-verification/:userId', userController.checkBusinessVerific
 
 router.get('/public/:userId', userController.getPublicProfile);
 
+// Add follow/unfollow routes
+router.post('/:userId/follow', protect, userController.followUser);
+router.post('/:userId/unfollow', protect, userController.unfollowUser);
+
 export default router;

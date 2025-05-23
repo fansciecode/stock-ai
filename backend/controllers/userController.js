@@ -615,7 +615,49 @@ export const manageUserRoles = async (req, res) => {
     }
 };
 
-// Add public profile endpoint:
+// Follow a user
+export const followUser = asyncHandler(async (req, res) => {
+    const targetUserId = req.params.userId;
+    const currentUserId = req.user._id;
+    if (targetUserId === String(currentUserId)) {
+        return res.status(400).json({ error: "You cannot follow yourself." });
+    }
+    const targetUser = await UserModel.findById(targetUserId);
+    const currentUser = await UserModel.findById(currentUserId);
+    if (!targetUser || !currentUser) {
+        return res.status(404).json({ error: "User not found." });
+    }
+    if (!targetUser.followers.includes(currentUserId)) {
+        targetUser.followers.push(currentUserId);
+        await targetUser.save();
+    }
+    if (!currentUser.following.includes(targetUserId)) {
+        currentUser.following.push(targetUserId);
+        await currentUser.save();
+    }
+    res.json({ success: true, followers: targetUser.followers.length, following: currentUser.following.length });
+});
+
+// Unfollow a user
+export const unfollowUser = asyncHandler(async (req, res) => {
+    const targetUserId = req.params.userId;
+    const currentUserId = req.user._id;
+    if (targetUserId === String(currentUserId)) {
+        return res.status(400).json({ error: "You cannot unfollow yourself." });
+    }
+    const targetUser = await UserModel.findById(targetUserId);
+    const currentUser = await UserModel.findById(currentUserId);
+    if (!targetUser || !currentUser) {
+        return res.status(404).json({ error: "User not found." });
+    }
+    targetUser.followers = targetUser.followers.filter(id => String(id) !== String(currentUserId));
+    await targetUser.save();
+    currentUser.following = currentUser.following.filter(id => String(id) !== String(targetUserId));
+    await currentUser.save();
+    res.json({ success: true, followers: targetUser.followers.length, following: currentUser.following.length });
+});
+
+// Update public profile endpoint to include follower/following counts
 export const getPublicProfile = asyncHandler(async (req, res) => {
     const user = await UserModel.findById(req.params.userId)
         .select('name profile followers following businessInfo location');
@@ -626,6 +668,8 @@ export const getPublicProfile = asyncHandler(async (req, res) => {
             profile: user.profile,
             followers: user.followers,
             following: user.following,
+            followersCount: user.followers.length,
+            followingCount: user.following.length,
             businessInfo: user.businessInfo,
             location: user.location
         });
@@ -658,6 +702,8 @@ export const userController = {
     updateUserPreferences,
     fetchUserActivity,
     manageUserRoles,
-    getPublicProfile
+    getPublicProfile,
+    followUser,
+    unfollowUser
 };
   
