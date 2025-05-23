@@ -13,6 +13,7 @@ import { protect, isSeller, isAdmin } from "../middleware/authMiddleware.js";
 import { checkEventLimit } from "../middleware/eventLimitMiddleware.js";
 import { createEventReview, getEventReviews, updateReview, deleteReview, respondToReview, markReviewHelpful, reportReview, moderateReview, getReviewAnalytics } from "../controllers/eventReviewController.js";
 import { aiMiddleware } from '../middleware/aiMiddleware.js';
+import { searchHandler } from "../controllers/searchController.js";
 
 const router = express.Router();
 
@@ -54,5 +55,8 @@ router.get('/optimize/:eventId', protect, optimizeExistingEvent);
 
 // Auto-generate event with minimal input
 router.post('/auto-generate', protect, autoGenerateEvent);
+
+// Add event search route BEFORE /:id
+router.get("/search", searchHandler);
 
 export default router;
