@@ -316,6 +316,7 @@ export const getEvents = asyncHandler(async (req, res) => {
 // @route GET /api/events/:id
 // @access Public
 export const getEvent = asyncHandler(async (req, res) => {
+    console.log('[DEBUG] getEvent called with id:', req.params.id);
     const event = await EventModel.findById(req.params.id);
 
     if (event) {
