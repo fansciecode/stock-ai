@@ -18,7 +18,15 @@ import { searchHandler } from "../controllers/searchController.js";
 const router = express.Router();
 
 router.route("/").post(protect, checkEventLimit,createEvent).get(getEvents);
-router.route("/:id").get(getEvent).put(protect, updateEvent).delete(protect, deleteEvent);
+
+// Add event search route BEFORE /:id
+router.get("/search", searchHandler);
+
+// Split /:id route into separate HTTP verbs, after /search
+router.get('/:id', getEvent);
+router.put('/:id', protect, updateEvent);
+router.delete('/:id', protect, deleteEvent);
+
 router.post("/:id/reviews", protect, addEventReview);
 router.get("/category/:categoryId", getEventsByCategory);
 router.post("/upgrade", protect, upgradeEvent);
@@ -55,8 +63,5 @@ router.get('/optimize/:eventId', protect, optimizeExistingEvent);
 
 // Auto-generate event with minimal input
 router.post('/auto-generate', protect, autoGenerateEvent);
-
-// Add event search route BEFORE /:id
-router.get("/search", searchHandler);
 
 export default router;
