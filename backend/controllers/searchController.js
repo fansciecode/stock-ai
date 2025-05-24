@@ -68,13 +68,13 @@ export const searchHandler = async (req, res) => {
     eventFilter.date = { $gte: new Date() };
 
     // Get events with pagination
-    let events = await Event.find(eventFilter)
+    let events = await EventModel.find(eventFilter)
       .skip((page - 1) * limit)
       .limit(limit);
 
     // Get businesses
     let businesses = query ? 
-      await Business.find({ 
+      await BusinessModel.find({ 
         name: { $regex: query, $options: "i" }
       }).limit(limit) : [];
 
@@ -86,9 +86,9 @@ export const searchHandler = async (req, res) => {
     }
 
     // Get total counts
-    const totalEvents = await Event.countDocuments(eventFilter);
+    const totalEvents = await EventModel.countDocuments(eventFilter);
     const totalBusinesses = query ? 
-      await Business.countDocuments({ 
+      await BusinessModel.countDocuments({ 
         name: { $regex: query, $options: "i" }
       }) : 0;
 
