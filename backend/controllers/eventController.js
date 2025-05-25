@@ -660,6 +660,38 @@ export const autoGenerateEvent = asyncHandler(async (req, res) => {
     }
 });
 
+// AI-powered event suggestion endpoint
+export const getAISuggestedEvent = asyncHandler(async (req, res) => {
+    try {
+        const { eventData } = req.body;
+        const creatorType = req.user && req.user.verificationBadge === 'BUSINESS' ? 'BUSINESS' : 'USER';
+
+        // Aggregate all relevant AI suggestions
+        const optimization = await EventOptimizer.optimizeEventCreation(eventData, creatorType);
+
+        // Optionally, call other AI services for more suggestions (e.g., content, demand, pricing)
+        // Example: const contentSuggestions = await ContentAIService.generateContentSuggestions(eventData);
+        // Example: const demandPrediction = await EventOptimizer.predictDemand(eventData);
+
+        res.status(200).json({
+            success: true,
+            suggestions: {
+                ...optimization.suggestedParameters,
+                aiOptimizations: optimization,
+                // contentSuggestions,
+                // demandPrediction,
+                // Add more as needed
+            }
+        });
+    } catch (error) {
+        console.error('Error getting AI event suggestions:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to get AI event suggestions'
+        });
+    }
+});
+
 export {
     // ... other exports ...
     uploadEventMedia,

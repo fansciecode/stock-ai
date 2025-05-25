@@ -7,7 +7,8 @@ import { createEvent, getEvents,
         createOptimizedEvent,
         getEventOptimizations,
         optimizeExistingEvent,
-        autoGenerateEvent
+        autoGenerateEvent,
+        getAISuggestedEvent
     } from "../controllers/eventController.js";
 import { protect, isSeller, isAdmin } from "../middleware/authMiddleware.js";
 import { checkEventLimit } from "../middleware/eventLimitMiddleware.js";
@@ -63,5 +64,8 @@ router.get('/optimize/:eventId', protect, optimizeExistingEvent);
 
 // Auto-generate event with minimal input
 router.post('/auto-generate', protect, autoGenerateEvent);
+
+// AI-powered event suggestion route
+router.post('/ai-suggest', protect, getAISuggestedEvent);
 
 export default router;
