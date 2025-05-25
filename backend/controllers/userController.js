@@ -671,7 +671,7 @@ export const unfollowUser = asyncHandler(async (req, res) => {
 // Update public profile endpoint to include follower/following counts
 export const getPublicProfile = asyncHandler(async (req, res) => {
     const user = await UserModel.findById(req.params.userId)
-        .select('name profile followers following businessInfo location');
+        .select('name profile followers following businessInfo location profilePictureUrl backgroundImageUrl');
     if (user) {
         res.json({
             _id: user._id,
@@ -683,8 +683,8 @@ export const getPublicProfile = asyncHandler(async (req, res) => {
             followingCount: user.following.length,
             businessInfo: user.businessInfo,
             location: user.location,
-            profilePictureUrl: user.profilePictureUrl,
-            backgroundImageUrl: user.backgroundImageUrl
+            profilePictureUrl: user.profilePictureUrl || null,
+            backgroundImageUrl: user.backgroundImageUrl || null
         });
     } else {
         res.status(404);
