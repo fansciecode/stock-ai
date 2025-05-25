@@ -112,7 +112,9 @@ const getUserProfile = asyncHandler(async (req, res) => {
             businessInfo: user.businessInfo,
             location: user.location,
             fcmTokens: user.fcmTokens,
-            profile: user.profile
+            profile: user.profile,
+            profilePictureUrl: user.profilePictureUrl,
+            backgroundImageUrl: user.backgroundImageUrl
         });
     } else {
         res.status(404);
@@ -149,6 +151,13 @@ const updateUserProfile = asyncHandler(async (req, res) => {
             };
         }
 
+        if (req.body.profilePictureUrl) {
+            user.profilePictureUrl = req.body.profilePictureUrl;
+        }
+        if (req.body.backgroundImageUrl) {
+            user.backgroundImageUrl = req.body.backgroundImageUrl;
+        }
+
         if (req.body.profile) {
             user.profile = {
                 ...user.profile,
@@ -169,7 +178,9 @@ const updateUserProfile = asyncHandler(async (req, res) => {
             interests: updatedUser.interests,
             businessInfo: updatedUser.businessInfo,
             location: updatedUser.location,
-            profile: updatedUser.profile
+            profile: updatedUser.profile,
+            profilePictureUrl: updatedUser.profilePictureUrl,
+            backgroundImageUrl: updatedUser.backgroundImageUrl
         });
     } else {
         res.status(404);
@@ -671,7 +682,9 @@ export const getPublicProfile = asyncHandler(async (req, res) => {
             followersCount: user.followers.length,
             followingCount: user.following.length,
             businessInfo: user.businessInfo,
-            location: user.location
+            location: user.location,
+            profilePictureUrl: user.profilePictureUrl,
+            backgroundImageUrl: user.backgroundImageUrl
         });
     } else {
         res.status(404);

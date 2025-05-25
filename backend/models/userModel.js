@@ -109,6 +109,8 @@ const userSchema = mongoose.Schema(
             required: true,
             default: false
         },
+        profilePictureUrl: { type: String, default: null },
+        backgroundImageUrl: { type: String, default: null },
         isVerified: {
             type: Boolean,
             default: false

@@ -156,7 +156,7 @@ const login = expressAsyncHandler(async (req, res) => {
       found: !!user, 
       email, 
       userId: user?._id, 
-      isVerified: user?.isVerified 
+      isVerified: user?.isEmailVerified 
     });
 
     if (!user) {
@@ -173,8 +173,8 @@ const login = expressAsyncHandler(async (req, res) => {
     }
 
     // Check if user is verified
-    if (user.isVerified === false) {
-      console.log('Login failed: User not verified', { email, userId: user._id });
+    if (user.isEmailVerified === false) {
+      console.log('Login failed: User email not verified', { email, userId: user._id });
       return res.status(400).json({ message: 'Please verify your email first' });
     }
 
