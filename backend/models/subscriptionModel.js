@@ -6,6 +6,7 @@ const subscriptionSchema = mongoose.Schema(
     planNamename: { type: String, required: true },
     eventLimit: { type: Number, required: true },
     price: { type: Number, required: true },
+    currency: { type: String, default: "INR" },
     duration: { type: String, enum: ["Day", "Month", "Year"], required: true },
     status: { type: String, enum: ["active", "expired"], default: "active" },
     expiryDate: { type: Date, required: true },
