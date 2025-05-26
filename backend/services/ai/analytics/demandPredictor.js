@@ -21,6 +21,9 @@ export class DemandPredictor {
 export const DemandPredictorService = {
     predictEventDemand: async (eventId) => {
         try {
+            // Fetch the event by ID
+            const event = await EventModel.findById(eventId);
+            if (!event) throw new Error('Event not found');
             // Gather historical data
             const historicalData = await EventModel.find({
                 category: event.category,

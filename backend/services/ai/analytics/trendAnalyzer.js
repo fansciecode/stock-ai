@@ -12,7 +12,7 @@ export const TrendAnalyzerService = {
                 createdAt: {
                     $gte: getDateFromTimeframe(timeframe)
                 }
-            }).populate('bookings reviews');
+            }).populate('reviews');
 
             return {
                 popularCategories: {
@@ -81,7 +81,7 @@ export const TrendAnalyzerService = {
             const orders = await OrderModel.find({
                 business: businessId,
                 createdAt: { $gte: getDateFromTimeframe(timeframe) }
-            });
+            }).populate('reviews');
 
             return {
                 performance: {
@@ -143,7 +143,7 @@ export const TrendAnalyzerService = {
         try {
             const searches = await SearchLog.find({
                 timestamp: { $gte: getDateFromTimeframe(timeframe) }
-            });
+            }).populate('reviews');
 
             return {
                 patterns: {
