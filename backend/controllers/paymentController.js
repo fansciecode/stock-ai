@@ -7,6 +7,7 @@ import logger from '../utils/logger.js';
 import asyncHandler from 'express-async-handler';
 import {
     createStripePayment,
+    createRazorpayOrder,
     processStripeRefund,
     calculateCharges,
     formatAmount
@@ -189,6 +190,7 @@ const initiatePayment = asyncHandler(async (req, res) => {
         description, 
         type, 
         eventId,
+        paymentMethod = 'stripe',
         metadata = {} 
     } = req.body;
 
@@ -236,15 +238,44 @@ const initiatePayment = asyncHandler(async (req, res) => {
             metadata: {
                 ...metadata,
                 userId: req.user._id.toString(),
-                eventId: eventId || null
+                eventId: eventId || null,
+                paymentMethod
             }
         });
 
-        // 4. Create a payment intent with Stripe
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount,
-      currency,
-      metadata: {
+        if (paymentMethod.toLowerCase() === 'razorpay') {
+            // 4. Create a Razorpay order
+            const razorpayOrder = await createRazorpayOrder(amount, currency, {
+                paymentId: payment._id.toString(),
+                userId: req.user._id.toString(),
+                eventId: eventId || null,
+                type,
+                ...metadata
+            });
+            // 5. Update payment record with Razorpay order ID
+            payment.externalPaymentId = razorpayOrder.id;
+            payment.provider = 'razorpay';
+            await payment.save();
+            // 6. Prepare response for Razorpay
+            return res.status(200).json({
+                success: true,
+                paymentId: payment._id,
+                razorpayOrderId: razorpayOrder.id,
+                amount: razorpayOrder.amount,
+                currency: razorpayOrder.currency,
+                status: payment.status,
+                type,
+                description,
+                provider: 'razorpay',
+                notes: razorpayOrder.notes
+            });
+        }
+
+        // 4. Create a payment intent with Stripe (default)
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount,
+            currency,
+            metadata: {
                 paymentId: payment._id.toString(),
                 userId: req.user._id.toString(),
                 eventId: eventId || null,
@@ -261,9 +292,10 @@ const initiatePayment = asyncHandler(async (req, res) => {
 
         // 5. Update payment record with Stripe payment intent ID
         payment.stripePaymentId = paymentIntent.id;
+        payment.provider = 'stripe';
         await payment.save();
 
-        // 6. Prepare response
+        // 6. Prepare response for Stripe
         const response = {
             success: true,
             paymentId: payment._id,
@@ -273,6 +305,7 @@ const initiatePayment = asyncHandler(async (req, res) => {
             status: payment.status,
             type,
             description,
+            provider: 'stripe',
             requiresAction: paymentIntent.status === 'requires_action',
             nextAction: paymentIntent.next_action
         };
@@ -285,11 +318,11 @@ const initiatePayment = asyncHandler(async (req, res) => {
 
         res.status(200).json(response);
 
-  } catch (error) {
+    } catch (error) {
         logger.error('Error initiating payment:', error);
-    res.status(400);
+        res.status(400);
         throw new Error(error.message || 'Error initiating payment');
-  }
+    }
 });
 
 // @desc    Confirm payment intent
