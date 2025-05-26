@@ -18,30 +18,15 @@ export const SearchLearningService = {
 
     getOptimizedResults: async (userId, query) => {
         try {
-            // Use OpenAI to generate enhanced search results
-            const aiResults = await import('../../openAiService.js').then(m => m.OpenAIService.generatePersonalizedSuggestions({ userId, query }, []));
+            // Basic implementation to start with
             return {
-                generalResults: [
-                    {
-                        id: 'ai-1',
-                        title: `AI Suggestion for: ${query}`,
-                        description: aiResults,
-                        category: 'AI',
-                        price: '',
-                    }
-                ],
                 timeBasedResults: [],
                 locationBasedResults: [],
                 priceBasedResults: []
             };
         } catch (error) {
             console.error('Error getting optimized results:', error);
-            return {
-                generalResults: [],
-                timeBasedResults: [],
-                locationBasedResults: [],
-                priceBasedResults: []
-            };
+            return null;
         }
     },
 

@@ -78,7 +78,7 @@ export class EventOptimizer {
         const prompt = this.buildParameterSuggestionPrompt(eventData, creatorType);
         
         const response = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "gpt-3.5-turbo",
             messages: [{
                 role: "system",
                 content: "You are an expert event planner. Suggest optimal parameters for event organization."
@@ -94,7 +94,7 @@ export class EventOptimizer {
     // Helper methods for specific optimizations
     async optimizeEventTiming(eventData, trends) {
         const analysis = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "gpt-3.5-turbo",
             messages: [{
                 role: "system",
                 content: "Analyze optimal timing for an event based on historical data and trends."

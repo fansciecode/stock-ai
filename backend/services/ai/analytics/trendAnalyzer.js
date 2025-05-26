@@ -12,7 +12,7 @@ export const TrendAnalyzerService = {
                 createdAt: {
                     $gte: getDateFromTimeframe(timeframe)
                 }
-            }).populate('reviews');
+            });
 
             return {
                 popularCategories: {

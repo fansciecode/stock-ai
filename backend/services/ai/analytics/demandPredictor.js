@@ -32,7 +32,7 @@ export const DemandPredictorService = {
 
             // Analyze patterns using OpenAI
             const analysis = await openai.chat.completions.create({
-                model: "gpt-4",
+                model: "gpt-3.5-turbo",
                 messages: [{
                     role: "system",
                     content: "Analyze event attendance patterns and predict demand"
@@ -122,8 +122,7 @@ export const TrendAnalyzerService = {
     analyzeEventTrends: async () => {
         try {
             const events = await EventModel.find({})
-                .select('category attendance price location date reviews')
-                .populate('reviews');
+                .select('category attendance price location date reviews');
 
             return {
                 popularCategories: await identifyPopularCategories(events),
