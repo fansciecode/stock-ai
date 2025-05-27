@@ -229,7 +229,7 @@ const initiatePayment = asyncHandler(async (req, res) => {
         // 3. Create a payment record in our database
         if (type === 'subscription' || type === 'package') {
             // For subscription/package payments, require planId and paymentInfo
-            const { planId, paymentInfo } = req.body;
+            const { planId, paymentInfo, paymentMethod = 'stripe', metadata = {} } = req.body;
             if (!planId || !paymentInfo) {
                 res.status(400);
                 throw new Error('planId and paymentInfo are required for subscription/package payments');
@@ -246,6 +246,30 @@ const initiatePayment = asyncHandler(async (req, res) => {
                 status: 'Pending',
                 paymentInfo
             });
+            if (paymentMethod.toLowerCase() === 'razorpay') {
+                // Razorpay expects INR and amount in paise
+                let razorpayCurrency = 'INR';
+                // Convert rupees to paise
+                const amountPaise = plan.price * 100;
+                const notes = { description: `Payment for plan ${plan.planName}`, ...metadata };
+                const razorpayOrder = await createRazorpayOrder(amountPaise, razorpayCurrency, notes);
+                payment.externalPaymentId = razorpayOrder.id;
+                payment.provider = 'razorpay';
+                await payment.save();
+                return res.status(200).json({
+                    success: true,
+                    paymentId: payment._id,
+                    razorpayOrderId: razorpayOrder.id,
+                    amount: razorpayOrder.amount,
+                    currency: razorpayOrder.currency,
+                    status: payment.status,
+                    type,
+                    description: `Payment for plan ${plan.planName}`,
+                    provider: 'razorpay',
+                    notes: razorpayOrder.notes
+                });
+            }
+            // Default: Stripe or other
             return res.status(200).json({
                 success: true,
                 paymentId: payment._id,
