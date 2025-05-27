@@ -673,6 +673,7 @@ export const getEventsCreatedByUser = asyncHandler(async (req, res) => {
         const events = await EventModel.find({ organizer: objectId });
         res.json({ success: true, data: events });
     } catch (error) {
+        console.error("getEventsCreatedByUser error:", error); // Log error to console
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -690,6 +691,7 @@ export const getEventsAttendedByUser = asyncHandler(async (req, res) => {
         const events = await EventModel.find({ attendees: objectId });
         res.json({ success: true, data: events });
     } catch (error) {
+        console.error("getEventsAttendedByUser error:", error); // Log error to console
         res.status(500).json({ success: false, error: error.message });
     }
 });
