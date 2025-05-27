@@ -666,6 +666,9 @@ export const autoGenerateEvent = asyncHandler(async (req, res) => {
 export const getEventsCreatedByUser = asyncHandler(async (req, res) => {
     const { userId } = req.params;
     try {
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ success: false, error: "Invalid userId" });
+        }
         const objectId = mongoose.Types.ObjectId(userId);
         const events = await EventModel.find({ organizer: objectId });
         res.json({ success: true, data: events });
@@ -680,6 +683,9 @@ export const getEventsCreatedByUser = asyncHandler(async (req, res) => {
 export const getEventsAttendedByUser = asyncHandler(async (req, res) => {
     const { userId } = req.params;
     try {
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ success: false, error: "Invalid userId" });
+        }
         const objectId = mongoose.Types.ObjectId(userId);
         const events = await EventModel.find({ attendees: objectId });
         res.json({ success: true, data: events });
