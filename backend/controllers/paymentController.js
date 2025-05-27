@@ -1550,6 +1550,57 @@ const verifyPayment = asyncHandler(async (req, res) => {
                 payment.razorpayPaymentId = razorpayPaymentId;
                 payment.razorpaySignature = razorpaySignature;
                 await payment.save();
+
+                // --- BEGIN: Update user event limit/package after successful payment ---
+                // Only update if payment is for a plan/package
+                if (payment.plan || (payment.paymentInfo && payment.paymentInfo.price && payment.paymentInfo.currency)) {
+                    const user = await UserModel.findById(payment.user);
+                    if (user) {
+                        // Determine plan details
+                        let plan = null;
+                        if (payment.plan) {
+                            // If plan is a reference to Subscription, populate it
+                            plan = await import('../models/subscriptionModel.js').then(m => m.default.findById(payment.plan));
+                        } else if (payment.paymentInfo) {
+                            plan = payment.paymentInfo;
+                        }
+                        if (plan) {
+                            // Calculate expiry date
+                            let expiryDate = new Date();
+                            if (plan.duration) {
+                                if (plan.duration === 'Month') expiryDate.setMonth(expiryDate.getMonth() + 1);
+                                else if (plan.duration === 'Year') expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+                                else if (plan.duration === 'Day') expiryDate.setDate(expiryDate.getDate() + 1);
+                            } else if (plan.expiryDate) {
+                                expiryDate = new Date(plan.expiryDate);
+                            } else {
+                                expiryDate.setMonth(expiryDate.getMonth() + 1); // Default 1 month
+                            }
+                            // Update user eventPackage and eventLimit
+                            user.eventPackage = {
+                                type: plan.planName || plan.name || 'premium',
+                                purchaseDate: new Date(),
+                                expiryDate,
+                                eventsAllowed: plan.eventLimit || plan.eventsAllowed || 100
+                            };
+                            user.eventLimit = plan.eventLimit || plan.eventsAllowed || 100;
+                            // Add to packageHistory
+                            user.packageHistory = user.packageHistory || [];
+                            user.packageHistory.push({
+                                packageId: payment.plan || null,
+                                name: plan.planName || plan.name || 'premium',
+                                purchaseDate: new Date(),
+                                expiryDate,
+                                eventsAllowed: plan.eventLimit || plan.eventsAllowed || 100,
+                                eventsUsed: 0,
+                                status: 'completed'
+                            });
+                            await user.save();
+                        }
+                    }
+                }
+                // --- END: Update user event limit/package ---
+
                 return res.json({
                     success: true,
                     payment: {
