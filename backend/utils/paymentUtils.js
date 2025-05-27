@@ -8,7 +8,7 @@ const logger = createLogger('paymentUtils');
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_SECRET
+    key_secret: process.env.RAZORPAY_KEY_SECRET
 });
 
 /**
