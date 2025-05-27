@@ -227,6 +227,34 @@ const initiatePayment = asyncHandler(async (req, res) => {
         }
 
         // 3. Create a payment record in our database
+        if (type === 'subscription' || type === 'package') {
+            // For subscription/package payments, require planId and paymentInfo
+            const { planId, paymentInfo } = req.body;
+            if (!planId || !paymentInfo) {
+                res.status(400);
+                throw new Error('planId and paymentInfo are required for subscription/package payments');
+            }
+            const plan = await import('../models/subscriptionModel.js').then(m => m.default.findById(planId));
+            if (!plan) {
+                res.status(404);
+                throw new Error('Subscription plan not found');
+            }
+            const payment = await PaymentModel.create({
+                user: req.user._id,
+                plan: planId,
+                amount: plan.price,
+                status: 'Pending',
+                paymentInfo
+            });
+            return res.status(200).json({
+                success: true,
+                paymentId: payment._id,
+                amount: plan.price,
+                status: payment.status
+            });
+        }
+
+        // 4. Create a payment record in our database
         const payment = await PaymentModel.create({
             user: req.user._id,
             event: eventId,
