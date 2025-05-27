@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const subscriptionSchema = mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    planNamename: { type: String, required: true },
+    planName: { type: String, required: true },
     eventLimit: { type: Number, required: true },
     price: { type: Number, required: true },
     currency: { type: String, default: "INR" },
