@@ -262,7 +262,9 @@ const initiatePayment = asyncHandler(async (req, res) => {
             currency,
             description,
             type,
-            status: 'pending',
+            status: 'Pending',
+            plan: null,
+            paymentInfo: {},
             metadata: {
                 ...metadata,
                 userId: req.user._id.toString(),
