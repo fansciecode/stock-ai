@@ -24,7 +24,7 @@ const upgradeEventPayment = asyncHandler(async (req, res) => {
 
   try {
     // 1. Fetch the event
-    const event = await Event.findById(eventId);
+    const event = await EventModel.findById(eventId);
     if (!event) {
       res.status(404);
       throw new Error('Event not found');
@@ -101,7 +101,7 @@ const upgradeEventPayment = asyncHandler(async (req, res) => {
     );
 
     // 7. Create payment record
-    const payment = await Payment.create({
+    const payment = await PaymentModel.create({
       user: req.user._id,
       event: eventId,
       amount,
@@ -208,14 +208,14 @@ const initiatePayment = asyncHandler(async (req, res) => {
 
         // 2. If payment is for an event, verify event exists
         if (eventId) {
-            const event = await Event.findById(eventId);
+            const event = await EventModel.findById(eventId);
             if (!event) {
                 res.status(404);
                 throw new Error('Event not found');
             }
 
             // Verify event payment hasn't already been made
-            const existingPayment = await Payment.findOne({
+            const existingPayment = await PaymentModel.findOne({
                 event: eventId,
                 status: 'completed'
             });
@@ -227,7 +227,7 @@ const initiatePayment = asyncHandler(async (req, res) => {
         }
 
         // 3. Create a payment record in our database
-        const payment = await Payment.create({
+        const payment = await PaymentModel.create({
             user: req.user._id,
             event: eventId,
             amount,
@@ -313,7 +313,7 @@ const initiatePayment = asyncHandler(async (req, res) => {
 
         // 7. If this is an event payment, include event details
         if (eventId) {
-            const event = await Event.findById(eventId).select('title date price');
+            const event = await EventModel.findById(eventId).select('title date price');
             response.event = event;
         }
 
@@ -369,7 +369,7 @@ const confirmPaymentIntent = asyncHandler(async (req, res) => {
                 response.message = 'Payment processed successfully';
                 
                 // Update payment record if it exists
-                const payment = await Payment.findOne({ stripePaymentId: paymentIntentId });
+                const payment = await PaymentModel.findOne({ stripePaymentId: paymentIntentId });
                 if (payment) {
                     payment.status = 'completed';
                     payment.updatedAt = Date.now();
@@ -378,7 +378,7 @@ const confirmPaymentIntent = asyncHandler(async (req, res) => {
 
                 // If this was for an event, update event status
                 if (confirmedPayment.metadata.eventId) {
-                    await Event.findByIdAndUpdate(
+                    await EventModel.findByIdAndUpdate(
                         confirmedPayment.metadata.eventId,
                         { paymentStatus: 'paid' }
                     );
@@ -427,7 +427,7 @@ const getPaymentStatus = asyncHandler(async (req, res) => {
 
   try {
     // 1. Check local payment record
-    const payment = await Payment.findById(paymentId);
+    const payment = await PaymentModel.findById(paymentId);
     if (!payment) {
       res.status(404);
       throw new Error('Payment not found');
@@ -490,7 +490,7 @@ const processRefund = asyncHandler(async (req, res) => {
 
     try {
         // 1. Find the payment record
-        const payment = await Payment.findById(paymentId);
+        const payment = await PaymentModel.findById(paymentId);
         if (!payment) {
             res.status(404);
             throw new Error('Payment not found');
@@ -537,7 +537,7 @@ const processRefund = asyncHandler(async (req, res) => {
                 });
 
                 // Update user's subscription status
-                await User.findByIdAndUpdate(req.user._id, {
+                await UserModel.findByIdAndUpdate(req.user._id, {
                     subscriptionStatus: 'canceled',
                     subscriptionPlan: null
                 });
@@ -550,7 +550,7 @@ const processRefund = asyncHandler(async (req, res) => {
         // 8. If this was an event payment, update event status
         if (payment.event) {
             try {
-                const event = await Event.findById(payment.event);
+                const event = await EventModel.findById(payment.event);
                 if (event) {
                     event.paymentStatus = 'refunded';
                     await event.save();
@@ -673,7 +673,7 @@ const processSubscriptionPayment = asyncHandler(async (req, res) => {
         });
 
         // 5. Create payment record
-        await Payment.create({
+        await PaymentModel.create({
             user: req.user._id,
       amount,
             type: 'subscription',
@@ -687,7 +687,7 @@ const processSubscriptionPayment = asyncHandler(async (req, res) => {
         });
 
         // 6. Update user's subscription status
-        await User.findByIdAndUpdate(req.user._id, {
+        await UserModel.findByIdAndUpdate(req.user._id, {
             subscriptionStatus: subscription.status,
             subscriptionPlan: subscriptionPlan,
             stripeCustomerId: customer.id,
@@ -735,7 +735,7 @@ const processPayment = asyncHandler(async (req, res) => {
 
     try {
         // 1. Find the payment record
-        const payment = await Payment.findById(paymentId);
+        const payment = await PaymentModel.findById(paymentId);
         if (!payment) {
             res.status(404);
             throw new Error('Payment not found');
@@ -773,7 +773,7 @@ const processPayment = asyncHandler(async (req, res) => {
                 customerId = customer.id;
 
                 // Update user with customer ID
-                await User.findByIdAndUpdate(req.user._id, {
+                await UserModel.findByIdAndUpdate(req.user._id, {
                     stripeCustomerId: customerId
                 });
             }
@@ -833,7 +833,7 @@ const processPayment = asyncHandler(async (req, res) => {
 
                 // If this was an event payment, update event status
                 if (payment.type === 'event_payment' && payment.metadata.eventId) {
-                    await Event.findByIdAndUpdate(
+                    await EventModel.findByIdAndUpdate(
                         payment.metadata.eventId,
                         { paymentStatus: 'paid' }
                     );
@@ -894,7 +894,7 @@ const createSubscription = asyncHandler(async (req, res) => {
 
     try {
         // 1. Validate if user already has an active subscription
-        const existingUser = await User.findById(req.user._id);
+        const existingUser = await UserModel.findById(req.user._id);
         if (existingUser.subscriptionStatus === 'active') {
             res.status(400);
             throw new Error('User already has an active subscription');
@@ -998,7 +998,7 @@ const createSubscription = asyncHandler(async (req, res) => {
     });
 
         // 6. Create subscription record in our database
-        const subscriptionRecord = await Payment.create({
+        const subscriptionRecord = await PaymentModel.create({
             user: req.user._id,
             type: 'subscription',
             amount: amount,
@@ -1013,7 +1013,7 @@ const createSubscription = asyncHandler(async (req, res) => {
         });
 
         // 7. Update user's subscription status
-        await User.findByIdAndUpdate(req.user._id, {
+        await UserModel.findByIdAndUpdate(req.user._id, {
             subscriptionStatus: subscription.status,
             subscriptionPlan: subscriptionPlan,
             stripeCustomerId: customer.id,
@@ -1055,7 +1055,7 @@ const createSubscription = asyncHandler(async (req, res) => {
 const cancelSubscription = asyncHandler(async (req, res) => {
   try {
         // 1. Get user's subscription details
-        const user = await User.findById(req.user._id);
+        const user = await UserModel.findById(req.user._id);
         if (!user.stripeSubscriptionId) {
             res.status(400);
             throw new Error('No active subscription found');
@@ -1074,7 +1074,7 @@ const cancelSubscription = asyncHandler(async (req, res) => {
         );
 
         // 3. Update subscription status in payment record
-        await Payment.findOneAndUpdate(
+        await PaymentModel.findOneAndUpdate(
             { stripeSubscriptionId: user.stripeSubscriptionId },
             {
                 $set: {
@@ -1115,7 +1115,7 @@ const cancelSubscription = asyncHandler(async (req, res) => {
 async function handlePaymentSuccess(paymentIntent) {
   const { eventId, userId } = paymentIntent.metadata;
 
-  await Payment.create({
+  await PaymentModel.create({
     user: userId,
     event: eventId,
     amount: paymentIntent.amount,
@@ -1125,7 +1125,7 @@ async function handlePaymentSuccess(paymentIntent) {
 
   // Update event or user status as needed
   if (eventId) {
-    const event = await Event.findById(eventId);
+    const event = await EventModel.findById(eventId);
     if (event) {
       event.paymentStatus = 'paid';
       await event.save();
@@ -1136,7 +1136,7 @@ async function handlePaymentSuccess(paymentIntent) {
 async function handlePaymentFailure(paymentIntent) {
   const { eventId, userId } = paymentIntent.metadata;
 
-  await Payment.create({
+  await PaymentModel.create({
     user: userId,
     event: eventId,
     amount: paymentIntent.amount,
@@ -1146,7 +1146,7 @@ async function handlePaymentFailure(paymentIntent) {
 
   // Handle failure consequences (e.g., cancel registration)
   if (eventId) {
-    const event = await Event.findById(eventId);
+    const event = await EventModel.findById(eventId);
     if (event) {
       event.paymentStatus = 'failed';
       await event.save();
@@ -1158,7 +1158,7 @@ async function handlePaymentFailure(paymentIntent) {
 const handleSubscriptionCreated = async (subscription) => {
     try {
         const { customer, metadata } = subscription;
-        await User.findByIdAndUpdate(metadata.userId, {
+        await UserModel.findByIdAndUpdate(metadata.userId, {
             subscriptionStatus: 'active',
             subscriptionPlan: metadata.plan,
             stripeCustomerId: customer,
@@ -1171,7 +1171,7 @@ const handleSubscriptionCreated = async (subscription) => {
 
 const handleSubscriptionUpdated = async (subscription) => {
     try {
-        const user = await User.findOne({ stripeSubscriptionId: subscription.id });
+        const user = await UserModel.findOne({ stripeSubscriptionId: subscription.id });
         if (user) {
             user.subscriptionStatus = subscription.status;
             user.subscriptionPlan = subscription.metadata.plan;
@@ -1184,7 +1184,7 @@ const handleSubscriptionUpdated = async (subscription) => {
 
 const handleSubscriptionCancelled = async (subscription) => {
     try {
-        const user = await User.findOne({ stripeSubscriptionId: subscription.id });
+        const user = await UserModel.findOne({ stripeSubscriptionId: subscription.id });
         if (user) {
             user.subscriptionStatus = 'cancelled';
             user.subscriptionPlan = null;
@@ -1197,7 +1197,7 @@ const handleSubscriptionCancelled = async (subscription) => {
 
 const handleInvoicePaymentFailed = async (invoice) => {
     try {
-        const user = await User.findOne({ stripeCustomerId: invoice.customer });
+        const user = await UserModel.findOne({ stripeCustomerId: invoice.customer });
         if (user) {
             user.subscriptionStatus = 'payment_failed';
             await user.save();
@@ -1279,7 +1279,7 @@ const createPaymentIntent = asyncHandler(async (req, res) => {
 // @access  Private
 const getPaymentHistory = asyncHandler(async (req, res) => {
     try {
-        const payments = await Payment.find({ user: req.user._id })
+        const payments = await PaymentModel.find({ user: req.user._id })
             .populate('event', 'title date')
             .sort('-createdAt');
 
@@ -1302,7 +1302,7 @@ const validatePayment = asyncHandler(async (req, res) => {
     const { paymentId } = req.params;
 
     try {
-        const payment = await Payment.findById(paymentId);
+        const payment = await PaymentModel.findById(paymentId);
         if (!payment) {
             res.status(404);
             throw new Error('Payment not found');
@@ -1339,7 +1339,7 @@ const refundPayment = asyncHandler(async (req, res) => {
 
     try {
         // 1. Find the payment record
-        const payment = await Payment.findById(paymentId);
+        const payment = await PaymentModel.findById(paymentId);
         if (!payment) {
             res.status(404);
             throw new Error('Payment not found');
@@ -1392,7 +1392,7 @@ const refundPayment = asyncHandler(async (req, res) => {
         switch (payment.type) {
             case 'event_payment':
                 if (payment.metadata.eventId) {
-                    await Event.findByIdAndUpdate(
+                    await EventModel.findByIdAndUpdate(
                         payment.metadata.eventId,
                         { 
                             paymentStatus: 'refunded',
@@ -1407,7 +1407,7 @@ const refundPayment = asyncHandler(async (req, res) => {
                     // Cancel subscription if it exists
                     try {
                         await stripe.subscriptions.cancel(payment.stripeSubscriptionId);
-                        await User.findByIdAndUpdate(req.user._id, {
+                        await UserModel.findByIdAndUpdate(req.user._id, {
                             subscriptionStatus: 'canceled',
                             subscriptionPlan: null,
                             subscriptionEndDate: Date.now()
@@ -1420,7 +1420,7 @@ const refundPayment = asyncHandler(async (req, res) => {
         }
 
         // 8. Create refund record
-        const refundRecord = await Payment.create({
+        const refundRecord = await PaymentModel.create({
             user: req.user._id,
             type: 'refund',
             amount: -refundAmount, // Negative amount to indicate refund
