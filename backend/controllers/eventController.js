@@ -666,7 +666,8 @@ export const autoGenerateEvent = asyncHandler(async (req, res) => {
 export const getEventsCreatedByUser = asyncHandler(async (req, res) => {
     const { userId } = req.params;
     try {
-        const events = await EventModel.find({ organizer: userId });
+        const objectId = mongoose.Types.ObjectId(userId);
+        const events = await EventModel.find({ organizer: objectId });
         res.json({ success: true, data: events });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -679,7 +680,8 @@ export const getEventsCreatedByUser = asyncHandler(async (req, res) => {
 export const getEventsAttendedByUser = asyncHandler(async (req, res) => {
     const { userId } = req.params;
     try {
-        const events = await EventModel.find({ attendees: userId });
+        const objectId = mongoose.Types.ObjectId(userId);
+        const events = await EventModel.find({ attendees: objectId });
         res.json({ success: true, data: events });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
