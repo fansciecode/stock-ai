@@ -660,35 +660,29 @@ export const autoGenerateEvent = asyncHandler(async (req, res) => {
     }
 });
 
-// AI-powered event suggestion endpoint
-export const getAISuggestedEvent = asyncHandler(async (req, res) => {
+// @desc Get events created by a user
+// @route GET /api/events/created/:userId
+// @access Public or Private (depending on use case)
+export const getEventsCreatedByUser = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
     try {
-        const { eventData } = req.body;
-        const creatorType = req.user && req.user.verificationBadge === 'BUSINESS' ? 'BUSINESS' : 'USER';
-
-        // Aggregate all relevant AI suggestions
-        const optimization = await EventOptimizer.optimizeEventCreation(eventData, creatorType);
-
-        // Optionally, call other AI services for more suggestions (e.g., content, demand, pricing)
-        // Example: const contentSuggestions = await ContentAIService.generateContentSuggestions(eventData);
-        // Example: const demandPrediction = await EventOptimizer.predictDemand(eventData);
-
-        res.status(200).json({
-            success: true,
-            suggestions: {
-                ...optimization.suggestedParameters,
-                aiOptimizations: optimization,
-                // contentSuggestions,
-                // demandPrediction,
-                // Add more as needed
-            }
-        });
+        const events = await EventModel.find({ organizer: userId });
+        res.json({ success: true, data: events });
     } catch (error) {
-        console.error('Error getting AI event suggestions:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to get AI event suggestions'
-        });
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// @desc Get events attended by a user
+// @route GET /api/events/attending/:userId
+// @access Public or Private (depending on use case)
+export const getEventsAttendedByUser = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+    try {
+        const events = await EventModel.find({ attendees: userId });
+        res.json({ success: true, data: events });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
