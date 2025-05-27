@@ -12,6 +12,7 @@ import {
     calculateCharges,
     formatAmount
 } from '../utils/paymentUtils.js';
+import crypto from 'crypto';
 dotenv.config();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -1520,7 +1521,7 @@ const refundPayment = asyncHandler(async (req, res) => {
 // @route   POST /api/payments/verify
 // @access  Private
 const verifyPayment = asyncHandler(async (req, res) => {
-    const { paymentId } = req.body;
+    const { paymentId, razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
 
     try {
         // Find payment in our database
@@ -1536,14 +1537,57 @@ const verifyPayment = asyncHandler(async (req, res) => {
             throw new Error('Not authorized to verify this payment');
         }
 
+        // Razorpay verification logic
+        if (razorpayPaymentId && razorpayOrderId && razorpaySignature) {
+            // Verify signature
+            const generatedSignature = crypto
+                .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+                .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+                .digest('hex');
+            if (generatedSignature === razorpaySignature) {
+                payment.status = 'Completed';
+                payment.razorpayOrderId = razorpayOrderId;
+                payment.razorpayPaymentId = razorpayPaymentId;
+                payment.razorpaySignature = razorpaySignature;
+                await payment.save();
+                return res.json({
+                    success: true,
+                    payment: {
+                        id: payment._id,
+                        status: payment.status,
+                        amount: payment.amount,
+                        currency: payment.currency,
+                        createdAt: payment.createdAt,
+                        metadata: payment.metadata
+                    }
+                });
+            } else {
+                payment.status = 'Failed';
+                payment.razorpayOrderId = razorpayOrderId;
+                payment.razorpayPaymentId = razorpayPaymentId;
+                payment.razorpaySignature = razorpaySignature;
+                await payment.save();
+                return res.status(400).json({
+                    success: false,
+                    message: 'Razorpay signature verification failed',
+                    payment: {
+                        id: payment._id,
+                        status: payment.status,
+                        amount: payment.amount,
+                        currency: payment.currency,
+                        createdAt: payment.createdAt,
+                        metadata: payment.metadata
+                    }
+                });
+            }
+        }
+
         // If payment has Stripe ID, verify with Stripe
         if (payment.stripePaymentId) {
             const stripePayment = await stripe.paymentIntents.retrieve(payment.stripePaymentId);
-            
             // Update payment status based on Stripe status
-            payment.status = stripePayment.status === 'succeeded' ? 'completed' : stripePayment.status;
+            payment.status = stripePayment.status === 'succeeded' ? 'Completed' : stripePayment.status;
             await payment.save();
-
             return res.json({
                 success: true,
                 payment: {
