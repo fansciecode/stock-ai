@@ -244,19 +244,24 @@ const initiatePayment = asyncHandler(async (req, res) => {
         });
 
         if (paymentMethod.toLowerCase() === 'razorpay') {
-            // 4. Create a Razorpay order
-            const razorpayOrder = await createRazorpayOrder(amount, currency, {
-                paymentId: payment._id.toString(),
-                userId: req.user._id.toString(),
-                eventId: eventId || null,
-                type,
-                ...metadata
-            });
-            // 5. Update payment record with Razorpay order ID
+            // Razorpay expects INR and amount in paise
+            let razorpayCurrency = currency.toUpperCase();
+            let razorpayAmount = amount;
+            if (razorpayCurrency !== 'INR') {
+                // Simple fixed conversion for USD->INR (update as needed)
+                const USD_TO_INR = 83; // Example rate, update as needed
+                razorpayAmount = Math.round(amount * USD_TO_INR);
+                razorpayCurrency = 'INR';
+            }
+            // Convert to paise
+            const amountPaise = razorpayAmount * 100;
+            const notes = { description, ...metadata };
+            const razorpayOrder = await createRazorpayOrder(amountPaise, razorpayCurrency, notes);
+            // Update payment record with Razorpay order ID
             payment.externalPaymentId = razorpayOrder.id;
             payment.provider = 'razorpay';
             await payment.save();
-            // 6. Prepare response for Razorpay
+            // Respond with Razorpay order details
             return res.status(200).json({
                 success: true,
                 paymentId: payment._id,
