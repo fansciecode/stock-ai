@@ -245,16 +245,12 @@ const initiatePayment = asyncHandler(async (req, res) => {
 
         if (paymentMethod.toLowerCase() === 'razorpay') {
             // Razorpay expects INR and amount in paise
-            let razorpayCurrency = currency.toUpperCase();
-            let razorpayAmount = amount;
-            if (razorpayCurrency !== 'INR') {
-                // Simple fixed conversion for USD->INR (update as needed)
-                const USD_TO_INR = 83; // Example rate, update as needed
-                razorpayAmount = Math.round(amount * USD_TO_INR);
-                razorpayCurrency = 'INR';
+            let razorpayCurrency = 'INR';
+            if (currency.toUpperCase() !== 'INR') {
+                logger.warn && logger.warn(`Razorpay only supports INR. Overriding currency from ${currency} to INR.`);
             }
-            // Convert to paise
-            const amountPaise = razorpayAmount * 100;
+            // Convert rupees to paise
+            const amountPaise = amount * 100;
             const notes = { description, ...metadata };
             const razorpayOrder = await createRazorpayOrder(amountPaise, razorpayCurrency, notes);
             // Update payment record with Razorpay order ID
