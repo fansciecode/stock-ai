@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+transformers
+torch
+pymongo
+lightfm
+scikit-learn
+numpy
+sentence-transformers 
