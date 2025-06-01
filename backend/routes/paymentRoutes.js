@@ -17,7 +17,8 @@ import {
   validatePayment,
   processSubscriptionPayment,
   verifyPayment,
-  getEventUpgradePrice
+  getEventUpgradePrice,
+  getEventUpgradeOptions
 } from '../controllers/paymentController.js';
 import { validateRequest } from '../middleware/validateRequest.js';
 import {
@@ -41,6 +42,9 @@ router.post('/upgrade/:eventId', upgradeEventPayment);
 
 // New: Get event upgrade price details
 router.get('/upgrade-price/:eventId', getEventUpgradePrice);
+
+// New: Get event upgrade options (valid types and payment methods)
+router.get('/upgrade-options/:eventId', getEventUpgradeOptions);
 
 // Initiate payment
 router.post('/create', initiatePayment);

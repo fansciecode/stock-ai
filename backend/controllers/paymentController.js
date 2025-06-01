@@ -13,6 +13,7 @@ import {
     formatAmount
 } from '../utils/paymentUtils.js';
 import crypto from 'crypto';
+import UpgradePricingModel from '../models/upgradePricingModel.js';
 dotenv.config();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -1666,11 +1667,42 @@ export const getEventUpgradePrice = asyncHandler(async (req, res) => {
   if (!event) {
     return res.status(404).json({ success: false, message: 'Event not found' });
   }
-  const price = event.getUpgradePrice(upgradeType);
+  // Fetch upgrade pricing config from DB
+  const pricingConfig = await UpgradePricingModel.findOne({ _id: 'global' });
+  if (!pricingConfig) {
+    return res.status(500).json({ success: false, message: 'Upgrade pricing config not found' });
+  }
+  const currentStatus = event.upgradeStatus || 'none';
+  const price = pricingConfig.upgradePricing?.[currentStatus]?.[upgradeType] ?? null;
   if (price === null) {
     return res.status(400).json({ success: false, message: 'Invalid upgrade path' });
   }
   return res.json({ success: true, eventId, upgradeType, price });
+});
+
+// Get valid upgrade options and payment methods for an event
+export const getEventUpgradeOptions = asyncHandler(async (req, res) => {
+  const { eventId } = req.params;
+  const event = await EventModel.findById(eventId);
+  if (!event) {
+    return res.status(404).json({ success: false, message: 'Event not found' });
+  }
+  // Fetch upgrade pricing config from DB
+  const pricingConfig = await UpgradePricingModel.findOne({ _id: 'global' });
+  if (!pricingConfig) {
+    return res.status(500).json({ success: false, message: 'Upgrade pricing config not found' });
+  }
+  const currentStatus = event.upgradeStatus || 'none';
+  const validUpgradeTypes = pricingConfig.upgradePricing?.[currentStatus] ? Object.keys(pricingConfig.upgradePricing[currentStatus]) : [];
+  // Available payment methods (could be dynamic in future)
+  const paymentMethods = ['Credit Card', 'Razorpay', 'PayPal'];
+  res.json({
+    success: true,
+    eventId,
+    currentStatus,
+    validUpgradeTypes,
+    paymentMethods
+  });
 });
 
 // Export all the functions that are used in routes
