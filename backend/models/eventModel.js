@@ -142,7 +142,12 @@ const eventSchema = new mongoose.Schema({
             type: Boolean,
             default: true
         }
-    }]
+    }],
+    upgradeStatus: {
+        type: String,
+        enum: ['none', 'featured', 'premium', 'vip'],
+        default: 'none'
+    }
 }, {
     timestamps: true
 });
@@ -151,5 +156,21 @@ const eventSchema = new mongoose.Schema({
 eventSchema.index({ 'location.coordinates': '2dsphere' });
 // Add compound index for date and status queries
 eventSchema.index({ 'date.start': 1, status: 1 });
+
+// Upgrade pricing logic as a schema method
+// You can later move this to a config or DB if needed
+const UPGRADE_PRICING = {
+  none: { featured: 2999, premium: 4999, vip: 9999 },
+  featured: { premium: 2999, vip: 7999 },
+  premium: { vip: 4999 }
+};
+
+eventSchema.methods.getUpgradePrice = function(upgradeType) {
+  const currentStatus = this.upgradeStatus || 'none';
+  if (!UPGRADE_PRICING[currentStatus] || !UPGRADE_PRICING[currentStatus][upgradeType]) {
+    return null;
+  }
+  return UPGRADE_PRICING[currentStatus][upgradeType];
+};
 
 export const EventModel = mongoose.model('Event', eventSchema);

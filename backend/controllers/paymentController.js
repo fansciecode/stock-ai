@@ -43,29 +43,12 @@ const upgradeEventPayment = asyncHandler(async (req, res) => {
       throw new Error('Event is already at the highest upgrade level');
     }
 
-    // 4. Calculate upgrade cost and validate upgrade path
-    const upgradePricing = {
-      none: {
-        featured: 2999,  // $29.99
-        premium: 4999,   // $49.99
-        vip: 9999       // $99.99
-      },
-      featured: {
-        premium: 2999,   // $29.99
-        vip: 7999        // $79.99
-      },
-      premium: {
-        vip: 4999        // $49.99
-      }
-    };
-
-    const currentStatus = event.upgradeStatus || 'none';
-    if (!upgradePricing[currentStatus] || !upgradePricing[currentStatus][upgradeType]) {
+    // 4. Get upgrade price from model
+    const amount = event.getUpgradePrice(upgradeType);
+    if (amount === null) {
       res.status(400);
       throw new Error('Invalid upgrade path');
     }
-
-    const amount = upgradePricing[currentStatus][upgradeType];
 
     // Calculate charges including gateway fees
     const charges = calculateCharges(amount, 'stripe');
@@ -97,7 +80,7 @@ const upgradeEventPayment = asyncHandler(async (req, res) => {
             eventId,
             userId: req.user._id.toString(),
             upgradeType,
-            previousStatus: currentStatus
+            previousStatus: event.upgradeStatus || 'none'
         }
     );
 
@@ -112,7 +95,7 @@ const upgradeEventPayment = asyncHandler(async (req, res) => {
       stripeCustomerId: customer.id,
       metadata: {
         upgradeType,
-        previousStatus: currentStatus,
+        previousStatus: event.upgradeStatus || 'none',
         eventTitle: event.title
       }
     });
@@ -121,7 +104,7 @@ const upgradeEventPayment = asyncHandler(async (req, res) => {
     if (paymentIntent.status === 'succeeded') {
       event.upgradeStatus = upgradeType;
       event.upgradedAt = Date.now();
-      event.previousUpgradeStatus = currentStatus;
+      event.previousUpgradeStatus = event.upgradeStatus || 'none';
       await event.save();
 
       // 9. Handle upgrade-specific actions
@@ -1670,6 +1653,24 @@ const verifyPayment = asyncHandler(async (req, res) => {
         res.status(400);
         throw new Error(error.message || 'Error verifying payment');
     }
+});
+
+// New: Get event upgrade price details
+export const getEventUpgradePrice = asyncHandler(async (req, res) => {
+  const { eventId } = req.params;
+  const { upgradeType } = req.query;
+  if (!upgradeType) {
+    return res.status(400).json({ success: false, message: 'upgradeType is required' });
+  }
+  const event = await EventModel.findById(eventId);
+  if (!event) {
+    return res.status(404).json({ success: false, message: 'Event not found' });
+  }
+  const price = event.getUpgradePrice(upgradeType);
+  if (price === null) {
+    return res.status(400).json({ success: false, message: 'Invalid upgrade path' });
+  }
+  return res.json({ success: true, eventId, upgradeType, price });
 });
 
 // Export all the functions that are used in routes
