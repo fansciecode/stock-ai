@@ -31,9 +31,6 @@ router.delete('/:id', protect, deleteEvent);
 
 router.post("/:id/reviews", protect, addEventReview);
 router.get("/category/:categoryId", getEventsByCategory);
-router.post("/upgrade", protect, upgradeEvent);
-router.post("/upgrade/:eventId", protect, upgradeEventPayment);
-router.post("/upgrade/verify/:eventId", protect, confirmUpgradePayment);
 
 // Review routes
 router.route('/:id/reviews')
