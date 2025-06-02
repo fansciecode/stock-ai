@@ -1624,7 +1624,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
                             }
                             // Update user eventPackage and eventLimit
                             user.eventPackage = {
-                                type: plan.planName || plan.name || 'premium',
+                                type: plan.type || plan.planName || plan.name || 'premium',
                                 purchaseDate: new Date(),
                                 expiryDate,
                                 eventsAllowed: plan.eventLimit || plan.eventsAllowed || 100
@@ -1634,7 +1634,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
                             user.packageHistory = user.packageHistory || [];
                             user.packageHistory.push({
                                 packageId: payment.plan || null,
-                                name: plan.planName || plan.name || 'premium',
+                                name: plan.type || plan.planName || plan.name || 'premium',
                                 purchaseDate: new Date(),
                                 expiryDate,
                                 eventsAllowed: plan.eventLimit || plan.eventsAllowed || 100,
