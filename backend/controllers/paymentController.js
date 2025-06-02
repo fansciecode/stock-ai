@@ -62,10 +62,11 @@ const upgradeEventPayment = asyncHandler(async (req, res) => {
         status: 'Pending',
         provider: 'razorpay',
         razorpayPaymentId: paymentMethodId,
-        metadata: {
+        paymentInfo: {
+          eventId,
           upgradeType,
-          previousStatus: event.upgradeStatus || 'none',
-          eventTitle: event.title
+          isEventUpgrade: true,
+          previousStatus: event.upgradeStatus || 'none'
         }
       });
       // Optionally, verify payment with Razorpay API here if needed
@@ -153,10 +154,11 @@ const upgradeEventPayment = asyncHandler(async (req, res) => {
       status: paymentIntent.status === 'succeeded' ? 'completed' : 'pending',
       stripePaymentId: paymentIntent.id,
       stripeCustomerId: customer.id,
-      metadata: {
+      paymentInfo: {
+        eventId,
         upgradeType,
-        previousStatus: event.upgradeStatus || 'none',
-        eventTitle: event.title
+        isEventUpgrade: true,
+        previousStatus: event.upgradeStatus || 'none'
       }
     });
 
@@ -1103,10 +1105,11 @@ const createSubscription = asyncHandler(async (req, res) => {
             status: subscription.status,
             stripeSubscriptionId: subscription.id,
             stripeCustomerId: customer.id,
-            metadata: {
-                plan: subscriptionPlan,
-                billingCycle: billingCycle,
-                automaticPayment: automaticPayment
+            paymentInfo: {
+                eventId,
+                upgradeType,
+                isEventUpgrade: true,
+                previousStatus: event.upgradeStatus || 'none'
             }
         });
 
