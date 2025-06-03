@@ -1744,12 +1744,18 @@ const verifyPayment = asyncHandler(async (req, res) => {
                                 }
                             });
                         } else if (type === 'ticket' || type === 'booking') {
+                            // Defensive check for quantity
+                            const qty = payment.paymentInfo.quantity;
+                            if (!Number.isInteger(qty) || qty <= 0) {
+                                logger.error('Invalid ticket quantity for booking:', { quantity: qty, paymentInfo: payment.paymentInfo });
+                                throw new Error('Invalid ticket quantity for booking: ' + qty);
+                            }
                             // Create Booking
                             const Booking = (await import('../models/bookingModel.js')).default;
                             const booking = await Booking.create({
                                 user: payment.user,
                                 event: payment.paymentInfo.eventId,
-                                seats: payment.paymentInfo.quantity,
+                                seats: qty,
                                 ticketType: payment.paymentInfo.ticketTypeId || payment.paymentInfo.ticketType,
                                 status: 'CONFIRMED',
                                 totalAmount: payment.amount,
@@ -1757,7 +1763,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
                             });
                             // Generate tickets and assign to booking
                             try {
-                                const tickets = await Promise.all(Array(payment.paymentInfo.quantity).fill().map(async () => {
+                                const tickets = await Promise.all(Array(qty).fill().map(async () => {
                                     const ticketNumber = generateTicketNumber();
                                     const qrCode = await generateQRCode(JSON.stringify({
                                         ticketNumber,
@@ -1771,6 +1777,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
                                         createdAt: new Date()
                                     };
                                 }));
+                                logger.info('Generated tickets for booking:', { quantity: qty, tickets });
                                 // Defensive check: ensure no ticketNumber is null/undefined
                                 if (tickets.some(t => !t.ticketNumber)) {
                                     logger.error('Ticket generation error: At least one ticketNumber is null/undefined', { tickets });
