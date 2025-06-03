@@ -63,6 +63,12 @@ const createEnhancedBooking = asyncHandler(async (req, res) => {
         throw new Error('Event not found');
     }
 
+    // Defensive check for seats
+    if (!Number.isInteger(seats) || seats <= 0) {
+        logger.error('Invalid ticket quantity for booking:', { seats, eventId, ticketType });
+        throw new Error('Invalid ticket quantity for booking: ' + seats);
+    }
+
     // Create booking first
     const booking = await Booking.create({
         user: req.user._id,
@@ -74,6 +80,11 @@ const createEnhancedBooking = asyncHandler(async (req, res) => {
 
     // Generate tickets after booking is created
     const tickets = await generateTickets(seats, booking._id);
+    logger.info('Generated tickets for booking:', { seats, tickets });
+    if (tickets.some(t => !t.ticketNumber)) {
+        logger.error('Ticket generation error: At least one ticketNumber is null/undefined', { tickets });
+        throw new Error('Ticket generation error: ticketNumber is null/undefined');
+    }
     booking.tickets = tickets;
     await booking.save();
 
