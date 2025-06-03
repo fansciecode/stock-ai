@@ -11,6 +11,7 @@ import EventAutoGenerator from '../services/ai/events/eventAutoGenerator.js';
 import mongoose from 'mongoose';
 import { processMediaUrls } from '../utils/mediaUtils.js';
 import { createLogger } from '../utils/logger.js';
+import { ProductModel } from '../models/productModel.js';
 
 const logger = createLogger('eventController');
 
@@ -206,13 +207,49 @@ export const createEvent = asyncHandler(async (req, res) => {
         // Process guidelines if available
         const guidelinesList = Array.isArray(guidelines) ? guidelines : [];
 
+        // Insert products into Product collection if provided
+        let productObjectIds = [];
+        if (Array.isArray(products) && products.length > 0) {
+            for (const prod of products) {
+                // Check if product already exists by name and seller (avoid duplicates)
+                let existing = await ProductModel.findOne({ name: prod.name, seller: userIdToUse });
+                if (!existing) {
+                    // Only insert if required fields are present
+                    if (prod.name && prod.price && prod.category) {
+                        const newProduct = await ProductModel.create({
+                            name: prod.name,
+                            description: prod.description,
+                            price: {
+                                amount: prod.price.amount || prod.price || 0,
+                                currency: prod.price.currency || prod.currency || 'USD'
+                            },
+                            category: {
+                                main: prod.category.main || prod.category || 'Uncategorized',
+                                sub: prod.category.sub || ''
+                            },
+                            attributes: prod.attributes || [],
+                            media: prod.media || [],
+                            inventory: prod.inventory || { quantity: prod.quantity || 0 },
+                            seller: userIdToUse,
+                            status: 'active',
+                            tags: prod.tags || [],
+                            metadata: prod.metadata || {}
+                        });
+                        productObjectIds.push(newProduct._id);
+                    }
+                } else {
+                    productObjectIds.push(existing._id);
+                }
+            }
+        }
+
         // Create event with fields from request
         const eventData = {
             title,
             description,
             date: {
-                start: new Date(startDate || startDateTime || date?.start || date || Date.now()),
-                end: new Date(endDate || endDateTime || date?.end || date || Date.now())
+                start: new Date(startDate || startDateTime || date || Date.now()),
+                end: new Date(endDate || endDateTime || date || Date.now())
             },
             startTime: startTime || "00:00",
             endTime: endTime || "00:00",
@@ -227,7 +264,7 @@ export const createEvent = asyncHandler(async (req, res) => {
             tags: tagsList,
             guidelines: guidelinesList,
             ticketTypes: ticketsList,
-            products: productsList,
+            products: productObjectIds,
             services: servicesList
         };
         
@@ -241,7 +278,7 @@ export const createEvent = asyncHandler(async (req, res) => {
             ...eventData,
             media: `${processedMedia.length} items`, // Log media length to keep output reasonable
             ticketTypes: ticketsList.length > 0 ? `${ticketsList.length} items` : [],
-            products: productsList.length > 0 ? `${productsList.length} items` : [],
+            products: productObjectIds.length > 0 ? `${productObjectIds.length} items` : [],
             services: servicesList.length > 0 ? `${servicesList.length} items` : []
         };
         
