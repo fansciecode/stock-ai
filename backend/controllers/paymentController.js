@@ -1652,11 +1652,20 @@ const verifyPayment = asyncHandler(async (req, res) => {
                             // Generate a unique order number (timestamp + user)
                             const orderNumber = `ORD-${Date.now()}-${payment.user.toString().slice(-4)}`;
 
-                            // Fetch all product docs and keep original IDs
+                            // Fetch all product docs and keep original IDs, try both _id and uuid
                             const productDocs = await Promise.all((payment.paymentInfo.products || []).map(async p => {
-                                // p.productId is the original product _id (string or ObjectId)
-                                let prod = await ProductModel.findById(p.productId);
-                                if (!prod) throw new Error(`Product not found: ${p.productId}`);
+                                let prod = null;
+                                if (mongoose.Types.ObjectId.isValid(p.productId)) {
+                                    prod = await ProductModel.findById(p.productId);
+                                }
+                                if (!prod) {
+                                    // Try to find by uuid if present
+                                    prod = await ProductModel.findOne({ uuid: p.productId });
+                                }
+                                if (!prod) {
+                                    logger.error(`Product not found for productId: ${p.productId}`);
+                                    throw new Error(`Product not found: ${p.productId}`);
+                                }
                                 return prod;
                             }));
 
@@ -1762,10 +1771,16 @@ const verifyPayment = asyncHandler(async (req, res) => {
                                         createdAt: new Date()
                                     };
                                 }));
+                                // Defensive check: ensure no ticketNumber is null/undefined
+                                if (tickets.some(t => !t.ticketNumber)) {
+                                    logger.error('Ticket generation error: At least one ticketNumber is null/undefined', { tickets });
+                                    throw new Error('Ticket generation error: ticketNumber is null/undefined');
+                                }
                                 booking.tickets = tickets;
                                 await booking.save();
                             } catch (ticketErr) {
                                 logger.error('Error generating tickets for booking:', ticketErr);
+                                throw ticketErr;
                             }
                         }
                     } catch (err) {
