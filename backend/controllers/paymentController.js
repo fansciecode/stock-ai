@@ -1598,18 +1598,11 @@ const verifyPayment = asyncHandler(async (req, res) => {
                 await payment.save();
 
                 // --- BEGIN: Update user event limit/package after successful payment ---
-                // Only update if payment is for a plan/package
-                if (payment.plan || (payment.paymentInfo && payment.paymentInfo.price && payment.paymentInfo.currency)) {
+                if (payment.plan) {
                     const user = await UserModel.findById(payment.user);
                     if (user) {
                         // Determine plan details
-                        let plan = null;
-                        if (payment.plan) {
-                            // If plan is a reference to Subscription, populate it
-                            plan = await import('../models/subscriptionModel.js').then(m => m.default.findById(payment.plan));
-                        } else if (payment.paymentInfo) {
-                            plan = payment.paymentInfo;
-                        }
+                        let plan = await import('../models/subscriptionModel.js').then(m => m.default.findById(payment.plan));
                         if (plan) {
                             // Calculate expiry date
                             let expiryDate = new Date();
@@ -1624,7 +1617,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
                             }
                             // Update user eventPackage and eventLimit
                             user.eventPackage = {
-                                type: (payment.paymentInfo && payment.paymentInfo.type) || plan.type || plan.planName || plan.name || 'premium',
+                                type: plan.type || plan.planName || plan.name || 'premium',
                                 purchaseDate: new Date(),
                                 expiryDate,
                                 eventsAllowed: plan.eventLimit || plan.eventsAllowed || 100
@@ -1634,7 +1627,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
                             user.packageHistory = user.packageHistory || [];
                             user.packageHistory.push({
                                 packageId: payment.plan || null,
-                                name: (payment.paymentInfo && payment.paymentInfo.type) || plan.type || plan.planName || plan.name || 'premium',
+                                name: plan.type || plan.planName || plan.name || 'premium',
                                 purchaseDate: new Date(),
                                 expiryDate,
                                 eventsAllowed: plan.eventLimit || plan.eventsAllowed || 100,
@@ -1645,6 +1638,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
                         }
                     }
                 }
+                // TODO: For service/product/booking payments, create the actual order/booking record here after payment success.
                 // --- END: Update user event limit/package ---
 
                 return res.json({
