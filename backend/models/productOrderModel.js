@@ -1,3 +1,5 @@
+import mongoose from 'mongoose';
+
 // NEW MODEL FOR PRODUCT ORDERS - Separate from event bookings
 const productOrderSchema = new mongoose.Schema({
     user: {

@@ -14,6 +14,7 @@ import {
 } from '../utils/paymentUtils.js';
 import crypto from 'crypto';
 import UpgradePricingModel from '../models/upgradePricingModel.js';
+import { generateTicketNumber, generateQRCode } from '../utils/ticketUtils.js';
 dotenv.config();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -1703,7 +1704,6 @@ const verifyPayment = asyncHandler(async (req, res) => {
                         } else if (type === 'ticket' || type === 'booking') {
                             // Create Booking
                             const Booking = (await import('../models/bookingModel.js')).default;
-                            const { generateTickets } = await import('./bookingController.js');
                             const booking = await Booking.create({
                                 user: payment.user,
                                 event: payment.paymentInfo.eventId,
@@ -1715,7 +1715,20 @@ const verifyPayment = asyncHandler(async (req, res) => {
                             });
                             // Generate tickets and assign to booking
                             try {
-                                const tickets = await generateTickets(payment.paymentInfo.quantity, booking._id);
+                                const tickets = await Promise.all(Array(payment.paymentInfo.quantity).fill().map(async () => {
+                                    const ticketNumber = generateTicketNumber();
+                                    const qrCode = await generateQRCode(JSON.stringify({
+                                        ticketNumber,
+                                        bookingId: booking._id,
+                                        timestamp: Date.now()
+                                    }));
+                                    return {
+                                        ticketNumber,
+                                        qrCode,
+                                        isUsed: false,
+                                        createdAt: new Date()
+                                    };
+                                }));
                                 booking.tickets = tickets;
                                 await booking.save();
                             } catch (ticketErr) {

@@ -6,21 +6,7 @@ import { generateQR, verifyQR } from "../utils/qrUtils.js";
 import logger from "../utils/logger.js";
 import PaymentService from '../services/paymentService.js';
 import PaymentModel from '../models/paymentModel.js';
-
-// Helper function to generate QR code
-const generateQRCode = async (data) => {
-    try {
-        return await QRCode.toDataURL(data);
-    } catch (error) {
-        console.error('QR Code generation error:', error);
-        return null;
-    }
-};
-
-// Helper function to generate ticket number
-const generateTicketNumber = () => {
-    return `TKT${Date.now()}${Math.floor(Math.random() * 1000)}`;
-};
+import { generateTicketNumber, generateQRCode } from '../utils/ticketUtils.js';
 
 // Helper function to generate tickets
 const generateTickets = async (quantity, bookingId) => {
