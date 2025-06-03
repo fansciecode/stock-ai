@@ -1643,41 +1643,63 @@ const verifyPayment = asyncHandler(async (req, res) => {
                         const type = payment.paymentInfo.type;
                         if (type === 'product') {
                             // Create ProductOrder
-                            const ProductOrder = (await import('../models/productOrderModel.js')).default || (await import('../models/productOrderModel.js')).ProductOrder;
+                            const ProductOrder = (await import('../models/productOrderModel.js')).default;
+                            // Generate a unique order number (timestamp + user)
+                            const orderNumber = `ORD-${Date.now()}-${payment.user.toString().slice(-4)}`;
                             await ProductOrder.create({
                                 user: payment.user,
-                                eventId: payment.paymentInfo.eventId,
-                                products: payment.paymentInfo.products,
-                                total: payment.paymentInfo.total,
-                                currency: payment.paymentInfo.currency,
-                                status: 'confirmed',
+                                // seller: (optional, can be set if available in paymentInfo)
+                                sourceEvent: payment.paymentInfo.eventId || undefined,
+                                orderNumber,
+                                items: (payment.paymentInfo.products || []).map(p => ({
+                                    product: p.productId,
+                                    quantity: p.quantity,
+                                    price: {
+                                        base: p.price,
+                                        discount: 0,
+                                        final: p.price
+                                    },
+                                    productSnapshot: {
+                                        name: p.name
+                                    }
+                                })),
+                                amounts: {
+                                    subtotal: payment.paymentInfo.total || payment.amount,
+                                    discount: 0,
+                                    tax: 0,
+                                    shipping: 0,
+                                    total: payment.paymentInfo.total || payment.amount
+                                },
                                 payment: {
-                                    method: 'online',
-                                    transactionId: payment.razorpayPaymentId || payment.stripePaymentId,
-                                    status: 'Completed'
-                                }
+                                    method: 'CARD',
+                                    status: 'COMPLETED',
+                                    transactions: [{
+                                        id: payment.razorpayPaymentId || payment.stripePaymentId,
+                                        amount: payment.amount,
+                                        status: 'COMPLETED',
+                                        type: 'PAYMENT',
+                                        date: new Date()
+                                    }]
+                                },
+                                status: 'confirmed'
                             });
                         } else if (type === 'service') {
-                            // Create ServiceBooking (if model exists)
-                            try {
-                                const ServiceBooking = (await import('../models/serviceBookingModel.js')).default;
-                                await ServiceBooking.create({
-                                    user: payment.user,
-                                    eventId: payment.paymentInfo.eventId,
-                                    serviceId: payment.paymentInfo.serviceId,
-                                    serviceName: payment.paymentInfo.serviceName,
-                                    price: payment.paymentInfo.price,
-                                    currency: payment.paymentInfo.currency,
-                                    status: 'confirmed',
-                                    payment: {
-                                        method: 'online',
-                                        transactionId: payment.razorpayPaymentId || payment.stripePaymentId,
-                                        status: 'Completed'
-                                    }
-                                });
-                            } catch (e) {
-                                logger.warn('ServiceBooking model not found or failed to create:', e.message);
-                            }
+                            // Create ServiceBooking
+                            const ServiceBooking = (await import('../models/serviceBookingModel.js')).default;
+                            await ServiceBooking.create({
+                                user: payment.user,
+                                eventId: payment.paymentInfo.eventId,
+                                serviceId: payment.paymentInfo.serviceId,
+                                serviceName: payment.paymentInfo.serviceName,
+                                price: payment.paymentInfo.price,
+                                currency: payment.paymentInfo.currency || 'INR',
+                                status: 'confirmed',
+                                payment: {
+                                    method: 'CARD',
+                                    transactionId: payment.razorpayPaymentId || payment.stripePaymentId,
+                                    status: 'COMPLETED'
+                                }
+                            });
                         } else if (type === 'ticket' || type === 'booking') {
                             // Create Booking
                             const Booking = (await import('../models/bookingModel.js')).default;
@@ -1687,7 +1709,8 @@ const verifyPayment = asyncHandler(async (req, res) => {
                                 seats: payment.paymentInfo.quantity,
                                 ticketType: payment.paymentInfo.ticketTypeId || payment.paymentInfo.ticketType,
                                 status: 'CONFIRMED',
-                                totalAmount: payment.amount
+                                totalAmount: payment.amount,
+                                currency: payment.paymentInfo.currency || 'INR'
                             });
                             // Optionally generate tickets if needed
                             // ...

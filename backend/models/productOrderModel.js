@@ -136,4 +136,7 @@ const productOrderSchema = new mongoose.Schema({
     }
 }, {
     timestamps: true
-}); 
+});
+
+const ProductOrder = mongoose.model('ProductOrder', productOrderSchema);
+export default ProductOrder; 
