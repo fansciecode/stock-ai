@@ -1703,6 +1703,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
                         } else if (type === 'ticket' || type === 'booking') {
                             // Create Booking
                             const Booking = (await import('../models/bookingModel.js')).default;
+                            const { generateTickets } = await import('./bookingController.js');
                             const booking = await Booking.create({
                                 user: payment.user,
                                 event: payment.paymentInfo.eventId,
@@ -1712,8 +1713,14 @@ const verifyPayment = asyncHandler(async (req, res) => {
                                 totalAmount: payment.amount,
                                 currency: payment.paymentInfo.currency || 'INR'
                             });
-                            // Optionally generate tickets if needed
-                            // ...
+                            // Generate tickets and assign to booking
+                            try {
+                                const tickets = await generateTickets(payment.paymentInfo.quantity, booking._id);
+                                booking.tickets = tickets;
+                                await booking.save();
+                            } catch (ticketErr) {
+                                logger.error('Error generating tickets for booking:', ticketErr);
+                            }
                         }
                     } catch (err) {
                         logger.error('Error creating business record after payment:', err);
