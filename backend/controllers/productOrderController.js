@@ -3,6 +3,8 @@ import ProductOrder from '../models/productOrderModel.js';
 import Cart from '../models/cartModel.js';
 import { calculateTax, calculateShipping } from '../services/pricingService.js';
 import { sendOrderConfirmation } from '../services/notificationService.js';
+import PaymentService from '../services/paymentService.js';
+import PaymentModel from '../models/paymentModel.js';
 
 // Keep existing methods unchanged
 export const createOrder = asyncHandler(async (req, res) => {
@@ -107,4 +109,51 @@ export const processRefund = asyncHandler(async (req, res) => {
     await order.save();
 
     res.json(order);
+});
+
+export const initiateProductOrderPayment = asyncHandler(async (req, res) => {
+    const cart = await Cart.findOne({ user: req.user._id }).populate('items.product');
+    if (!cart || cart.items.length === 0) {
+        throw new Error('Cart is empty');
+    }
+    // Calculate total
+    const subtotal = cart.summary.subtotal;
+    const discount = cart.summary.discount;
+    const tax = await calculateTax(cart.items, req.body.billingAddress);
+    const shipping = await calculateShipping(cart.items, req.body.shippingMethod, req.body.shippingAddress);
+    const total = subtotal - discount + tax + shipping;
+    // Initiate payment
+    const paymentIntent = await PaymentService.createPaymentIntent({
+        userId: req.user._id,
+        amount: total,
+        currency: 'INR',
+        metadata: { type: 'product_order' }
+    });
+    const payment = await PaymentModel.create({
+        user: req.user._id,
+        amount: total,
+        type: 'product_order',
+        status: 'pending',
+        paymentInfo: { cartId: cart._id },
+        stripePaymentId: paymentIntent.paymentIntent.id
+    });
+    res.json({ paymentIntent: paymentIntent.paymentIntent, paymentId: payment._id });
+});
+
+export const confirmProductOrderAfterPayment = asyncHandler(async (req, res) => {
+    const { paymentId, shippingAddress, billingAddress, shippingMethod } = req.body;
+    const payment = await PaymentModel.findById(paymentId);
+    if (!payment || payment.status !== 'pending') {
+        throw new Error('Invalid or already processed payment');
+    }
+    const verified = await PaymentService.verifyPayment(paymentId);
+    if (!verified) {
+        throw new Error('Payment not verified');
+    }
+    // Proceed to create order as before, using cart info from payment.paymentInfo.cartId
+    // ... (copy logic from createOrderFromCart, but use payment info)
+    // After order creation:
+    payment.status = 'completed';
+    await payment.save();
+    res.status(201).json({ success: true });
 }); 

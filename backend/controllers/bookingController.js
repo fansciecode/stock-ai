@@ -4,6 +4,8 @@ import { EventModel } from "../models/eventModel.js";
 import { UserModel } from "../models/userModel.js";
 import { generateQR, verifyQR } from "../utils/qrUtils.js";
 import logger from "../utils/logger.js";
+import PaymentService from '../services/paymentService.js';
+import PaymentModel from '../models/paymentModel.js';
 
 // Helper function to generate QR code
 const generateQRCode = async (data) => {
@@ -470,6 +472,61 @@ export const moderateEvent = asyncHandler(async (req, res) => {
         res.status(404);
         throw new Error('Event not found');
     }
+});
+
+// Add new endpoint to initiate payment for booking
+export const initiateBookingPayment = asyncHandler(async (req, res) => {
+    const { eventId, ticketType, quantity, paymentMethod } = req.body;
+    // Validate event and ticket availability as before
+    // ...
+    // Calculate amount (implement your logic)
+    const amount = /* calculate based on event/ticketType/quantity */ 1000;
+    // Initiate payment
+    const paymentIntent = await PaymentService.createPaymentIntent({
+        userId: req.user._id,
+        amount,
+        currency: 'INR',
+        metadata: { eventId, ticketType, quantity, type: 'booking' }
+    });
+    // Create payment record
+    const payment = await PaymentModel.create({
+        user: req.user._id,
+        event: eventId,
+        amount,
+        type: 'booking',
+        status: 'pending',
+        paymentInfo: { ticketType, quantity },
+        stripePaymentId: paymentIntent.paymentIntent.id
+    });
+    res.json({ paymentIntent: paymentIntent.paymentIntent, paymentId: payment._id });
+});
+
+// Add new endpoint to confirm booking after payment
+export const confirmBookingAfterPayment = asyncHandler(async (req, res) => {
+    const { paymentId } = req.body;
+    const payment = await PaymentModel.findById(paymentId);
+    if (!payment || payment.status !== 'pending') {
+        throw new Error('Invalid or already processed payment');
+    }
+    // Verify payment
+    const verified = await PaymentService.verifyPayment(paymentId);
+    if (!verified) {
+        throw new Error('Payment not verified');
+    }
+    // Create booking
+    const booking = await Booking.create({
+        user: payment.user,
+        event: payment.event,
+        seats: payment.paymentInfo.quantity,
+        ticketType: payment.paymentInfo.ticketType,
+        status: 'confirmed'
+    });
+    // Generate tickets
+    booking.tickets = await generateTickets(payment.paymentInfo.quantity, booking._id);
+    await booking.save();
+    payment.status = 'completed';
+    await payment.save();
+    res.status(201).json(booking);
 });
 
 // Single export statement at the end

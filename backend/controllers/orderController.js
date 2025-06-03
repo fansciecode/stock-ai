@@ -9,9 +9,12 @@ import { sendOrderNotification } from '../utils/notificationUtils.js';
 import { createLogger } from '../utils/logger.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { AppError } from '../middleware/errorMiddleware.js';
+import PaymentService from '../services/paymentService.js';
+import PaymentModel from '../models/paymentModel.js';
 
 const logger = createLogger('orderController');
- const createOrder = asyncHandler(async (req, res) => {
+
+const createOrder = asyncHandler(async (req, res) => {
     const {
         businessId,
         items,
@@ -189,7 +192,7 @@ const verifyCODDelivery = asyncHandler(async (req, res) => {
     res.json({ success: true, order });
 });
 
- const getSellerOrders = asyncHandler(async (req, res) => {
+const getSellerOrders = asyncHandler(async (req, res) => {
     const orders = await Order.find({ seller: req.user.businessId })
         .populate('customer', 'name email')
         .populate('items.product')
@@ -198,7 +201,7 @@ const verifyCODDelivery = asyncHandler(async (req, res) => {
     res.json(orders);
 });
 
- const updateOrderStatus = asyncHandler(async (req, res) => {
+const updateOrderStatus = asyncHandler(async (req, res) => {
     const { orderId } = req.params;
     const { status, note } = req.body;
 
@@ -279,7 +282,8 @@ const verifyCODDelivery = asyncHandler(async (req, res) => {
         throw new Error(`Status update failed: ${error.message}`);
     }
 });
- const getOrderById = asyncHandler(async (req, res) => {
+
+const getOrderById = asyncHandler(async (req, res) => {
     const order = await Order.findById(req.params.orderId)
         .populate('user', 'name email')
         .populate('items.product');
@@ -292,7 +296,7 @@ const verifyCODDelivery = asyncHandler(async (req, res) => {
     res.json(order);
 });
 
- const getMyOrders = asyncHandler(async (req, res) => {
+const getMyOrders = asyncHandler(async (req, res) => {
     const orders = await Order.find({ user: req.user._id })
         .populate('items.product')
         .sort('-createdAt');
@@ -484,7 +488,7 @@ async function handleOrderDelivery(order) {
 }
 
 // Get all orders
- const getAllOrders = asyncHandler(async (req, res) => {
+const getAllOrders = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, status, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
     
     const query = {};
@@ -512,7 +516,7 @@ async function handleOrderDelivery(order) {
 });
 
 // Cancel order
- const cancelOrder = asyncHandler(async (req, res) => {
+const cancelOrder = asyncHandler(async (req, res) => {
     const { reason } = req.body;
     const order = await Order.findById(req.params.id);
 
@@ -540,7 +544,7 @@ async function handleOrderDelivery(order) {
 });
 
 // Get order analytics
- const getOrderAnalytics = asyncHandler(async (req, res) => {
+const getOrderAnalytics = asyncHandler(async (req, res) => {
     const { startDate, endDate } = req.query;
 
     const query = {};
@@ -581,7 +585,7 @@ async function handleOrderDelivery(order) {
 });
 
 // Process refund
- const processRefund = asyncHandler(async (req, res) => {
+const processRefund = asyncHandler(async (req, res) => {
     const { amount, reason } = req.body;
     const order = await Order.findById(req.params.id);
 
@@ -628,4 +632,45 @@ export {
     verifyCODDelivery,
     processOrderPayment,
     initiateOrderRefund
-}; 
+};
+
+export const initiateServiceOrderPayment = asyncHandler(async (req, res) => {
+    const { businessId, items, paymentMethod, deliveryAddress } = req.body;
+    // Calculate total (reuse logic from createOrder)
+    // ...
+    const total = /* calculate total based on items and delivery */ 1000;
+    // Initiate payment
+    const paymentIntent = await PaymentService.createPaymentIntent({
+        userId: req.user._id,
+        amount: total,
+        currency: 'INR',
+        metadata: { type: 'service_order', businessId }
+    });
+    const payment = await PaymentModel.create({
+        user: req.user._id,
+        amount: total,
+        type: 'service_order',
+        status: 'pending',
+        paymentInfo: { businessId, items, deliveryAddress },
+        stripePaymentId: paymentIntent.paymentIntent.id
+    });
+    res.json({ paymentIntent: paymentIntent.paymentIntent, paymentId: payment._id });
+});
+
+export const confirmServiceOrderAfterPayment = asyncHandler(async (req, res) => {
+    const { paymentId } = req.body;
+    const payment = await PaymentModel.findById(paymentId);
+    if (!payment || payment.status !== 'pending') {
+        throw new Error('Invalid or already processed payment');
+    }
+    const verified = await PaymentService.verifyPayment(paymentId);
+    if (!verified) {
+        throw new Error('Payment not verified');
+    }
+    // Proceed to create order as before, using info from payment.paymentInfo
+    // ... (copy logic from createOrder, but use payment info)
+    // After order creation:
+    payment.status = 'completed';
+    await payment.save();
+    res.status(201).json({ success: true });
+}); 
