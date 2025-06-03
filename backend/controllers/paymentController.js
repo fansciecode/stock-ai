@@ -1645,25 +1645,58 @@ const verifyPayment = asyncHandler(async (req, res) => {
                         if (type === 'product') {
                             // Create ProductOrder
                             const ProductOrder = (await import('../models/productOrderModel.js')).default;
+                            const { ProductModel } = await import('../models/productModel.js');
+                            const { EventModel } = await import('../models/eventModel.js');
+                            const { BusinessModel } = await import('../models/businessModel.js');
+                            const mongoose = (await import('mongoose')).default;
                             // Generate a unique order number (timestamp + user)
                             const orderNumber = `ORD-${Date.now()}-${payment.user.toString().slice(-4)}`;
+
+                            // Fetch all product docs and keep original IDs
+                            const productDocs = await Promise.all((payment.paymentInfo.products || []).map(async p => {
+                                // p.productId is the original product _id (string or ObjectId)
+                                let prod = await ProductModel.findById(p.productId);
+                                if (!prod) throw new Error(`Product not found: ${p.productId}`);
+                                return prod;
+                            }));
+
+                            // Determine seller (Business):
+                            let seller = null;
+                            if (payment.paymentInfo.eventId) {
+                                // If order is from event, use event organizer's business
+                                const event = await EventModel.findById(payment.paymentInfo.eventId);
+                                if (!event) throw new Error('Event not found for product order');
+                                seller = await BusinessModel.findOne({ user: event.organizer });
+                                if (!seller) throw new Error('Business not found for event organizer');
+                            } else {
+                                // Otherwise, use the first product's seller's business
+                                const firstProduct = productDocs[0];
+                                seller = await BusinessModel.findOne({ user: firstProduct.seller });
+                                if (!seller) throw new Error('Business not found for product seller');
+                            }
+
                             await ProductOrder.create({
                                 user: payment.user,
-                                // seller: (optional, can be set if available in paymentInfo)
+                                seller: seller._id,
                                 sourceEvent: payment.paymentInfo.eventId || undefined,
                                 orderNumber,
-                                items: (payment.paymentInfo.products || []).map(p => ({
-                                    product: p.productId,
-                                    quantity: p.quantity,
-                                    price: {
-                                        base: p.price,
-                                        discount: 0,
-                                        final: p.price
-                                    },
-                                    productSnapshot: {
-                                        name: p.name
-                                    }
-                                })),
+                                items: productDocs.map((prod, idx) => {
+                                    const p = payment.paymentInfo.products[idx];
+                                    return {
+                                        product: prod._id, // always ObjectId
+                                        quantity: p.quantity,
+                                        price: {
+                                            base: p.price,
+                                            discount: 0,
+                                            final: p.price
+                                        },
+                                        productSnapshot: {
+                                            name: prod.name,
+                                            sku: prod.inventory?.sku || '',
+                                            attributes: prod.attributes || {}
+                                        }
+                                    };
+                                }),
                                 amounts: {
                                     subtotal: payment.paymentInfo.total || payment.amount,
                                     discount: 0,
