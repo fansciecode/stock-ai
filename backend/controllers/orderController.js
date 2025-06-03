@@ -14,7 +14,7 @@ import PaymentModel from '../models/paymentModel.js';
 
 const logger = createLogger('orderController');
 
-const createOrder = asyncHandler(async (req, res) => {
+ const createOrder = asyncHandler(async (req, res) => {
     const {
         businessId,
         items,
@@ -192,7 +192,7 @@ const verifyCODDelivery = asyncHandler(async (req, res) => {
     res.json({ success: true, order });
 });
 
-const getSellerOrders = asyncHandler(async (req, res) => {
+ const getSellerOrders = asyncHandler(async (req, res) => {
     const orders = await Order.find({ seller: req.user.businessId })
         .populate('customer', 'name email')
         .populate('items.product')
@@ -201,7 +201,7 @@ const getSellerOrders = asyncHandler(async (req, res) => {
     res.json(orders);
 });
 
-const updateOrderStatus = asyncHandler(async (req, res) => {
+ const updateOrderStatus = asyncHandler(async (req, res) => {
     const { orderId } = req.params;
     const { status, note } = req.body;
 
@@ -283,7 +283,7 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     }
 });
 
-const getOrderById = asyncHandler(async (req, res) => {
+ const getOrderById = asyncHandler(async (req, res) => {
     const order = await Order.findById(req.params.orderId)
         .populate('user', 'name email')
         .populate('items.product');
@@ -296,7 +296,7 @@ const getOrderById = asyncHandler(async (req, res) => {
     res.json(order);
 });
 
-const getMyOrders = asyncHandler(async (req, res) => {
+ const getMyOrders = asyncHandler(async (req, res) => {
     const orders = await Order.find({ user: req.user._id })
         .populate('items.product')
         .sort('-createdAt');
@@ -488,7 +488,7 @@ async function handleOrderDelivery(order) {
 }
 
 // Get all orders
-const getAllOrders = asyncHandler(async (req, res) => {
+ const getAllOrders = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, status, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
     
     const query = {};
@@ -516,7 +516,7 @@ const getAllOrders = asyncHandler(async (req, res) => {
 });
 
 // Cancel order
-const cancelOrder = asyncHandler(async (req, res) => {
+ const cancelOrder = asyncHandler(async (req, res) => {
     const { reason } = req.body;
     const order = await Order.findById(req.params.id);
 
@@ -544,7 +544,7 @@ const cancelOrder = asyncHandler(async (req, res) => {
 });
 
 // Get order analytics
-const getOrderAnalytics = asyncHandler(async (req, res) => {
+ const getOrderAnalytics = asyncHandler(async (req, res) => {
     const { startDate, endDate } = req.query;
 
     const query = {};
@@ -585,7 +585,7 @@ const getOrderAnalytics = asyncHandler(async (req, res) => {
 });
 
 // Process refund
-const processRefund = asyncHandler(async (req, res) => {
+ const processRefund = asyncHandler(async (req, res) => {
     const { amount, reason } = req.body;
     const order = await Order.findById(req.params.id);
 
@@ -632,7 +632,7 @@ export {
     verifyCODDelivery,
     processOrderPayment,
     initiateOrderRefund
-};
+}; 
 
 export const initiateServiceOrderPayment = asyncHandler(async (req, res) => {
     const { businessId, items, paymentMethod, deliveryAddress } = req.body;

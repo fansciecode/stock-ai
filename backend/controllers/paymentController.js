@@ -1676,12 +1676,54 @@ const verifyPayment = asyncHandler(async (req, res) => {
                                 const event = await EventModel.findById(payment.paymentInfo.eventId);
                                 if (!event) throw new Error('Event not found for product order');
                                 seller = await BusinessModel.findOne({ user: event.organizer });
-                                if (!seller) throw new Error('Business not found for event organizer');
+                                if (!seller) {
+                                    // Auto-create minimal business for organizer
+                                    const organizerUser = await UserModel.findById(event.organizer);
+                                    if (!organizerUser) throw new Error('Organizer user not found');
+                                    const businessName = organizerUser.name || 'Business of ' + organizerUser._id;
+                                    const businessEmail = organizerUser.email || `user${organizerUser._id}@example.com`;
+                                    const registrationNumber = `AUTO-${event.organizer.toString().slice(-6)}-${Date.now()}`;
+                                    seller = await BusinessModel.create({
+                                        user: event.organizer,
+                                        businessName,
+                                        businessType: 'EVENT_ORGANIZER',
+                                        registrationDetails: {
+                                            registrationNumber,
+                                            registrationType: 'SOLE_PROPRIETORSHIP',
+                                            registrationDate: new Date()
+                                        },
+                                        contactInfo: {
+                                            email: businessEmail
+                                        },
+                                        status: 'ACTIVE'
+                                    });
+                                }
                             } else {
                                 // Otherwise, use the first product's seller's business
                                 const firstProduct = productDocs[0];
                                 seller = await BusinessModel.findOne({ user: firstProduct.seller });
-                                if (!seller) throw new Error('Business not found for product seller');
+                                if (!seller) {
+                                    // Auto-create minimal business for product seller
+                                    const sellerUser = await UserModel.findById(firstProduct.seller);
+                                    if (!sellerUser) throw new Error('Product seller user not found');
+                                    const businessName = sellerUser.name || 'Business of ' + sellerUser._id;
+                                    const businessEmail = sellerUser.email || `user${sellerUser._id}@example.com`;
+                                    const registrationNumber = `AUTO-${firstProduct.seller.toString().slice(-6)}-${Date.now()}`;
+                                    seller = await BusinessModel.create({
+                                        user: firstProduct.seller,
+                                        businessName,
+                                        businessType: 'RETAIL',
+                                        registrationDetails: {
+                                            registrationNumber,
+                                            registrationType: 'SOLE_PROPRIETORSHIP',
+                                            registrationDate: new Date()
+                                        },
+                                        contactInfo: {
+                                            email: businessEmail
+                                        },
+                                        status: 'ACTIVE'
+                                    });
+                                }
                             }
 
                             await ProductOrder.create({
