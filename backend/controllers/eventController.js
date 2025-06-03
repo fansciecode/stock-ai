@@ -208,15 +208,16 @@ export const createEvent = asyncHandler(async (req, res) => {
         const guidelinesList = Array.isArray(guidelines) ? guidelines : [];
 
         // Insert products into Product collection if provided
-        let productObjectIds = [];
+        let eventProducts = [];
         if (Array.isArray(products) && products.length > 0) {
             for (const prod of products) {
                 // Check if product already exists by name and seller (avoid duplicates)
                 let existing = await ProductModel.findOne({ name: prod.name, seller: userIdToUse });
+                let productDoc;
                 if (!existing) {
                     // Only insert if required fields are present
                     if (prod.name && prod.price && prod.category) {
-                        const newProduct = await ProductModel.create({
+                        productDoc = await ProductModel.create({
                             name: prod.name,
                             description: prod.description,
                             price: {
@@ -235,10 +236,29 @@ export const createEvent = asyncHandler(async (req, res) => {
                             tags: prod.tags || [],
                             metadata: prod.metadata || {}
                         });
-                        productObjectIds.push(newProduct._id);
                     }
                 } else {
-                    productObjectIds.push(existing._id);
+                    productDoc = existing;
+                }
+                // Store the full product object in the event's products array
+                if (productDoc) {
+                    // Merge original prod fields (like imageUrl, regularPrice, etc.)
+                    eventProducts.push({
+                        id: prod.id || productDoc._id.toString(),
+                        _id: productDoc._id,
+                        name: productDoc.name,
+                        description: productDoc.description,
+                        price: productDoc.price.amount,
+                        regularPrice: prod.regularPrice || undefined,
+                        currency: productDoc.price.currency,
+                        quantity: (productDoc.inventory && productDoc.inventory.quantity) || prod.quantity || 0,
+                        imageUrl: (prod.imageUrl || (productDoc.media && productDoc.media[0]?.url) || ''),
+                        category: productDoc.category.main,
+                        media: productDoc.media,
+                        attributes: productDoc.attributes,
+                        tags: productDoc.tags,
+                        status: productDoc.status
+                    });
                 }
             }
         }
@@ -264,7 +284,7 @@ export const createEvent = asyncHandler(async (req, res) => {
             tags: tagsList,
             guidelines: guidelinesList,
             ticketTypes: ticketsList,
-            products: productObjectIds,
+            products: eventProducts,
             services: servicesList
         };
         
@@ -278,7 +298,7 @@ export const createEvent = asyncHandler(async (req, res) => {
             ...eventData,
             media: `${processedMedia.length} items`, // Log media length to keep output reasonable
             ticketTypes: ticketsList.length > 0 ? `${ticketsList.length} items` : [],
-            products: productObjectIds.length > 0 ? `${productObjectIds.length} items` : [],
+            products: eventProducts.length > 0 ? `${eventProducts.length} items` : [],
             services: servicesList.length > 0 ? `${servicesList.length} items` : []
         };
         
