@@ -1637,8 +1637,66 @@ const verifyPayment = asyncHandler(async (req, res) => {
                             await user.save();
                         }
                     }
+                } else if (payment.paymentInfo && payment.paymentInfo.type) {
+                    // --- BEGIN: Create order/booking/service after payment ---
+                    try {
+                        const type = payment.paymentInfo.type;
+                        if (type === 'product') {
+                            // Create ProductOrder
+                            const ProductOrder = (await import('../models/productOrderModel.js')).default || (await import('../models/productOrderModel.js')).ProductOrder;
+                            await ProductOrder.create({
+                                user: payment.user,
+                                eventId: payment.paymentInfo.eventId,
+                                products: payment.paymentInfo.products,
+                                total: payment.paymentInfo.total,
+                                currency: payment.paymentInfo.currency,
+                                status: 'confirmed',
+                                payment: {
+                                    method: 'online',
+                                    transactionId: payment.razorpayPaymentId || payment.stripePaymentId,
+                                    status: 'Completed'
+                                }
+                            });
+                        } else if (type === 'service') {
+                            // Create ServiceBooking (if model exists)
+                            try {
+                                const ServiceBooking = (await import('../models/serviceBookingModel.js')).default;
+                                await ServiceBooking.create({
+                                    user: payment.user,
+                                    eventId: payment.paymentInfo.eventId,
+                                    serviceId: payment.paymentInfo.serviceId,
+                                    serviceName: payment.paymentInfo.serviceName,
+                                    price: payment.paymentInfo.price,
+                                    currency: payment.paymentInfo.currency,
+                                    status: 'confirmed',
+                                    payment: {
+                                        method: 'online',
+                                        transactionId: payment.razorpayPaymentId || payment.stripePaymentId,
+                                        status: 'Completed'
+                                    }
+                                });
+                            } catch (e) {
+                                logger.warn('ServiceBooking model not found or failed to create:', e.message);
+                            }
+                        } else if (type === 'ticket' || type === 'booking') {
+                            // Create Booking
+                            const Booking = (await import('../models/bookingModel.js')).default;
+                            const booking = await Booking.create({
+                                user: payment.user,
+                                event: payment.paymentInfo.eventId,
+                                seats: payment.paymentInfo.quantity,
+                                ticketType: payment.paymentInfo.ticketTypeId || payment.paymentInfo.ticketType,
+                                status: 'CONFIRMED',
+                                totalAmount: payment.amount
+                            });
+                            // Optionally generate tickets if needed
+                            // ...
+                        }
+                    } catch (err) {
+                        logger.error('Error creating business record after payment:', err);
+                    }
+                    // --- END: Create order/booking/service after payment ---
                 }
-                // TODO: For service/product/booking payments, create the actual order/booking record here after payment success.
                 // --- END: Update user event limit/package ---
 
                 return res.json({
