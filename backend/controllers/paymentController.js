@@ -334,7 +334,7 @@ const initiatePayment = asyncHandler(async (req, res) => {
             type,
             status: 'Pending',
             plan: null,
-            paymentInfo: {},
+            paymentInfo: req.body.paymentInfo || {}, // Always save paymentInfo from request
             metadata: {
                 ...metadata,
                 userId: req.user._id.toString(),
