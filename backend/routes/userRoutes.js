@@ -3,6 +3,7 @@ import { userController } from "../controllers/userController.js";
 import { protect, isAdmin } from "../middleware/authMiddleware.js";
 import upload from '../middleware/uploadMiddleware.js';
 import { aiMiddleware } from '../middleware/aiMiddleware.js';
+import { getUserBookings } from "../controllers/bookingController.js";
 
 const router = express.Router();
 
@@ -68,5 +69,7 @@ router.get('/public/:userId', userController.getPublicProfile);
 // Add follow/unfollow routes
 router.post('/:userId/follow', protect, userController.followUser);
 router.post('/:userId/unfollow', protect, userController.unfollowUser);
+
+router.get('/:userId/bookings', protect, isAdmin, getUserBookings);
 
 export default router;
