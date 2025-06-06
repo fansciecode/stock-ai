@@ -24,14 +24,14 @@ const logger = createLogger('orderController');
 
     try {
         // 1. Validate business availability
-        const business = await Business.findById(businessId);
+        const business = await BusinessModel.findById(businessId);
         if (!business.canAcceptOrder(deliveryAddress)) {
             throw new Error('Business cannot accept orders at this time');
         }
 
         // 2. Validate and process items
         const processedItems = await Promise.all(items.map(async (item) => {
-            const product = await Product.findById(item.productId);
+            const product = await ProductModel.findById(item.productId);
             const availability = await product.checkAvailability();
             
             if (!availability.isAvailable || availability.quantity < item.quantity) {
@@ -58,7 +58,7 @@ const logger = createLogger('orderController');
         }
 
         // 4. Create order
-        const order = new Order({
+        const order = new OrderModel({
             business: businessId,
             user: req.user._id,
             items: processedItems,
@@ -149,7 +149,7 @@ const logger = createLogger('orderController');
 const verifyCODDelivery = asyncHandler(async (req, res) => {
     const { orderId, otp } = req.body;
 
-    const order = await Order.findById(orderId);
+    const order = await OrderModel.findById(orderId);
     if (!order) {
         res.status(404);
         throw new Error('Order not found');
@@ -193,7 +193,7 @@ const verifyCODDelivery = asyncHandler(async (req, res) => {
 });
 
  const getSellerOrders = asyncHandler(async (req, res) => {
-    const orders = await Order.find({ seller: req.user.businessId })
+    const orders = await OrderModel.find({ seller: req.user.businessId })
         .populate('customer', 'name email')
         .populate('items.product')
         .sort('-createdAt');
@@ -205,7 +205,7 @@ const verifyCODDelivery = asyncHandler(async (req, res) => {
     const { orderId } = req.params;
     const { status, note } = req.body;
 
-    const order = await Order.findById(orderId)
+    const order = await OrderModel.findById(orderId)
         .populate('business')
         .populate('items.product');
 
@@ -284,7 +284,7 @@ const verifyCODDelivery = asyncHandler(async (req, res) => {
 });
 
  const getOrderById = asyncHandler(async (req, res) => {
-    const order = await Order.findById(req.params.orderId)
+    const order = await OrderModel.findById(req.params.orderId)
         .populate('user', 'name email')
         .populate('items.product');
 
@@ -297,7 +297,7 @@ const verifyCODDelivery = asyncHandler(async (req, res) => {
 });
 
  const getMyOrders = asyncHandler(async (req, res) => {
-    const orders = await Order.find({ user: req.user._id })
+    const orders = await OrderModel.find({ user: req.user._id })
         .populate('items.product')
         .sort('-createdAt');
 
@@ -309,7 +309,7 @@ const processOrderPayment = asyncHandler(async (req, res) => {
     const { orderId } = req.params;
     const { paymentMethod, paymentDetails } = req.body;
 
-    const order = await Order.findById(orderId);
+    const order = await OrderModel.findById(orderId);
     if (!order) {
         res.status(404);
         throw new Error('Order not found');
@@ -371,7 +371,7 @@ const initiateOrderRefund = asyncHandler(async (req, res) => {
     const { orderId } = req.params;
     const { reason, amount } = req.body;
 
-    const order = await Order.findById(orderId);
+    const order = await OrderModel.findById(orderId);
     if (!order) {
         res.status(404);
         throw new Error('Order not found');
@@ -494,14 +494,14 @@ async function handleOrderDelivery(order) {
     const query = {};
     if (status) query.status = status;
 
-    const orders = await Order.find(query)
+    const orders = await OrderModel.find(query)
         .sort({ [sortBy]: sortOrder === 'desc' ? -1 : 1 })
         .limit(limit * 1)
         .skip((page - 1) * limit)
         .populate('user', 'name email')
         .populate('event', 'title date');
 
-    const count = await Order.countDocuments(query);
+    const count = await OrderModel.countDocuments(query);
 
     res.json({
         success: true,
@@ -518,7 +518,7 @@ async function handleOrderDelivery(order) {
 // Cancel order
  const cancelOrder = asyncHandler(async (req, res) => {
     const { reason } = req.body;
-    const order = await Order.findById(req.params.id);
+    const order = await OrderModel.findById(req.params.id);
 
     if (!order) {
         throw new AppError('Order not found', 404);
@@ -555,7 +555,7 @@ async function handleOrderDelivery(order) {
         };
     }
 
-    const analytics = await Order.aggregate([
+    const analytics = await OrderModel.aggregate([
         { $match: query },
         {
             $group: {
@@ -587,7 +587,7 @@ async function handleOrderDelivery(order) {
 // Process refund
  const processRefund = asyncHandler(async (req, res) => {
     const { amount, reason } = req.body;
-    const order = await Order.findById(req.params.id);
+    const order = await OrderModel.findById(req.params.id);
 
     if (!order) {
         throw new AppError('Order not found', 404);

@@ -12,7 +12,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // User Behavior Analysis
 export const analyzeUserBehavior = asyncHandler(async (req, res) => {
-    const userBehaviorData = await User.aggregate([
+    const userBehaviorData = await UserModel.aggregate([
         {
             $lookup: {
                 from: 'orders',
@@ -81,7 +81,7 @@ export const predictFraud = asyncHandler(async (req, res) => {
 // Business Insights
 export const generateInsights = asyncHandler(async (req, res) => {
     const [userStats, orderStats, eventStats] = await Promise.all([
-        User.aggregate([
+        UserModel.aggregate([
             {
                 $group: {
                     _id: null,
@@ -98,7 +98,7 @@ export const generateInsights = asyncHandler(async (req, res) => {
                 }
             }
         ]),
-        Order.aggregate([
+        OrderModel.aggregate([
             {
                 $group: {
                     _id: null,
@@ -108,7 +108,7 @@ export const generateInsights = asyncHandler(async (req, res) => {
                 }
             }
         ]),
-        Event.aggregate([
+        EventModel.aggregate([
             {
                 $group: {
                     _id: null,
@@ -144,7 +144,7 @@ export const optimizePricing = asyncHandler(async (req, res) => {
         throw new AppError('Event ID is required', 400);
     }
 
-    const event = await Event.findById(eventId);
+    const event = await EventModel.findById(eventId);
     if (!event) {
         throw new AppError('Event not found', 404);
     }
@@ -163,7 +163,7 @@ export const optimizePricing = asyncHandler(async (req, res) => {
 
 // Market Trend Analysis
 export const analyzeMarketTrends = asyncHandler(async (req, res) => {
-    const trends = await Event.aggregate([
+    const trends = await EventModel.aggregate([
         {
             $group: {
                 _id: "$category",

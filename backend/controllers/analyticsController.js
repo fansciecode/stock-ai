@@ -7,7 +7,7 @@ import { BusinessModel } from '../models/businessModel.js';
 
 // Get analytics for event ratings
 export const getEventRatingAnalytics = asyncHandler(async (req, res) => {
-    const eventAnalytics = await Event.aggregate([
+    const eventAnalytics = await EventModel.aggregate([
         {
             $group: {
                 _id: "$category",
@@ -22,15 +22,15 @@ export const getEventRatingAnalytics = asyncHandler(async (req, res) => {
 
 // Get rating-based analytics
 export const getRatingAnalytics = asyncHandler(async (req, res) => {
-    const topRatedEvents = await Event.find().sort({ rating: -1 }).limit(10);
-    const topUsers = await User.find().sort({ avgRating: -1 }).limit(10);
+    const topRatedEvents = await EventModel.find().sort({ rating: -1 }).limit(10);
+    const topUsers = await UserModel.find().sort({ avgRating: -1 }).limit(10);
   
     res.json({ topRatedEvents, topUsers });
   });
 
 // Get analytics for user behavior
 export const getUserActivityAnalytics = asyncHandler(async (req, res) => {
-    const users = await User.find({}).select("interests location joinedAt");
+    const users = await UserModel.find({}).select("interests location joinedAt");
 
     const activityAnalytics = users.reduce((acc, user) => {
         user.interests.forEach(category => {
@@ -47,7 +47,7 @@ export const getUserActivityAnalytics = asyncHandler(async (req, res) => {
 // @route   GET /api/analytics
 // @access  Private/Admin
 export const getUserAnalytics = asyncHandler(async (req, res) => {
-    const analytics = await UserActivity.aggregate([
+    const analytics = await UserActivityModel.aggregate([
         {
             $group: {
                 _id: "$event",
@@ -74,7 +74,7 @@ const getOrderAnalytics = asyncHandler(async (req, res) => {
     const { businessId } = req.params;
     const { startDate, endDate } = req.query;
 
-    const business = await Business.findById(businessId);
+    const business = await BusinessModel.findById(businessId);
     if (!business) {
         res.status(404);
         throw new Error('Business not found');
@@ -88,7 +88,7 @@ const getOrderAnalytics = asyncHandler(async (req, res) => {
         }
     };
 
-    const analytics = await Order.aggregate([
+    const analytics = await OrderModel.aggregate([
         { $match: matchCriteria },
         {
             $group: {
@@ -118,7 +118,7 @@ const getOrderTrends = asyncHandler(async (req, res) => {
     const { businessId } = req.params;
     const { startDate, endDate, interval = 'day' } = req.query;
 
-    const business = await Business.findById(businessId);
+    const business = await BusinessModel.findById(businessId);
     if (!business) {
         res.status(404);
         throw new Error('Business not found');
@@ -132,7 +132,7 @@ const getOrderTrends = asyncHandler(async (req, res) => {
         }
     };
 
-    const trends = await Order.aggregate([
+    const trends = await OrderModel.aggregate([
         { $match: matchCriteria },
         {
             $group: {
