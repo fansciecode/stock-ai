@@ -18,6 +18,16 @@ import { generateTicketNumber, generateQRCode } from '../utils/ticketUtils.js';
 dotenv.config();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+// Add this mapping function at the top of the file (after imports):
+function mapPlanNameToType(planName) {
+    if (!planName) return 'free';
+    const name = planName.toLowerCase();
+    if (name.includes('pro')) return 'standard';
+    if (name.includes('basic')) return 'basic';
+    if (name.includes('premium')) return 'premium';
+    return 'free';
+}
+
 // @desc    Upgrade event payment
 // @route   POST /api/payments/upgrade/:eventId
 // @access  Private
@@ -1618,7 +1628,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
                             }
                             // Update user eventPackage and eventLimit
                             user.eventPackage = {
-                                type: plan.type || plan.planName || plan.name || 'premium',
+                                type: mapPlanNameToType(plan.type || plan.planName || plan.name),
                                 purchaseDate: new Date(),
                                 expiryDate,
                                 eventsAllowed: plan.eventLimit || plan.eventsAllowed || 100
@@ -1628,7 +1638,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
                             user.packageHistory = user.packageHistory || [];
                             user.packageHistory.push({
                                 packageId: payment.plan || null,
-                                name: plan.type || plan.planName || plan.name || 'premium',
+                                name: mapPlanNameToType(plan.type || plan.planName || plan.name),
                                 purchaseDate: new Date(),
                                 expiryDate,
                                 eventsAllowed: plan.eventLimit || plan.eventsAllowed || 100,
