@@ -1931,11 +1931,15 @@ export const getEventUpgradePrice = asyncHandler(async (req, res) => {
     return res.status(500).json({ success: false, message: 'Upgrade pricing config not found' });
   }
   const currentStatus = event.upgradeStatus || 'none';
-  const price = pricingConfig.upgradePricing?.[currentStatus]?.[upgradeType] ?? null;
-  if (price === null) {
+  const priceObj = pricingConfig.upgradePricing?.[currentStatus]?.[upgradeType] ?? null;
+  if (priceObj === null) {
     return res.status(400).json({ success: false, message: 'Invalid upgrade path' });
   }
-  return res.json({ success: true, eventId, upgradeType, price });
+  if (typeof priceObj === 'object' && priceObj !== null) {
+    return res.json({ success: true, eventId, upgradeType, price: priceObj.price, currency: priceObj.currency });
+  } else {
+    return res.json({ success: true, eventId, upgradeType, price: priceObj, currency: 'INR' });
+  }
 });
 
 // Get valid upgrade options and payment methods for an event
