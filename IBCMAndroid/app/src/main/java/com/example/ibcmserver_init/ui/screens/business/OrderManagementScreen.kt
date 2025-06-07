@@ -12,7 +12,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.ibcmserver_init.data.models.*
 import com.example.ibcmserver_init.ui.components.*
 import com.example.ibcmserver_init.ui.theme.IBCMTheme
 import java.text.NumberFormat

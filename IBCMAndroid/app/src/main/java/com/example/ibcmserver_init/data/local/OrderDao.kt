@@ -1,7 +1,6 @@
 package com.example.ibcmserver_init.data.local
 
 import androidx.room.*
-import com.example.ibcmserver_init.data.models.*
 import kotlinx.coroutines.flow.Flow
 
 @Dao

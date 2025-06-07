@@ -1954,28 +1954,12 @@ export const getEventUpgradeOptions = asyncHandler(async (req, res) => {
   const validUpgradeTypes = pricingConfig.upgradePricing?.[currentStatus] ? Object.keys(pricingConfig.upgradePricing[currentStatus]) : [];
   // Available payment methods (could be dynamic in future)
   const paymentMethods = ['Credit Card', 'Razorpay', 'PayPal'];
-  const upgradeTypeDetails = {};
-  for (const type of validUpgradeTypes) {
-    const priceObj = pricingConfig.upgradePricing[currentStatus][type];
-    if (typeof priceObj === 'object' && priceObj !== null) {
-      upgradeTypeDetails[type] = {
-        price: priceObj.price ?? priceObj,
-        currency: priceObj.currency ?? 'INR'
-      };
-    } else {
-      upgradeTypeDetails[type] = {
-        price: priceObj,
-        currency: 'INR'
-      };
-    }
-  }
   res.json({
     success: true,
     eventId,
     currentStatus,
     validUpgradeTypes,
-    paymentMethods,
-    upgradeTypeDetails
+    paymentMethods
   });
 });
 

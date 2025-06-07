@@ -3,7 +3,6 @@ package com.example.ibcmserver_init.ui.screens.business
 import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.ibcmserver_init.data.models.*
 import com.example.ibcmserver_init.data.repository.OrderRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
@@ -208,13 +207,10 @@ class OrderManagementViewModel @Inject constructor(
 
     private suspend fun verifyOtp(orderId: String, otp: String): Boolean {
         return try {
-            // Here you would make an API call to verify the OTP
-            // For now, we'll simulate the verification
-            // Replace this with actual API call
-            delay(1000) // Simulate network call
-            otp.length == 6 // Simple validation for demonstration
+            // Call backend API to verify OTP
+            orderRepository.verifyOtp(orderId, otp)
         } catch (e: Exception) {
-            throw Exception("Failed to verify OTP: ${e.message}")
+            throw Exception("Failed to verify OTP: "+e.message)
         }
     }
 
@@ -234,12 +230,8 @@ class OrderManagementViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 _uiState.update { it.copy(isLoading = true) }
-                // Here you would make an API call to verify the QR code
-                // For now, we'll simulate the verification
-                val isVerified = verifyQrCode(qrContent)
-                
+                val isVerified = orderRepository.verifyBookingQr(qrContent)
                 if (isVerified) {
-                    // Update booking status to CHECKED_IN
                     _uiState.value.selectedDigitalBooking?.let { booking ->
                         updateDigitalBookingStatus(booking.id, BookingStatus.CHECKED_IN)
                     }
@@ -258,11 +250,8 @@ class OrderManagementViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 _uiState.update { it.copy(isLoading = true) }
-                // Here you would make an API call to generate the QR code
-                // For now, we'll simulate the generation
-                val qrCode = generateQrCode(content)
-                
-                // Update the booking with the new QR code
+                // Call backend API to generate the QR code
+                val qrCode = orderRepository.generateBookingQr(content)
                 _uiState.value.selectedDigitalBooking?.let { booking ->
                     updateDigitalBookingQr(booking.id, qrCode)
                 }
@@ -274,34 +263,10 @@ class OrderManagementViewModel @Inject constructor(
         }
     }
 
-    private suspend fun verifyQrCode(qrContent: String): Boolean {
-        return try {
-            // Here you would make an API call to verify the QR code
-            // For now, we'll simulate the verification
-            delay(1000) // Simulate network call
-            qrContent.isNotEmpty() // Simple validation for demonstration
-        } catch (e: Exception) {
-            throw Exception("Failed to verify QR code: ${e.message}")
-        }
-    }
-
-    private suspend fun generateQrCode(content: String): Bitmap {
-        return try {
-            // Here you would make an API call to generate the QR code
-            // For now, we'll simulate the generation
-            delay(1000) // Simulate network call
-            // Return a dummy bitmap for demonstration
-            // In a real implementation, you would use a QR code generation library
-            Bitmap.createBitmap(200, 200, Bitmap.Config.ARGB_8888)
-        } catch (e: Exception) {
-            throw Exception("Failed to generate QR code: ${e.message}")
-        }
-    }
-
     private suspend fun updateDigitalBookingStatus(bookingId: String, status: BookingStatus) {
         try {
-            // Here you would make an API call to update the booking status
-            // For now, we'll update the local state
+            // Call backend API to update the booking status
+            orderRepository.updateBookingStatus(bookingId, status)
             _uiState.update { currentState ->
                 currentState.copy(
                     digitalBookings = currentState.digitalBookings.map { booking ->
@@ -327,8 +292,8 @@ class OrderManagementViewModel @Inject constructor(
 
     private suspend fun updateDigitalBookingQr(bookingId: String, qrCode: Bitmap) {
         try {
-            // Here you would make an API call to update the booking QR code
-            // For now, we'll update the local state
+            // Call backend API to update the booking QR code
+            orderRepository.updateBookingQr(bookingId, qrCode)
             _uiState.update { currentState ->
                 currentState.copy(
                     digitalBookings = currentState.digitalBookings.map { booking ->

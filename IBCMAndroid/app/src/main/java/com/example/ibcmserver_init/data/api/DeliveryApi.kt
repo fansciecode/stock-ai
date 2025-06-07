@@ -1,6 +1,5 @@
 package com.example.ibcmserver_init.data.api
 
-import com.example.ibcmserver_init.data.models.*
 import retrofit2.http.*
 
 interface DeliveryApi {

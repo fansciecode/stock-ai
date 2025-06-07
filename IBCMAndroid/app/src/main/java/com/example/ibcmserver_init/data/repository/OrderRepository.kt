@@ -7,6 +7,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 import javax.inject.Singleton
+import android.graphics.Bitmap
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 @Singleton
 class OrderRepository @Inject constructor(
@@ -239,5 +242,66 @@ class OrderRepository @Inject constructor(
         } catch (e: Exception) {
             emit(NetworkResult.Error("Network error: ${e.message}"))
         }
+    }
+
+    suspend fun verifyOtp(orderId: String, otp: String): Boolean {
+        // Example: Call backend API to verify OTP for the order
+        val response = orderApiService.getOrder(orderId) // Replace with actual verifyOtp endpoint if available
+        // TODO: Replace with real verification logic
+        return response.isSuccessful // Simulate success if order exists
+    }
+
+    suspend fun verifyBookingQr(qrContent: String): Boolean {
+        // TODO: Implement real backend call to verify QR code for booking
+        // For now, always return true
+        return true
+    }
+
+    suspend fun generateBookingQr(content: String): Bitmap {
+        // TODO: Implement real backend call to generate QR code for booking
+        // For now, return a dummy Bitmap
+        return Bitmap.createBitmap(200, 200, Bitmap.Config.ARGB_8888)
+    }
+
+    suspend fun updateBookingStatus(bookingId: String, status: BookingStatus) {
+        // Example: Call backend API to update booking status
+        // Use updateOrderStatus for now (if booking and order are unified)
+        orderApiService.updateOrderStatus(bookingId, status.name)
+    }
+
+    suspend fun updateBookingQr(bookingId: String, qrCode: Bitmap) {
+        // TODO: Implement real backend call to update booking QR code
+        // No-op for now
+    }
+
+    // In-memory cache for observed orders
+    private val _ordersFlow = MutableStateFlow<List<Order>>(emptyList())
+    val ordersFlow = _ordersFlow.asStateFlow()
+
+    fun observeBusinessOrders(businessId: String): Flow<List<Order>> {
+        // Just return the flow for now
+        return ordersFlow
+    }
+
+    suspend fun refreshOrders(businessId: String) {
+        // Fetch orders for the creator/business and update the flow
+        val response = orderApiService.getCreatorOrders(businessId)
+        if (response.isSuccessful) {
+            _ordersFlow.value = response.body() ?: emptyList()
+        } else {
+            _ordersFlow.value = emptyList()
+        }
+    }
+
+    fun getOrderSummary(businessId: String): OrderSummary {
+        val orders = _ordersFlow.value
+        return OrderSummary(
+            totalOrders = orders.size,
+            pendingOrders = orders.count { it.status == OrderStatus.PENDING },
+            completedOrders = orders.count { it.status == OrderStatus.COMPLETED },
+            cancelledOrders = orders.count { it.status == OrderStatus.CANCELLED },
+            totalRevenue = orders.sumOf { it.totalPrice ?: 0.0 },
+            averageOrderValue = if (orders.isNotEmpty()) orders.sumOf { it.totalPrice ?: 0.0 } / orders.size else 0.0
+        )
     }
 } 
