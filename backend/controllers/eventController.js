@@ -751,6 +751,52 @@ export const getEventsAttendedByUser = asyncHandler(async (req, res) => {
     }
 });
 
+// @desc Get events user is attending
+// @route GET /api/events/user/attending
+// @access Private
+export const getAttendingEvents = asyncHandler(async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const events = await EventModel.find({
+            'attendees': userId
+        }).populate('organizer', 'name email');
+
+        res.json({
+            success: true,
+            data: events
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message,
+            errorCode: "INTERNAL_ERROR"
+        });
+    }
+});
+
+// @desc Get events created by user
+// @route GET /api/events/user/created
+// @access Private
+export const getCreatedEvents = asyncHandler(async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const events = await EventModel.find({
+            'organizer': userId
+        }).populate('organizer', 'name email');
+
+        res.json({
+            success: true,
+            data: events
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message,
+            errorCode: "INTERNAL_ERROR"
+        });
+    }
+});
+
 export {
     // ... other exports ...
     uploadEventMedia,
