@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -41,7 +41,7 @@ function UsersList() {
     role: ''
   });
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       const response = await usersAPI.getAll(page + 1, rowsPerPage);
       setUsers(response.data.users);
@@ -51,11 +51,11 @@ function UsersList() {
       setError(err.message);
       setLoading(false);
     }
-  };
+  }, [page, rowsPerPage]);
 
   useEffect(() => {
     fetchUsers();
-  }, [page, rowsPerPage]);
+  }, [fetchUsers]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);

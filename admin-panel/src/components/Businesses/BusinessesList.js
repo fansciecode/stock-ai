@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -45,7 +45,7 @@ function BusinessesList() {
   });
   const [rejectReason, setRejectReason] = useState('');
 
-  const fetchBusinesses = async () => {
+  const fetchBusinesses = useCallback(async () => {
     try {
       const response = await businessAPI.getAll(page + 1, rowsPerPage);
       setBusinesses(response.data.businesses);
@@ -55,11 +55,11 @@ function BusinessesList() {
       setError(err.message);
       setLoading(false);
     }
-  };
+  }, [page, rowsPerPage]);
 
   useEffect(() => {
     fetchBusinesses();
-  }, [page, rowsPerPage]);
+  }, [fetchBusinesses]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);

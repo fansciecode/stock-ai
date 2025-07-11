@@ -12,8 +12,8 @@ import {
   ListItemText,
   Toolbar,
   Typography,
-  Button,
-  Divider
+  Divider,
+  Avatar
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -23,26 +23,22 @@ import {
   LocalShipping as LocalShippingIcon,
   Logout as LogoutIcon
 } from '@mui/icons-material';
-import { authAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 const drawerWidth = 240;
 
 function MainLayout() {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
 
-  const handleLogout = async () => {
-    try {
-      await authAPI.logout();
-      localStorage.removeItem('adminToken');
-      navigate('/login');
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
   const menuItems = [
@@ -107,9 +103,19 @@ function MainLayout() {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div">
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             IBCM Admin Panel
           </Typography>
+          {user && (
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Typography variant="body2" sx={{ mr: 2 }}>
+                {user.name || user.email}
+              </Typography>
+              <Avatar sx={{ width: 32, height: 32 }}>
+                {user.name ? user.name.charAt(0).toUpperCase() : 'A'}
+              </Avatar>
+            </Box>
+          )}
         </Toolbar>
       </AppBar>
       <Box

@@ -5,6 +5,7 @@ import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
 import ResetPassword from './components/Auth/ResetPassword';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
+import Dashboard from './components/Dashboard/Dashboard';
 import AIInsightsDashboard from './components/Dashboard/AIInsightsDashboard';
 import UserManagement from './components/Users/UserManagement';
 import EventManagement from './components/Events/EventManagement';
@@ -33,7 +34,8 @@ const AppRoutes = () => {
                 }
             >
                 <Route index element={<Navigate to="/dashboard" replace />} />
-                <Route path="dashboard" element={<AIInsightsDashboard />} />
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="ai-insights" element={<AIInsightsDashboard />} />
                 <Route 
                     path="users" 
                     element={
@@ -99,9 +101,6 @@ const AppRoutes = () => {
                     } 
                 />
             </Route>
-
-            {/* AI routes */}
-            <Route path="/ai-insights" element={<AIInsightsDashboard />} />
 
             {/* Catch all route */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

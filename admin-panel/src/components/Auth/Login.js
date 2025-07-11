@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -9,10 +9,14 @@ import {
   Container,
   Alert
 } from '@mui/material';
-import { authAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
+  const from = location.state?.from?.pathname || '/';
+  
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -34,11 +38,10 @@ function Login() {
     setLoading(true);
 
     try {
-      const response = await authAPI.login(formData);
-      localStorage.setItem('adminToken', response.data.token);
-      navigate('/');
+      await login(formData.email, formData.password);
+      navigate(from);
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      setError(err.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }

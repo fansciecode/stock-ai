@@ -16,6 +16,7 @@ protocol DependencyContainerProtocol {
     var reportAPIService: ReportAPIService { get }
     var imageAPIService: ImageAPIService { get }
     var chatAPIService: ChatAPIService { get }
+    var aiService: AIService { get }
     
     // Repositories
     var userRepository: UserRepository { get }
@@ -25,6 +26,7 @@ protocol DependencyContainerProtocol {
     var reportRepository: ReportRepository { get }
     var imageRepository: ImageRepository { get }
     var chatRepository: ChatRepository { get }
+    var aiRepository: AIRepository { get }
     
     // Firebase Services
     var firebaseAuth: Auth { get }
@@ -84,6 +86,10 @@ final class DependencyContainer: DependencyContainerProtocol {
         return ChatAPIServiceImpl(apiService: apiService)
     }()
     
+    lazy var aiService: AIService = {
+        return AIService.shared
+    }()
+    
     // MARK: - Repositories
     
     lazy var userRepository: UserRepository = {
@@ -127,6 +133,10 @@ final class DependencyContainer: DependencyContainerProtocol {
             apiService: chatAPIService,
             webSocketService: webSocketService
         )
+    }()
+    
+    lazy var aiRepository: AIRepository = {
+        return AIRepositoryImpl(aiService: aiService)
     }()
     
     // MARK: - Firebase Services

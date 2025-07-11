@@ -1,0 +1,97 @@
+version: '3'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "5001:5001"
+    environment:
+      - NODE_ENV=development
+      - PORT=5001
+      - MONGODB_URI=mongodb://mongo:27017/ibcm_db
+      - JWT_SECRET=ibcm_jwt_secret_key_development
+      - AI_SERVICE_URL=http://ibcm-ai:8001
+      - AI_SERVICE_API_KEY=development_key
+    depends_on:
+      - mongo
+      - ibcm-ai
+    networks:
+      - ibcmnet
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  ibcm-ai:
+    build: ./IBCM-ai
+    ports:
+      - "8001:8001"
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/ibcm_db
+      - API_KEY=development_key
+      - API_BASE_URL=http://backend:5001/api
+    depends_on:
+      - mongo
+    networks:
+      - ibcmnet
+    volumes:
+      - ./IBCM-ai:/app
+      - /app/__pycache__
+
+  mongo:
+    image: mongo:5
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - ibcmnet
+
+  web-app:
+    build: ./web-app
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:5001/api
+    depends_on:
+      - backend
+    networks:
+      - ibcmnet
+    volumes:
+      - ./web-app:/app
+      - /app/node_modules
+
+  admin-panel:
+    build: ./admin-panel
+    environment:
+      - REACT_APP_API_URL=https://api.ibcm.app/api
+    depends_on:
+      - backend
+    networks:
+      - ibcmnet
+    volumes:
+      - ./admin-panel:/app
+      - /app/node_modules
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/ssl:/etc/letsencrypt
+      - ./nginx/html:/usr/share/nginx/html
+    depends_on:
+      - web-app
+      - backend
+      - admin-panel
+    networks:
+      - ibcmnet
+
+networks:
+  ibcmnet:
+    driver: bridge
+
+volumes:
+  mongo-data: 

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.REACT_APP_API_URL || 'https://api.ibcm.app/api';
 
 const axiosInstance = axios.create({
   baseURL: API_URL,
@@ -64,18 +64,18 @@ export const authAPI = {
 };
 
 export const usersAPI = {
-  getAll: (page = 1, limit = 10) => axiosInstance.get(`/users?page=${page}&limit=${limit}`),
-  getById: (id) => axiosInstance.get(`/users/${id}`),
-  update: (id, data) => axiosInstance.put(`/users/${id}`, data),
-  delete: (id) => axiosInstance.delete(`/users/${id}`),
+  getAll: (page = 1, limit = 10) => axiosInstance.get(`/admin/users?page=${page}&limit=${limit}`),
+  getById: (id) => axiosInstance.get(`/admin/users/${id}`),
+  update: (id, data) => axiosInstance.put(`/users/${id}`, data), // Regular user update endpoint
+  delete: (id) => axiosInstance.delete(`/users/${id}`), // Regular user delete endpoint
 };
 
 export const businessAPI = {
-  getAll: (page = 1, limit = 10) => axiosInstance.get(`/businesses?page=${page}&limit=${limit}`),
-  getById: (id) => axiosInstance.get(`/businesses/${id}`),
-  update: (id, data) => axiosInstance.put(`/businesses/${id}`, data),
-  verify: (id) => axiosInstance.post(`/businesses/${id}/verify`),
-  reject: (id, reason) => axiosInstance.post(`/businesses/${id}/reject`, { reason }),
+  getAll: (page = 1, limit = 10) => axiosInstance.get(`/admin/verifications?page=${page}&limit=${limit}`),
+  getById: (id) => axiosInstance.get(`/business/${id}`), // Regular business endpoint
+  update: (id, data) => axiosInstance.put(`/business/${id}`, data), // Regular business update endpoint
+  verify: (id) => axiosInstance.put(`/admin/verifications/${id}`, { status: 'approved' }),
+  reject: (id, reason) => axiosInstance.put(`/admin/verifications/${id}`, { status: 'rejected', notes: reason }),
 };
 
 export const deliveryAPI = {
@@ -87,13 +87,22 @@ export const deliveryAPI = {
 export const statsAPI = {
   getDashboardStats: async () => {
     try {
-      const response = await axiosInstance.get('/stats/dashboard');
+      const response = await axiosInstance.get('/admin/dashboard');
       return response;
     } catch (error) {
       console.error('Dashboard stats error:', error);
       throw error;
     }
   },
+  getSystemHealth: async () => {
+    try {
+      const response = await axiosInstance.get('/admin/system-health');
+      return response;
+    } catch (error) {
+      console.error('System health error:', error);
+      throw error;
+    }
+  }
 };
 
 export default axiosInstance; 

@@ -3,6 +3,8 @@ import SwiftUI
 struct SearchView: View {
     @StateObject private var viewModel = SearchViewModel()
     @State private var showFilters = false
+    @StateObject private var aiViewModel = AIViewModel()
+    @State private var useAISearch = true
     
     var body: some View {
         NavigationView {

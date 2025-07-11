@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+// Using production API URL
+const API_URL = 'https://api.ibcm.app/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -13,7 +14,7 @@ const api = axios.create({
 // Add request interceptor
 api.interceptors.request.use(
   (config) => {
-    console.log('Making request to:', config.url);
+    // Removed console log for production
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -29,7 +30,7 @@ api.interceptors.request.use(
 // Add response interceptor
 api.interceptors.response.use(
   (response) => {
-    console.log('Response received:', response.config.url);
+    // Removed console log for production
     return response;
   },
   (error) => {

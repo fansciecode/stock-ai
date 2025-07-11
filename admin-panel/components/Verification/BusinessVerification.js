@@ -1,456 +1,399 @@
 import React, { useState, useEffect } from 'react';
 import {
     Box,
-    Card,
-    CardContent,
     Typography,
+    Paper,
     Table,
     TableBody,
     TableCell,
+    TableContainer,
     TableHead,
     TableRow,
+    TablePagination,
     Button,
+    IconButton,
     Dialog,
     DialogTitle,
     DialogContent,
     DialogActions,
     TextField,
-    IconButton,
-    Chip,
-    Stack,
-    FormControl,
-    InputLabel,
-    Select,
-    MenuItem,
-    Grid,
+    CircularProgress,
     Alert,
-    Snackbar,
-    Link
+    Chip,
+    Grid,
+    Card,
+    CardContent,
+    CardMedia,
+    Tabs,
+    Tab
 } from '@mui/material';
 import {
     CheckCircle as ApproveIcon,
     Cancel as RejectIcon,
     Visibility as ViewIcon,
-    History as HistoryIcon,
+    Image as ImageIcon,
     Description as DocumentIcon
 } from '@mui/icons-material';
+import api from '../../services/api';
 
 const BusinessVerification = () => {
-    const [verifications, setVerifications] = useState([]);
+    const [businesses, setBusinesses] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
     const [selectedBusiness, setSelectedBusiness] = useState(null);
-    const [dialogOpen, setDialogOpen] = useState(false);
-    const [actionType, setActionType] = useState('');
-    const [notes, setNotes] = useState('');
-    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-    const [filters, setFilters] = useState({
-        status: 'pending',
-        type: 'all'
-    });
-    const [businessDetails, setBusinessDetails] = useState(null);
+    const [openDialog, setOpenDialog] = useState(false);
+    const [verificationNotes, setVerificationNotes] = useState('');
+    const [tabValue, setTabValue] = useState(0);
+    const [totalBusinesses, setTotalBusinesses] = useState(0);
+    const [documentPreview, setDocumentPreview] = useState({ open: false, url: '', title: '' });
 
     useEffect(() => {
-        fetchVerifications();
-    }, [filters]);
+        fetchBusinesses();
+    }, [page, rowsPerPage]);
 
-    const fetchVerifications = async () => {
+    const fetchBusinesses = async () => {
         try {
-            const response = await fetch('/api/admin/verifications/business', {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(filters)
+            setLoading(true);
+            const response = await api.get('/admin/verifications', {
+                params: {
+                    page: page + 1,
+                    limit: rowsPerPage
+                }
             });
-            const data = await response.json();
-            setVerifications(data);
+            
+            setBusinesses(response.data.businesses);
+            setTotalBusinesses(response.data.totalPages * rowsPerPage);
+            setError(null);
         } catch (error) {
-            showSnackbar('Error fetching verifications', 'error');
-        }
-    };
-
-    const handleAction = async (business, action) => {
-        setSelectedBusiness(business);
-        setActionType(action);
-        
-        if (action === 'view') {
-            await fetchBusinessDetails(business.id);
-        }
-        
-        setDialogOpen(true);
-    };
-
-    const fetchBusinessDetails = async (businessId) => {
-        try {
-            const response = await fetch(`/api/admin/businesses/${businessId}/details`);
-            const data = await response.json();
-            setBusinessDetails(data);
-        } catch (error) {
-            showSnackbar('Error fetching business details', 'error');
-        }
-    };
-
-    const handleConfirmAction = async () => {
-        try {
-            let response;
-            switch (actionType) {
-                case 'approve':
-                    response = await fetch(`/api/admin/verifications/business/${selectedBusiness.id}/approve`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ notes })
-                    });
-                    break;
-                case 'reject':
-                    response = await fetch(`/api/admin/verifications/business/${selectedBusiness.id}/reject`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ notes })
-                    });
-                    break;
-            }
-
-            if (response.ok) {
-                showSnackbar(`Business ${actionType}d successfully`, 'success');
-                fetchVerifications();
-            } else {
-                throw new Error('Action failed');
-            }
-        } catch (error) {
-            showSnackbar('Error performing action', 'error');
+            console.error('Error fetching businesses:', error);
+            setError('Failed to load businesses for verification');
         } finally {
-            handleCloseDialog();
+            setLoading(false);
         }
+    };
+
+    const handleChangePage = (event, newPage) => {
+        setPage(newPage);
+    };
+
+    const handleChangeRowsPerPage = (event) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0);
+    };
+
+    const handleOpenDialog = (business) => {
+        setSelectedBusiness(business);
+        setVerificationNotes('');
+        setOpenDialog(true);
     };
 
     const handleCloseDialog = () => {
-        setDialogOpen(false);
+        setOpenDialog(false);
         setSelectedBusiness(null);
-        setActionType('');
-        setNotes('');
-        setBusinessDetails(null);
     };
 
-    const showSnackbar = (message, severity) => {
-        setSnackbar({ open: true, message, severity });
+    const handleTabChange = (event, newValue) => {
+        setTabValue(newValue);
     };
 
-    const handleFilterChange = (filterType, value) => {
-        setFilters(prev => ({
-            ...prev,
-            [filterType]: value
-        }));
-    };
-
-    const renderBusinessDetails = () => {
-        if (!businessDetails) {
-            return <Typography>Loading business details...</Typography>;
+    const handleVerification = async (status) => {
+        try {
+            await api.put(`/admin/verifications/${selectedBusiness._id}`, {
+                status,
+                notes: verificationNotes
+            });
+            
+            // Update the local state
+            setBusinesses(businesses.filter(business => business._id !== selectedBusiness._id));
+            handleCloseDialog();
+        } catch (error) {
+            console.error('Error updating business verification:', error);
+            setError('Failed to update business verification status');
         }
-
-        return (
-            <Grid container spacing={3}>
-                <Grid item xs={12}>
-                    <Typography variant="h6" gutterBottom>
-                        Business Information
-                    </Typography>
-                </Grid>
-                
-                {/* Basic Information */}
-                <Grid item xs={12} md={6}>
-                    <Card variant="outlined">
-                        <CardContent>
-                            <Typography variant="subtitle1" gutterBottom>
-                                Basic Details
-                            </Typography>
-                            <Stack spacing={2}>
-                                <Box>
-                                    <Typography variant="caption">Business Name</Typography>
-                                    <Typography>{businessDetails.name}</Typography>
-                                </Box>
-                                <Box>
-                                    <Typography variant="caption">Registration Number</Typography>
-                                    <Typography>{businessDetails.registrationNumber}</Typography>
-                                </Box>
-                                <Box>
-                                    <Typography variant="caption">Tax ID</Typography>
-                                    <Typography>{businessDetails.taxId}</Typography>
-                                </Box>
-                            </Stack>
-                        </CardContent>
-                    </Card>
-                </Grid>
-
-                {/* Contact Information */}
-                <Grid item xs={12} md={6}>
-                    <Card variant="outlined">
-                        <CardContent>
-                            <Typography variant="subtitle1" gutterBottom>
-                                Contact Information
-                            </Typography>
-                            <Stack spacing={2}>
-                                <Box>
-                                    <Typography variant="caption">Email</Typography>
-                                    <Typography>{businessDetails.email}</Typography>
-                                </Box>
-                                <Box>
-                                    <Typography variant="caption">Phone</Typography>
-                                    <Typography>{businessDetails.phone}</Typography>
-                                </Box>
-                                <Box>
-                                    <Typography variant="caption">Address</Typography>
-                                    <Typography>{businessDetails.address}</Typography>
-                                </Box>
-                            </Stack>
-                        </CardContent>
-                    </Card>
-                </Grid>
-
-                {/* Documents */}
-                <Grid item xs={12}>
-                    <Card variant="outlined">
-                        <CardContent>
-                            <Typography variant="subtitle1" gutterBottom>
-                                Verification Documents
-                            </Typography>
-                            <Grid container spacing={2}>
-                                {businessDetails.documents.map((doc, index) => (
-                                    <Grid item xs={12} sm={6} md={4} key={index}>
-                                        <Card variant="outlined">
-                                            <CardContent>
-                                                <Stack spacing={1}>
-                                                    <Typography variant="subtitle2">
-                                                        {doc.type}
-                                                    </Typography>
-                                                    <Link href={doc.url} target="_blank">
-                                                        View Document
-                                                    </Link>
-                                                    <Typography variant="caption">
-                                                        Uploaded: {new Date(doc.uploadedAt).toLocaleDateString()}
-                                                    </Typography>
-                                                </Stack>
-                                            </CardContent>
-                                        </Card>
-                                    </Grid>
-                                ))}
-                            </Grid>
-                        </CardContent>
-                    </Card>
-                </Grid>
-
-                {/* Verification History */}
-                {businessDetails.verificationHistory && (
-                    <Grid item xs={12}>
-                        <Card variant="outlined">
-                            <CardContent>
-                                <Typography variant="subtitle1" gutterBottom>
-                                    Verification History
-                                </Typography>
-                                <Table size="small">
-                                    <TableHead>
-                                        <TableRow>
-                                            <TableCell>Date</TableCell>
-                                            <TableCell>Action</TableCell>
-                                            <TableCell>Status</TableCell>
-                                            <TableCell>Notes</TableCell>
-                                            <TableCell>Admin</TableCell>
-                                        </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                        {businessDetails.verificationHistory.map((history, index) => (
-                                            <TableRow key={index}>
-                                                <TableCell>
-                                                    {new Date(history.date).toLocaleDateString()}
-                                                </TableCell>
-                                                <TableCell>{history.action}</TableCell>
-                                                <TableCell>
-                                                    <Chip
-                                                        label={history.status}
-                                                        size="small"
-                                                        color={
-                                                            history.status === 'approved' ? 'success' :
-                                                            history.status === 'rejected' ? 'error' :
-                                                            'default'
-                                                        }
-                                                    />
-                                                </TableCell>
-                                                <TableCell>{history.notes}</TableCell>
-                                                <TableCell>{history.admin}</TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                )}
-            </Grid>
-        );
     };
+
+    const handleViewDocument = (url, title) => {
+        setDocumentPreview({
+            open: true,
+            url,
+            title
+        });
+    };
+
+    const handleCloseDocumentPreview = () => {
+        setDocumentPreview({ open: false, url: '', title: '' });
+    };
+
+    if (loading && businesses.length === 0) {
+        return (
+            <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+                <CircularProgress />
+                                </Box>
+        );
+    }
 
     return (
         <Box p={3}>
-            <Typography variant="h5" gutterBottom>
-                Business Verification Management
+            <Typography variant="h4" gutterBottom>
+                Business Verification
             </Typography>
 
-            <Card sx={{ mb: 3 }}>
-                <CardContent>
-                    <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
-                        <FormControl sx={{ minWidth: 120 }}>
-                            <InputLabel>Status</InputLabel>
-                            <Select
-                                value={filters.status}
-                                onChange={(e) => handleFilterChange('status', e.target.value)}
-                                label="Status"
-                            >
-                                <MenuItem value="all">All</MenuItem>
-                                <MenuItem value="pending">Pending</MenuItem>
-                                <MenuItem value="approved">Approved</MenuItem>
-                                <MenuItem value="rejected">Rejected</MenuItem>
-                            </Select>
-                        </FormControl>
-                    </Stack>
-
+            {error && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                    {error}
+                </Alert>
+            )}
+            
+            <Paper sx={{ mb: 3, p: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                    Pending Verifications: {totalBusinesses}
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                    Review and verify business accounts to ensure they meet platform standards
+                </Typography>
+            </Paper>
+            
+            <TableContainer component={Paper}>
                     <Table>
                         <TableHead>
                             <TableRow>
-                                <TableCell>ID</TableCell>
                                 <TableCell>Business Name</TableCell>
-                                <TableCell>Registration Number</TableCell>
-                                <TableCell>Submitted Date</TableCell>
-                                <TableCell>Status</TableCell>
+                            <TableCell>Owner</TableCell>
+                            <TableCell>Type</TableCell>
+                            <TableCell>Submitted</TableCell>
+                            <TableCell>Documents</TableCell>
                                 <TableCell>Actions</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {verifications.map((business) => (
-                                <TableRow key={business.id}>
-                                    <TableCell>{business.id}</TableCell>
+                        {businesses.map((business) => (
+                            <TableRow key={business._id}>
                                     <TableCell>{business.name}</TableCell>
-                                    <TableCell>{business.registrationNumber}</TableCell>
+                                <TableCell>{business.owner?.name || 'Unknown'}</TableCell>
+                                <TableCell>{business.businessType}</TableCell>
                                     <TableCell>
-                                        {new Date(business.submittedDate).toLocaleDateString()}
+                                    {new Date(business.createdAt).toLocaleDateString()}
                                     </TableCell>
                                     <TableCell>
                                         <Chip 
-                                            label={business.status}
-                                            color={
-                                                business.status === 'approved' ? 'success' :
-                                                business.status === 'rejected' ? 'error' :
-                                                'warning'
-                                            }
+                                        label={`${business.documents?.length || 0} docs`} 
+                                        color="primary"
                                             size="small"
                                         />
                                     </TableCell>
                                     <TableCell>
-                                        <Stack direction="row" spacing={1}>
                                             <IconButton
                                                 size="small"
-                                                onClick={() => handleAction(business, 'view')}
                                                 color="primary"
+                                        onClick={() => handleOpenDialog(business)}
                                             >
                                                 <ViewIcon />
                                             </IconButton>
-                                            {business.status === 'pending' && (
-                                                <>
                                                     <IconButton
                                                         size="small"
-                                                        onClick={() => handleAction(business, 'approve')}
                                                         color="success"
+                                        onClick={() => {
+                                            setSelectedBusiness(business);
+                                            handleVerification('approved');
+                                        }}
                                                     >
                                                         <ApproveIcon />
                                                     </IconButton>
                                                     <IconButton
                                                         size="small"
-                                                        onClick={() => handleAction(business, 'reject')}
                                                         color="error"
+                                        onClick={() => {
+                                            setSelectedBusiness(business);
+                                            handleVerification('rejected');
+                                        }}
                                                     >
                                                         <RejectIcon />
                                                     </IconButton>
-                                                </>
-                                            )}
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleAction(business, 'history')}
-                                                color="default"
-                                            >
-                                                <HistoryIcon />
-                                            </IconButton>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleAction(business, 'documents')}
-                                                color="info"
-                                            >
-                                                <DocumentIcon />
-                                            </IconButton>
-                                        </Stack>
                                     </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
                     </Table>
-                </CardContent>
-            </Card>
-
+                <TablePagination
+                    rowsPerPageOptions={[5, 10, 25]}
+                    component="div"
+                    count={totalBusinesses}
+                    rowsPerPage={rowsPerPage}
+                    page={page}
+                    onPageChange={handleChangePage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                />
+            </TableContainer>
+            
+            {/* Business Details Dialog */}
             <Dialog 
-                open={dialogOpen} 
+                open={openDialog} 
                 onClose={handleCloseDialog} 
                 maxWidth="md" 
                 fullWidth
             >
-                <DialogTitle>
-                    {actionType === 'view' ? 'Business Details' :
-                     actionType === 'approve' ? 'Approve Business' :
-                     actionType === 'reject' ? 'Reject Business' :
-                     actionType === 'history' ? 'Verification History' :
-                     actionType === 'documents' ? 'Business Documents' :
-                     'Business Action'}
-                </DialogTitle>
+                <DialogTitle>Business Verification</DialogTitle>
                 <DialogContent>
-                    {actionType === 'view' ? (
-                        renderBusinessDetails()
-                    ) : actionType === 'approve' || actionType === 'reject' ? (
+                    {selectedBusiness && (
+                        <Box sx={{ pt: 2 }}>
+                            <Tabs value={tabValue} onChange={handleTabChange} sx={{ mb: 2 }}>
+                                <Tab label="Business Info" />
+                                <Tab label="Documents" />
+                                <Tab label="Verification" />
+                            </Tabs>
+                            
+                            {/* Business Info Tab */}
+                            {tabValue === 0 && (
+                                <Grid container spacing={2}>
+                                    <Grid item xs={12}>
+                                        <Typography variant="h6" gutterBottom>
+                                            {selectedBusiness.name}
+                                        </Typography>
+                                    </Grid>
+                                    <Grid item xs={12} sm={6}>
+                                        <Typography variant="body1" gutterBottom>
+                                            <strong>Business Type:</strong> {selectedBusiness.businessType}
+                                        </Typography>
+                                        <Typography variant="body1" gutterBottom>
+                                            <strong>Registration Number:</strong> {selectedBusiness.registrationNumber || 'Not provided'}
+                                        </Typography>
+                                        <Typography variant="body1" gutterBottom>
+                                            <strong>Tax ID:</strong> {selectedBusiness.taxId || 'Not provided'}
+                                        </Typography>
+                                    </Grid>
+                                    <Grid item xs={12} sm={6}>
+                                        <Typography variant="body1" gutterBottom>
+                                            <strong>Owner:</strong> {selectedBusiness.owner?.name || 'Unknown'}
+                                        </Typography>
+                                        <Typography variant="body1" gutterBottom>
+                                            <strong>Email:</strong> {selectedBusiness.email}
+                                        </Typography>
+                                        <Typography variant="body1" gutterBottom>
+                                            <strong>Phone:</strong> {selectedBusiness.phone || 'Not provided'}
+                                        </Typography>
+                                    </Grid>
+                                    <Grid item xs={12}>
+                                        <Typography variant="body1" gutterBottom>
+                                            <strong>Address:</strong> {selectedBusiness.address || 'Not provided'}
+                                        </Typography>
+                                        <Typography variant="body1" gutterBottom>
+                                            <strong>Description:</strong> {selectedBusiness.description || 'Not provided'}
+                                        </Typography>
+                                    </Grid>
+                                </Grid>
+                            )}
+                            
+                            {/* Documents Tab */}
+                            {tabValue === 1 && (
+                                <Grid container spacing={2}>
+                                    {selectedBusiness.documents?.length > 0 ? (
+                                        selectedBusiness.documents.map((doc, index) => (
+                                            <Grid item xs={12} sm={6} md={4} key={index}>
+                                                <Card>
+                                                    <CardMedia
+                                                        component="img"
+                                                        height="140"
+                                                        image={doc.isImage ? doc.url : '/document-placeholder.png'}
+                                                        alt={doc.title}
+                                                    />
+                                                    <CardContent>
+                                                        <Typography variant="body1" gutterBottom>
+                                                            {doc.title || `Document ${index + 1}`}
+                                                        </Typography>
+                                                        <Button
+                                                            startIcon={doc.isImage ? <ImageIcon /> : <DocumentIcon />}
+                                                            variant="outlined"
+                                                            size="small"
+                                                            onClick={() => handleViewDocument(doc.url, doc.title)}
+                                                        >
+                                                            View
+                                                        </Button>
+                                                    </CardContent>
+                                                </Card>
+                                            </Grid>
+                                        ))
+                                    ) : (
+                                        <Grid item xs={12}>
+                                            <Alert severity="warning">
+                                                No documents provided
+                                            </Alert>
+                                        </Grid>
+                                    )}
+                                </Grid>
+                            )}
+                            
+                            {/* Verification Tab */}
+                            {tabValue === 2 && (
+                                <Box>
                         <TextField
                             fullWidth
-                            label="Notes"
+                                        label="Verification Notes"
                             multiline
                             rows={4}
-                            value={notes}
-                            onChange={(e) => setNotes(e.target.value)}
+                                        value={verificationNotes}
+                                        onChange={(e) => setVerificationNotes(e.target.value)}
                             margin="normal"
-                            required
-                            helperText="Please provide a reason for your decision"
-                        />
-                    ) : null}
+                                        placeholder="Enter notes regarding the verification decision"
+                                    />
+                                    <Box display="flex" justifyContent="space-between" mt={2}>
+                                        <Button
+                                            variant="contained"
+                                            color="success"
+                                            onClick={() => handleVerification('approved')}
+                                        >
+                                            Approve Business
+                                        </Button>
+                                        <Button
+                                            variant="contained"
+                                            color="error"
+                                            onClick={() => handleVerification('rejected')}
+                                        >
+                                            Reject Business
+                                        </Button>
+                                    </Box>
+                                </Box>
+                            )}
+                        </Box>
+                    )}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleCloseDialog}>
-                        {actionType === 'view' ? 'Close' : 'Cancel'}
-                    </Button>
-                    {(actionType === 'approve' || actionType === 'reject') && (
-                        <Button 
-                            onClick={handleConfirmAction}
-                            color={actionType === 'approve' ? 'success' : 'error'}
-                            variant="contained"
-                            disabled={!notes.trim()}
-                        >
-                            {actionType === 'approve' ? 'Approve' : 'Reject'}
-                        </Button>
-                    )}
+                    <Button onClick={handleCloseDialog}>Close</Button>
                 </DialogActions>
             </Dialog>
 
-            <Snackbar
-                open={snackbar.open}
-                autoHideDuration={6000}
-                onClose={() => setSnackbar({ ...snackbar, open: false })}
+            {/* Document Preview Dialog */}
+            <Dialog
+                open={documentPreview.open}
+                onClose={handleCloseDocumentPreview}
+                maxWidth="md"
+                fullWidth
             >
-                <Alert 
-                    onClose={() => setSnackbar({ ...snackbar, open: false })}
-                    severity={snackbar.severity}
-                >
-                    {snackbar.message}
-                </Alert>
-            </Snackbar>
+                <DialogTitle>{documentPreview.title || 'Document Preview'}</DialogTitle>
+                <DialogContent>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                        {documentPreview.url.match(/\.(jpeg|jpg|gif|png)$/i) ? (
+                            <img 
+                                src={documentPreview.url} 
+                                alt={documentPreview.title}
+                                style={{ maxWidth: '100%', maxHeight: '70vh' }}
+                            />
+                        ) : (
+                            <iframe
+                                src={documentPreview.url}
+                                title={documentPreview.title}
+                                width="100%"
+                                height="500px"
+                                frameBorder="0"
+                            />
+                        )}
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseDocumentPreview}>Close</Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 };

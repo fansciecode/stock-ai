@@ -7,7 +7,10 @@ import {
     getOptimizedRecommendations,
     getPersonalizedRecommendations,
     processVoiceSearch,
-    getLocationRecommendations
+    getLocationRecommendations,
+    getSearchHistory,
+    getSearchInsights,
+    getUserPreferences
 } from '../controllers/aiController.js';
 
 const router = express.Router();

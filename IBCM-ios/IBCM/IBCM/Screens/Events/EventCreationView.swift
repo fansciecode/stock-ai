@@ -3,6 +3,7 @@ import SwiftUI
 struct EventCreationView: View {
     @StateObject private var viewModel = EventCreationViewModel()
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var aiViewModel = AIViewModel()
     
     var body: some View {
         NavigationView {
@@ -19,16 +20,81 @@ struct EventCreationView: View {
                             }
                         }
                     
-                    TextEditor(text: $viewModel.formState.description)
-                        .frame(height: 100)
-                        .overlay {
-                            if let error = viewModel.formState.descriptionError {
-                                Text(error)
-                                    .foregroundColor(.red)
-                                    .font(.caption)
-                                    .padding(.top, 110)
+                    HStack {
+                        Text("Description")
+                            .font(.headline)
+                        
+                        Spacer()
+                        
+                        Button("Generate") {
+                            if !viewModel.formState.title.isEmpty && viewModel.formState.category != nil {
+                                aiViewModel.generateDescription(
+                                    title: viewModel.formState.title,
+                                    category: viewModel.formState.category?.rawValue ?? "",
+                                    context: viewModel.formState.location
+                                )
+                            } else {
+                                // Show alert that title and category are required
+                                viewModel.showError = true
+                                viewModel.errorMessage = "Please enter a title and select a category first."
                             }
                         }
+                        .font(.caption)
+                        .disabled(viewModel.formState.title.isEmpty || viewModel.formState.category == nil)
+                    }
+                    
+                    TextEditor(text: $viewModel.formState.description)
+                        .frame(height: 120)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                        )
+                        .onChange(of: aiViewModel.generatedDescription) { newValue in
+                            if !newValue.isEmpty {
+                                viewModel.formState.description = newValue
+                            }
+                        }
+                    
+                    HStack {
+                        Text("Tags")
+                            .font(.headline)
+                        
+                        Spacer()
+                        
+                        Button("Generate Tags") {
+                            if !viewModel.formState.description.isEmpty {
+                                aiViewModel.generateTags(content: viewModel.formState.description)
+                            } else {
+                                // Show alert that description is required
+                                viewModel.showError = true
+                                viewModel.errorMessage = "Please enter a description first."
+                            }
+                        }
+                        .font(.caption)
+                        .disabled(viewModel.formState.description.isEmpty)
+                    }
+                    
+                    if !aiViewModel.generatedTags.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack {
+                                ForEach(aiViewModel.generatedTags, id: \.self) { tag in
+                                    Text(tag)
+                                        .font(.caption)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(Color.blue.opacity(0.2))
+                                        .foregroundColor(.blue)
+                                        .cornerRadius(12)
+                                }
+                            }
+                        }
+                        .frame(height: 30)
+                    }
+                    
+                    if aiViewModel.isLoading {
+                        ProgressView("Generating...")
+                            .padding()
+                    }
                 }
                 
                 Section("Category & Visibility") {
@@ -106,6 +172,13 @@ struct EventCreationView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(viewModel.errorMessage)
+            }
+            .alert(isPresented: $aiViewModel.showError) {
+                Alert(
+                    title: Text("Generation Error"),
+                    message: Text(aiViewModel.errorMessage ?? "An unknown error occurred"),
+                    dismissButton: .default(Text("OK"))
+                )
             }
         }
     }

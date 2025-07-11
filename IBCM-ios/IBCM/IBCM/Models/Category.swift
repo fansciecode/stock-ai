@@ -12,6 +12,33 @@ struct Category: Identifiable, Codable {
     let createdAt: Date
     let updatedAt: Date
     var subcategories: [Category]?
+    
+    // Added property for icon name used in UI
+    var iconName: String {
+        // Default icon mapping based on category name
+        switch name.lowercased() {
+        case let n where n.contains("music"):
+            return "music.note"
+        case let n where n.contains("sport"):
+            return "sportscourt"
+        case let n where n.contains("food"):
+            return "fork.knife"
+        case let n where n.contains("art"):
+            return "paintpalette"
+        case let n where n.contains("tech"):
+            return "laptopcomputer"
+        case let n where n.contains("business"):
+            return "briefcase"
+        case let n where n.contains("education"):
+            return "book"
+        case let n where n.contains("health"):
+            return "heart"
+        case let n where n.contains("travel"):
+            return "airplane"
+        default:
+            return "star"
+        }
+    }
 }
 
 // MARK: - Response Types

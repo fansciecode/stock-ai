@@ -1,16 +1,26 @@
 import express from 'express';
-import { getRateLimitStats } from '../middleware/rateLimiter.js';
-import { isAdmin } from '../middleware/authMiddleware.js';
+import { protect, isAdmin } from '../middleware/authMiddleware.js';
+import { 
+    getDashboardStats, 
+    getPendingVerifications,
+    updateVerificationStatus,
+    getSystemHealth,
+    getUserManagement
+} from '../controllers/adminController.js';
 
 const router = express.Router();
 
-router.get('/rate-limit-stats', isAdmin, async (req, res) => {
-  try {
-    const stats = await getRateLimitStats();
-    res.json(stats);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching rate limit stats' });
-  }
-});
+// Dashboard statistics
+router.get('/dashboard', protect, isAdmin, getDashboardStats);
+
+// Business verification routes
+router.get('/verifications', protect, isAdmin, getPendingVerifications);
+router.put('/verifications/:businessId', protect, isAdmin, updateVerificationStatus);
+
+// System health
+router.get('/system-health', protect, isAdmin, getSystemHealth);
+
+// User management
+router.get('/users', protect, isAdmin, getUserManagement);
 
 export default router; 

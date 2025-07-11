@@ -1,22 +1,22 @@
 import React, { useState } from 'react';
+import { Outlet } from 'react-router-dom';
 import {
     Box,
+    CssBaseline,
     Drawer,
     AppBar,
     Toolbar,
-    List,
     Typography,
     Divider,
     IconButton,
+    List,
     ListItem,
     ListItemIcon,
     ListItemText,
-    useTheme,
     Avatar,
     Menu,
     MenuItem,
-    Collapse,
-    ListItemButton
+    useTheme
 } from '@mui/material';
 import {
     Menu as MenuIcon,
@@ -24,31 +24,27 @@ import {
     Dashboard as DashboardIcon,
     People as PeopleIcon,
     Event as EventIcon,
-    Analytics as AnalyticsIcon,
+    VerifiedUser as VerifiedUserIcon,
+    AttachMoney as MoneyIcon,
+    ShoppingCart as CartIcon,
+    Assessment as AssessmentIcon,
     Settings as SettingsIcon,
-    Security as SecurityIcon,
-    Business as BusinessIcon,
+    Psychology as PsychologyIcon,
+    AccountCircle as AccountCircleIcon,
     Notifications as NotificationsIcon,
-    AccountCircle,
-    ExpandLess,
-    ExpandMore,
-    MonetizationOn as MonetizationOnIcon,
-    Assignment as AssignmentIcon
+    Logout as LogoutIcon
 } from '@mui/icons-material';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
 const drawerWidth = 240;
 
-const MainLayout = ({ children }) => {
-    const theme = useTheme();
-    const navigate = useNavigate();
-    const location = useLocation();
+const MainLayout = () => {
     const [open, setOpen] = useState(true);
     const [anchorEl, setAnchorEl] = useState(null);
-    const [menuOpen, setMenuOpen] = useState({
-        settings: false,
-        management: false
-    });
+    const theme = useTheme();
+    const navigate = useNavigate();
+    const { user, logout } = useAuth();
 
     const handleDrawerToggle = () => {
         setOpen(!open);
@@ -58,134 +54,34 @@ const MainLayout = ({ children }) => {
         setAnchorEl(event.currentTarget);
     };
 
-    const handleProfileMenuClose = () => {
+    const handleMenuClose = () => {
         setAnchorEl(null);
     };
 
-    const handleMenuClick = (category) => {
-        setMenuOpen(prev => ({
-            ...prev,
-            [category]: !prev[category]
-        }));
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
     };
 
     const menuItems = [
-        {
-            text: 'Dashboard',
-            icon: <DashboardIcon />,
-            path: '/dashboard',
-            category: null
-        },
-        {
-            text: 'AI Insights',
-            icon: <AnalyticsIcon />,
-            path: '/insights',
-            category: null
-        },
-        {
-            text: 'User Management',
-            icon: <PeopleIcon />,
-            path: '/users',
-            category: 'management'
-        },
-        {
-            text: 'Event Management',
-            icon: <EventIcon />,
-            path: '/events',
-            category: 'management'
-        },
-        {
-            text: 'Business Verification',
-            icon: <BusinessIcon />,
-            path: '/verification',
-            category: 'management'
-        },
-        {
-            text: 'Financial Management',
-            icon: <MonetizationOnIcon />,
-            path: '/financial',
-            category: 'management'
-        },
-        {
-            text: 'Reports & Analytics',
-            icon: <AssignmentIcon />,
-            path: '/reports',
-            category: 'management'
-        },
-        {
-            text: 'Role & Permissions',
-            icon: <SecurityIcon />,
-            path: '/roles',
-            category: 'settings'
-        },
-        {
-            text: 'System Settings',
-            icon: <SettingsIcon />,
-            path: '/settings',
-            category: 'settings'
-        }
+        { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+        { text: 'AI Insights', icon: <PsychologyIcon />, path: '/ai-insights' },
+        { text: 'User Management', icon: <PeopleIcon />, path: '/users' },
+        { text: 'Event Management', icon: <EventIcon />, path: '/events' },
+        { text: 'Business Verification', icon: <VerifiedUserIcon />, path: '/verification' },
+        { text: 'Financial Management', icon: <MoneyIcon />, path: '/financial' },
+        { text: 'Order Management', icon: <CartIcon />, path: '/orders' },
+        { text: 'Reports & Analytics', icon: <AssessmentIcon />, path: '/reports' },
+        { text: 'System Settings', icon: <SettingsIcon />, path: '/settings' }
     ];
-
-    const categories = {
-        management: {
-            title: 'Management',
-            items: menuItems.filter(item => item.category === 'management')
-        },
-        settings: {
-            title: 'Settings',
-            items: menuItems.filter(item => item.category === 'settings')
-        }
-    };
-
-    const renderMenuItems = () => (
-        <List>
-            {menuItems.filter(item => !item.category).map((item) => (
-                <ListItem
-                    button
-                    key={item.text}
-                    onClick={() => navigate(item.path)}
-                    selected={location.pathname === item.path}
-                >
-                    <ListItemIcon>{item.icon}</ListItemIcon>
-                    <ListItemText primary={item.text} />
-                </ListItem>
-            ))}
-            
-            <Divider />
-            
-            {Object.entries(categories).map(([key, category]) => (
-                <React.Fragment key={key}>
-                    <ListItemButton onClick={() => handleMenuClick(key)}>
-                        <ListItemText primary={category.title} />
-                        {menuOpen[key] ? <ExpandLess /> : <ExpandMore />}
-                    </ListItemButton>
-                    <Collapse in={menuOpen[key]} timeout="auto" unmountOnExit>
-                        <List component="div" disablePadding>
-                            {category.items.map((item) => (
-                                <ListItem
-                                    button
-                                    key={item.text}
-                                    onClick={() => navigate(item.path)}
-                                    selected={location.pathname === item.path}
-                                    sx={{ pl: 4 }}
-                                >
-                                    <ListItemIcon>{item.icon}</ListItemIcon>
-                                    <ListItemText primary={item.text} />
-                                </ListItem>
-                            ))}
-                        </List>
-                    </Collapse>
-                </React.Fragment>
-            ))}
-        </List>
-    );
 
     return (
         <Box sx={{ display: 'flex' }}>
+            <CssBaseline />
             <AppBar
                 position="fixed"
                 sx={{
-                    zIndex: theme.zIndex.drawer + 1,
+                    zIndex: (theme) => theme.zIndex.drawer + 1,
                     transition: theme.transitions.create(['width', 'margin'], {
                         easing: theme.transitions.easing.sharp,
                         duration: theme.transitions.duration.leavingScreen,
@@ -206,34 +102,28 @@ const MainLayout = ({ children }) => {
                         aria-label="open drawer"
                         onClick={handleDrawerToggle}
                         edge="start"
-                        sx={{ marginRight: 5 }}
+                        sx={{ marginRight: 2 }}
                     >
-                        <MenuIcon />
+                        {open ? <ChevronLeftIcon /> : <MenuIcon />}
                     </IconButton>
                     <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
                         Admin Panel
                     </Typography>
-                    <IconButton
-                        size="large"
-                        edge="end"
-                        aria-label="notifications"
-                        color="inherit"
-                    >
+                    <IconButton color="inherit">
                         <NotificationsIcon />
                     </IconButton>
                     <IconButton
-                        size="large"
                         edge="end"
-                        aria-label="account"
-                        aria-controls="menu-appbar"
+                        aria-label="account of current user"
                         aria-haspopup="true"
                         onClick={handleProfileMenuOpen}
                         color="inherit"
                     >
-                        <AccountCircle />
+                        <Avatar sx={{ width: 32, height: 32, bgcolor: theme.palette.secondary.main }}>
+                            {user?.name?.charAt(0) || 'A'}
+                        </Avatar>
                     </IconButton>
                     <Menu
-                        id="menu-appbar"
                         anchorEl={anchorEl}
                         anchorOrigin={{
                             vertical: 'bottom',
@@ -245,11 +135,20 @@ const MainLayout = ({ children }) => {
                             horizontal: 'right',
                         }}
                         open={Boolean(anchorEl)}
-                        onClose={handleProfileMenuClose}
+                        onClose={handleMenuClose}
                     >
-                        <MenuItem onClick={handleProfileMenuClose}>Profile</MenuItem>
-                        <MenuItem onClick={handleProfileMenuClose}>Settings</MenuItem>
-                        <MenuItem onClick={handleProfileMenuClose}>Logout</MenuItem>
+                        <MenuItem onClick={() => { handleMenuClose(); navigate('/profile'); }}>
+                            <ListItemIcon>
+                                <AccountCircleIcon fontSize="small" />
+                            </ListItemIcon>
+                            Profile
+                        </MenuItem>
+                        <MenuItem onClick={handleLogout}>
+                            <ListItemIcon>
+                                <LogoutIcon fontSize="small" />
+                            </ListItemIcon>
+                            Logout
+                        </MenuItem>
                     </Menu>
                 </Toolbar>
             </AppBar>
@@ -262,52 +161,57 @@ const MainLayout = ({ children }) => {
                     [`& .MuiDrawer-paper`]: {
                         width: drawerWidth,
                         boxSizing: 'border-box',
-                        ...(open && {
+                        whiteSpace: 'nowrap',
+                        overflowX: 'hidden',
                             transition: theme.transitions.create('width', {
                                 easing: theme.transitions.easing.sharp,
                                 duration: theme.transitions.duration.enteringScreen,
-                            }),
-                            overflowX: 'hidden',
                         }),
                         ...(!open && {
+                            width: theme.spacing(7),
+                            overflowX: 'hidden',
                             transition: theme.transitions.create('width', {
                                 easing: theme.transitions.easing.sharp,
                                 duration: theme.transitions.duration.leavingScreen,
                             }),
-                            overflowX: 'hidden',
-                            width: theme.spacing(7),
-                            [theme.breakpoints.up('sm')]: {
-                                width: theme.spacing(9),
-                            },
                         }),
                     },
                 }}
             >
-                <Toolbar
+                <Toolbar />
+                <Box sx={{ overflow: 'auto' }}>
+                    <List>
+                        {menuItems.map((item) => (
+                            <ListItem
+                                button
+                                key={item.text}
+                                onClick={() => navigate(item.path)}
+                                sx={{
+                                    minHeight: 48,
+                                    justifyContent: open ? 'initial' : 'center',
+                                    px: 2.5,
+                                }}
+                            >
+                                <ListItemIcon
                     sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'flex-end',
-                        px: [1],
-                    }}
-                >
-                    <IconButton onClick={handleDrawerToggle}>
-                        <ChevronLeftIcon />
-                    </IconButton>
-                </Toolbar>
-                <Divider />
-                {renderMenuItems()}
+                                        minWidth: 0,
+                                        mr: open ? 3 : 'auto',
+                                        justifyContent: 'center',
+                                    }}
+                                >
+                                    {item.icon}
+                                </ListItemIcon>
+                                <ListItemText
+                                    primary={item.text}
+                                    sx={{ opacity: open ? 1 : 0 }}
+                                />
+                            </ListItem>
+                        ))}
+                    </List>
+                </Box>
             </Drawer>
-            <Box
-                component="main"
-                sx={{
-                    flexGrow: 1,
-                    p: 3,
-                    width: { sm: `calc(100% - ${drawerWidth}px)` },
-                    marginTop: '64px',
-                }}
-            >
-                {children}
+            <Box component="main" sx={{ flexGrow: 1, p: 3, mt: 8 }}>
+                <Outlet />
             </Box>
         </Box>
     );

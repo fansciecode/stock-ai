@@ -5,21 +5,21 @@ target 'IBCM' do
   # Comment the next line if you don't want to use dynamic frameworks
   use_frameworks!
 
-  # Firebase
-  pod 'Firebase/Core'
-  pod 'Firebase/Auth'
-  pod 'Firebase/Firestore'
-  pod 'Firebase/Storage'
-  pod 'Firebase/Messaging'
-  pod 'Firebase/Analytics'
+  # Firebase - using version 9.6.0 which is compatible with Swift 5.7
+  pod 'Firebase/Core', '~> 9.6.0'
+  pod 'Firebase/Auth', '~> 9.6.0'
+  pod 'Firebase/Firestore', '~> 9.6.0'
+  pod 'Firebase/Storage', '~> 9.6.0'
+  pod 'Firebase/Messaging', '~> 9.6.0'
+  pod 'Firebase/Analytics', '~> 9.6.0'
   
   # Networking
-  pod 'Alamofire'
+  pod 'Alamofire', '~> 5.6.4' # Use version compatible with Swift 5.7
   pod 'Starscream' # For WebSocket
   
   # UI
   pod 'SnapKit'
-  pod 'Kingfisher'
+  pod 'Kingfisher', '~> 7.6.2' # Use version compatible with Swift 5.7
   pod 'IQKeyboardManagerSwift'
   
   # Utils
@@ -42,4 +42,4 @@ post_install do |installer|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
     end
   end
-end 
+end

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -18,10 +18,8 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  TextField,
   Chip
 } from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import { deliveryAPI } from '../../services/api';
 
@@ -35,7 +33,7 @@ function DeliveriesList() {
   const [viewDialog, setViewDialog] = useState(false);
   const [selectedDelivery, setSelectedDelivery] = useState(null);
 
-  const fetchDeliveries = async () => {
+  const fetchDeliveries = useCallback(async () => {
     try {
       const response = await deliveryAPI.getAll(page + 1, rowsPerPage);
       setDeliveries(response.data.deliveries);
@@ -45,11 +43,11 @@ function DeliveriesList() {
       setError(err.message);
       setLoading(false);
     }
-  };
+  }, [page, rowsPerPage]);
 
   useEffect(() => {
     fetchDeliveries();
-  }, [page, rowsPerPage]);
+  }, [fetchDeliveries]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);

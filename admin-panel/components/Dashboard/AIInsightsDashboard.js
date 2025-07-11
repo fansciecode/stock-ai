@@ -91,20 +91,25 @@ const AIInsightsDashboard = () => {
         );
     }
 
-    if (error) {
-        return (
-            <Alert severity="error" action={
-                <Button color="inherit" size="small" onClick={handleRefresh}>
-                    RETRY
-                </Button>
-            }>
-                {error}
-            </Alert>
-        );
-    }
-
     return (
         <Box p={3}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                <Typography variant="h4">AI Insights Dashboard</Typography>
+                <Button variant="contained" onClick={handleRefresh}>
+                    Refresh Data
+                </Button>
+            </Box>
+
+            {error && (
+                <Alert severity="error" action={
+                    <Button color="inherit" size="small" onClick={handleRefresh}>
+                        RETRY
+                    </Button>
+                }>
+                    {error}
+                </Alert>
+            )}
+
             <Grid container spacing={3}>
                 {/* Event Insights */}
                 <Grid item xs={12} md={6}>
@@ -253,12 +258,6 @@ const AIInsightsDashboard = () => {
                     </Card>
                 </Grid>
             </Grid>
-
-            <Box mt={3} display="flex" justifyContent="flex-end">
-                <Button variant="contained" color="primary" onClick={handleRefresh}>
-                    Refresh Insights
-                </Button>
-            </Box>
         </Box>
     );
 };

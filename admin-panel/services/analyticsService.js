@@ -1,223 +1,116 @@
-import axios from 'axios';
-import { OpenAI } from 'openai';
-
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-});
+import api from './api';
 
 class AnalyticsService {
-    constructor() {
-        this.baseUrl = process.env.API_BASE_URL;
-    }
-
     // Event Analytics
     async getEventAnalytics(timeRange) {
         try {
-            const response = await axios.get(`${this.baseUrl}/analytics/events`, {
+            const response = await api.get('/admin-analytics/events', {
                 params: { timeRange }
             });
-
-            const insights = await this.generateEventInsights(response.data);
-            return {
-                data: response.data,
-                insights,
-                trends: await this.analyzeTrends(response.data)
-            };
+            return response.data;
         } catch (error) {
             console.error('Error fetching event analytics:', error);
-            throw error;
+            return {
+                data: [],
+                insights: { summary: 'Failed to load event analytics' },
+                trends: []
+            };
         }
     }
 
     // User Analytics
     async getUserAnalytics() {
         try {
-            const response = await axios.get(`${this.baseUrl}/analytics/users`);
-            return {
-                data: response.data,
-                insights: await this.generateUserInsights(response.data),
-                segments: await this.generateUserSegments(response.data)
-            };
+            const response = await api.get('/admin-analytics/users');
+            return response.data;
         } catch (error) {
             console.error('Error fetching user analytics:', error);
-            throw error;
+            return {
+                data: [],
+                insights: { summary: 'Failed to load user analytics' },
+                segments: {}
+            };
         }
     }
 
     // Revenue Analytics
     async getRevenueAnalytics(timeRange) {
         try {
-            const response = await axios.get(`${this.baseUrl}/analytics/revenue`, {
+            const response = await api.get('/admin-analytics/revenue', {
                 params: { timeRange }
             });
-            return {
-                data: response.data,
-                insights: await this.generateRevenueInsights(response.data),
-                forecasts: await this.generateRevenueForecast(response.data)
-            };
+            return response.data;
         } catch (error) {
             console.error('Error fetching revenue analytics:', error);
-            throw error;
+            return {
+                data: [],
+                insights: { summary: 'Failed to load revenue analytics' },
+                forecasts: { nextMonth: 'Forecast unavailable' }
+            };
         }
     }
 
     // Platform Health Analytics
     async getPlatformHealth() {
         try {
-            const response = await axios.get(`${this.baseUrl}/analytics/platform-health`);
-            return {
-                data: response.data,
-                insights: await this.generatePlatformInsights(response.data),
-                recommendations: await this.generateOptimizationRecommendations(response.data)
-            };
-  } catch (error) {
-            console.error('Error fetching platform health:', error);
-            throw error;
-        }
-    }
-
-    // AI-Powered Insights Generation
-    async generateEventInsights(data) {
-        const prompt = `Analyze the following event data and provide key insights:
-                       ${JSON.stringify(data)}
-                       Focus on trends, patterns, and actionable recommendations.`;
-
-        const response = await openai.chat.completions.create({
-            model: "gpt-4",
-            messages: [{
-                role: "system",
-                content: "You are an expert in event analytics and business intelligence."
-            }, {
-                role: "user",
-                content: prompt
-            }]
-        });
-
-        return this.parseAIResponse(response.choices[0].message.content);
-    }
-
-    async generateUserInsights(data) {
-        const prompt = `Analyze user behavior data and provide insights:
-                       ${JSON.stringify(data)}
-                       Focus on engagement patterns, retention, and growth opportunities.`;
-
-        const response = await openai.chat.completions.create({
-            model: "gpt-4",
-            messages: [{
-                role: "system",
-                content: "You are an expert in user behavior analysis."
-            }, {
-                role: "user",
-                content: prompt
-            }]
-        });
-
-        return this.parseAIResponse(response.choices[0].message.content);
-    }
-
-    async generateUserSegments(data) {
-        return {
-            highValue: this.identifyHighValueUsers(data),
-            atRisk: this.identifyAtRiskUsers(data),
-            growing: this.identifyGrowingUsers(data),
-            segments: await this.createUserSegments(data)
-        };
-    }
-
-    async generateRevenueForecast(data) {
-        const prompt = `Generate revenue forecasts based on historical data:
-                       ${JSON.stringify(data)}
-                       Include monthly projections and growth opportunities.`;
-
-        const response = await openai.chat.completions.create({
-            model: "gpt-4",
-            messages: [{
-                role: "system",
-                content: "You are an expert in financial forecasting and analysis."
-            }, {
-                role: "user",
-                content: prompt
-            }]
-        });
-
-        return this.parseAIResponse(response.choices[0].message.content);
-    }
-
-    async generateOptimizationRecommendations(data) {
-        const prompt = `Analyze platform performance data and suggest optimizations:
-                       ${JSON.stringify(data)}
-                       Focus on performance, user experience, and system efficiency.`;
-
-        const response = await openai.chat.completions.create({
-            model: "gpt-4",
-            messages: [{
-                role: "system",
-                content: "You are an expert in platform optimization and performance analysis."
-            }, {
-                role: "user",
-                content: prompt
-            }]
-        });
-
-        return this.parseAIResponse(response.choices[0].message.content);
-    }
-
-    // Helper Methods
-    parseAIResponse(content) {
-        try {
-            return JSON.parse(content);
+            const response = await api.get('/admin-analytics/platform-health');
+            return response.data;
         } catch (error) {
-            return this.structureTextResponse(content);
+            console.error('Error fetching platform health:', error);
+            return {
+                data: [],
+                insights: { summary: 'Failed to load platform health data' },
+                recommendations: ['System data unavailable']
+            };
         }
     }
 
-    structureTextResponse(text) {
-        const sections = text.split('\n\n');
-        return sections.reduce((acc, section) => {
-            const [key, ...values] = section.split('\n');
-            acc[key.toLowerCase().replace(/[^a-z0-9]/g, '')] = values.join('\n');
-            return acc;
-        }, {});
+    // AI-Powered Insights
+    async getAIInsights(dataType, data) {
+        try {
+            const response = await api.post('/admin/ai/insights', {
+                dataType,
+                data
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching AI insights:', error);
+        return {
+                summary: 'AI insights unavailable',
+                recommendations: []
+            };
+        }
     }
 
-    identifyHighValueUsers(data) {
-        return data.users
-            .filter(user => this.calculateUserValue(user) > this.getHighValueThreshold(data))
-            .map(user => ({
-                ...user,
-                valueScore: this.calculateUserValue(user),
-                retentionRisk: this.calculateRetentionRisk(user)
-            }));
+    // Market Trends
+    async getMarketTrends() {
+        try {
+            const response = await api.get('/admin/ai/market-trends');
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching market trends:', error);
+            return {
+                trends: [],
+                analysis: 'Market trend analysis unavailable'
+            };
+        }
     }
 
-    identifyAtRiskUsers(data) {
-        return data.users
-            .filter(user => this.calculateRetentionRisk(user) > 0.7)
-            .map(user => ({
-                ...user,
-                riskScore: this.calculateRetentionRisk(user),
-                retentionStrategies: this.generateRetentionStrategies(user)
-            }));
-    }
-
-    calculateUserValue(user) {
-        // Implement user value calculation logic
-        return 0;
-    }
-
-    calculateRetentionRisk(user) {
-        // Implement retention risk calculation logic
-        return 0;
-    }
-
-    getHighValueThreshold(data) {
-        // Implement threshold calculation logic
-        return 0;
-    }
-
-    generateRetentionStrategies(user) {
-        // Implement retention strategies generation
-        return [];
+    // Subscription Analytics
+    async getSubscriptionAnalytics() {
+        try {
+            const response = await api.get('/admin-analytics/subscriptions');
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching subscription analytics:', error);
+            return {
+                totalSubscriptions: 0,
+                dailyPlans: 0,
+                monthlyPlans: 0,
+                yearlyPlans: 0,
+                totalRevenue: 0
+            };
+        }
     }
 }
 

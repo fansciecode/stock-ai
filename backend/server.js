@@ -12,6 +12,7 @@ import eventReviewRoutes from "./routes/eventReviewRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
 import userActivityRoutes from "./routes/userActivityRoutes.js";
 import adminAnalyticsRoutes from "./routes/adminAnalyticsRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
 import searchRoutes from "./routes/searchRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
@@ -41,6 +42,8 @@ import adminAIRoutes from './routes/adminAIRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import businessRoutes from './routes/businessRoutes.js';
 import growthRoutes from './routes/growthRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
+import aiFeatureRoutes from './routes/aiFeatureRoutes.js';
 
 dotenv.config();
 const app = express();
@@ -99,6 +102,7 @@ app.use("/api/events/reviews", eventReviewRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/user-activity", userActivityRoutes);
 app.use("/api/admin-analytics", adminAnalyticsRoutes);
+app.use("/api/admin", adminRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/auth", authRoutes);
@@ -111,6 +115,9 @@ app.use("/api/external", externalRoutes);
 app.use('/api/growth', growthRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/android', androidRoutes);
+// AI routes
+app.use('/api/ai', aiRoutes);
+app.use('/api/ai/features', aiFeatureRoutes);
 
 // Serve uploaded files with correct path
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
