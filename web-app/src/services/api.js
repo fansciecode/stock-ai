@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Use environment variable for API URL with fallback for development
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+// Use environment variable for API URL with fallback to production
+const API_URL = process.env.REACT_APP_API_URL || 'https://api.ibcm.app/api';
 
 console.log('API_URL:', API_URL); // Debug log to check API URL
 

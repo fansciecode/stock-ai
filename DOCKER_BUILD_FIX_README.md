@@ -4,7 +4,16 @@ This document explains the fixes applied to resolve the Docker build issues for 
 
 ## Issues Fixed
 
-### 1. Missing .dockerignore File
+### 1. CORS Configuration Issue
+**Problem:** The web app was getting network errors when trying to connect to the API due to CORS restrictions. The backend was only allowing requests from a single origin defined in `CLIENT_URL`.
+
+**Solution:** Updated the backend CORS configuration to allow multiple origins:
+- `http://localhost:3000` and `http://localhost:5000` (development)
+- `http://127.0.0.1:3000` and `http://127.0.0.1:5000` (alternative localhost)
+- `https://ibcm.app` and `https://www.ibcm.app` (production domains)
+- Added debug logging to show allowed origins
+
+### 2. Missing .dockerignore File
 **Problem:** The Docker build context was including unnecessary files like `node_modules`, build artifacts, and other files that could cause conflicts or slow down the build process.
 
 **Solution:** Created a comprehensive `.dockerignore` file in the `web-app` directory to exclude:
@@ -38,10 +47,15 @@ This document explains the fixes applied to resolve the Docker build issues for 
 
 ## Files Modified
 
-1. **web-app/.dockerignore** - Created to exclude unnecessary files
-2. **web-app/Dockerfile** - Optimized for reliable builds
-3. **docker-compose.yml** - Updated web-app service configuration
-4. **build-web-app.sh** - Created helper script for building
+1. **backend/server.js** - Fixed CORS configuration to allow multiple origins
+2. **web-app/src/services/api.js** - Enhanced error handling and debugging
+3. **web-app/.dockerignore** - Created to exclude unnecessary files
+4. **web-app/Dockerfile** - Optimized for reliable builds
+5. **web-app/.env.development** - Created for development environment
+6. **web-app/.env.production** - Created for production environment
+7. **docker-compose.yml** - Updated backend and web-app service configuration
+8. **build-web-app.sh** - Created helper script for building
+9. **test-api-connection.js** - Created test script for API connectivity
 
 ## How to Use
 
@@ -96,6 +110,16 @@ If port 5000 is already in use:
 
 ## Testing the Fix
 
+### 1. Test API Connection (Optional)
+```bash
+# Install axios if not already installed
+npm install axios
+
+# Run the API connection test
+node test-api-connection.js
+```
+
+### 2. Build and Run
 1. **Build the image:**
    ```bash
    ./build-web-app.sh
@@ -114,7 +138,15 @@ If port 5000 is already in use:
 4. **View logs if needed:**
    ```bash
    docker-compose logs web-app
+   docker-compose logs backend
    ```
+
+### 3. Test Signup Functionality
+1. Open your browser and go to `http://localhost:5000`
+2. Navigate to the signup page
+3. Try creating a new account
+4. Check the browser console for any errors
+5. Check the backend logs for CORS messages
 
 ## Environment Variables
 
