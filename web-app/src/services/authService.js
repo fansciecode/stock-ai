@@ -21,7 +21,24 @@ const authService = {
 
   signup: async (userData) => {
     try {
-      const response = await api.post("/auth/register", userData);
+      // Transform frontend data to match backend expectations
+      const registrationData = {
+        name: `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || 'User',
+        email: userData.email,
+        password: userData.password,
+      };
+
+      // Validate required fields
+      if (!registrationData.email || !registrationData.password) {
+        return {
+          success: false,
+          message: "Email and password are required",
+        };
+      }
+
+      console.log('Sending registration data:', registrationData);
+
+      const response = await api.post("/auth/register", registrationData);
       return {
         success: true,
         message: "Account created successfully",
