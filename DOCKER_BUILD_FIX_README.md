@@ -4,14 +4,20 @@ This document explains the fixes applied to resolve the Docker build issues for 
 
 ## Issues Fixed
 
-### 1. CORS Configuration Issue
-**Problem:** The web app was getting network errors when trying to connect to the API due to CORS restrictions. The backend was only allowing requests from a single origin defined in `CLIENT_URL`.
+### 1. CORS and API Payload Issues
+**Problem:** The web app was getting network errors due to two issues:
+1. CORS restrictions - backend only allowed requests from a single origin
+2. Payload mismatch - frontend sent `firstName` and `lastName` but backend expected single `name` field
 
-**Solution:** Updated the backend CORS configuration to allow multiple origins:
-- `http://localhost:3000` and `http://localhost:5000` (development)
-- `http://127.0.0.1:3000` and `http://127.0.0.1:5000` (alternative localhost)
-- `https://ibcm.app` and `https://www.ibcm.app` (production domains)
-- Added debug logging to show allowed origins
+**Solution:** 
+1. Updated backend CORS configuration to allow multiple origins:
+   - `http://localhost:3000` and `http://localhost:5000` (development)
+   - `http://127.0.0.1:3000` and `http://127.0.0.1:5000` (alternative localhost)
+   - `https://ibcm.app` and `https://www.ibcm.app` (production domains)
+2. Fixed frontend authService to transform data before sending to backend:
+   - Combines `firstName` and `lastName` into single `name` field
+   - Only sends required fields: `name`, `email`, `password`
+   - Added validation for required fields
 
 ### 2. Missing .dockerignore File
 **Problem:** The Docker build context was including unnecessary files like `node_modules`, build artifacts, and other files that could cause conflicts or slow down the build process.
