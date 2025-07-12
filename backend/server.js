@@ -49,8 +49,31 @@ dotenv.config();
 const app = express();
 
 // Middleware
+// Configure CORS to allow multiple origins
+const allowedOrigins = [
+    process.env.CLIENT_URL,
+    'http://localhost:3000',
+    'http://localhost:5000',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:5000',
+    'https://ibcm.app',
+    'https://www.ibcm.app'
+].filter(Boolean); // Remove any undefined values
+
+console.log('Allowed CORS origins:', allowedOrigins);
+
 app.use(cors({
-    origin: process.env.CLIENT_URL,
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            console.log('CORS blocked origin:', origin);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true
 }));
 app.use(helmet());
@@ -149,7 +172,7 @@ const server = createServer(app);
 // Initialize Socket.IO
 const io = new Server(server, {
     cors: {
-        origin: process.env.CLIENT_URL,
+        origin: allowedOrigins,
         methods: ['GET', 'POST'],
         credentials: true
     }
