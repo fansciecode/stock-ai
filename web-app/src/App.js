@@ -17,6 +17,7 @@ import SignupScreen from "./screens/auth/SignupScreen";
 import ForgotPasswordScreen from "./screens/auth/ForgotPasswordScreen";
 
 // Main Screens
+import LandingPage from "./screens/landing/LandingPage";
 import HomeScreen from "./screens/home/HomeScreen";
 import DashboardScreen from "./screens/dashboard/DashboardScreen";
 import EnterpriseDashboardScreen from "./screens/dashboard/EnterpriseDashboardScreen";
@@ -132,8 +133,9 @@ function App() {
                         />
 
                         {/* Main Routes */}
+                        <Route path="/" element={<LandingPage />} />
                         <Route
-                          path="/"
+                          path="/app"
                           element={
                             <ProtectedRoute>
                               <HomeScreen />
@@ -496,7 +498,7 @@ function App() {
                         />
 
                         {/* Catch all route */}
-                        <Route path="*" element={<Navigate to="/" />} />
+                        <Route path="*" element={<Navigate to="/app" />} />
                       </Routes>
 
                       {/* Bottom Navigation for mobile */}
