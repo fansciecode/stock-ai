@@ -22,6 +22,9 @@ import HomeScreen from "./screens/home/HomeScreen";
 import DashboardScreen from "./screens/dashboard/DashboardScreen";
 import EnterpriseDashboardScreen from "./screens/dashboard/EnterpriseDashboardScreen";
 
+// Verification Screen
+import VerificationScreen from "./screens/verification/VerificationScreen";
+
 // Event Screens
 import EventBrowseScreen from "./screens/event/EventBrowseScreen";
 import EventCreationScreen from "./screens/event/EventCreationScreen";
@@ -165,6 +168,16 @@ function App() {
                           element={
                             <ProtectedRoute>
                               <EnterpriseDashboardScreen />
+                            </ProtectedRoute>
+                          }
+                        />
+
+                        {/* Verification Route */}
+                        <Route
+                          path="/verification"
+                          element={
+                            <ProtectedRoute>
+                              <VerificationScreen />
                             </ProtectedRoute>
                           }
                         />
