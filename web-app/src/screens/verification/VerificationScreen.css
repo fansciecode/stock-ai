@@ -1,0 +1,310 @@
+/* Verification Screen Styles */
+.verification-screen {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  background: #f5f5f5;
+  min-height: 100vh;
+}
+
+.verification-header {
+  text-align: center;
+  margin-bottom: 32px;
+  background: white;
+  padding: 32px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.verification-header h2 {
+  color: #1890ff;
+  margin-bottom: 8px;
+}
+
+.verification-overview {
+  margin-bottom: 32px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.verification-score {
+  text-align: center;
+  padding: 24px;
+}
+
+.verification-score .ant-progress {
+  margin: 24px 0;
+}
+
+.score-description {
+  color: #666;
+  margin-top: 16px;
+  margin-bottom: 0;
+}
+
+.verification-benefits {
+  padding: 24px;
+}
+
+.benefits-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.benefits-list li {
+  padding: 8px 0;
+  font-size: 14px;
+  color: #333;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.benefits-list li:last-child {
+  border-bottom: none;
+}
+
+.verification-steps {
+  margin-bottom: 32px;
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.verification-progress {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.verification-content .ant-card {
+  margin-bottom: 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.verification-content .ant-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.verification-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #f9f9f9;
+  border-radius: 8px;
+}
+
+.verification-item .anticon {
+  font-size: 18px;
+}
+
+/* Step Icons */
+.verification-progress .ant-steps-item-icon {
+  border-color: #d9d9d9;
+  background: white;
+}
+
+.verification-progress .ant-steps-item-process .ant-steps-item-icon {
+  border-color: #1890ff;
+  background: #1890ff;
+}
+
+.verification-progress .ant-steps-item-finish .ant-steps-item-icon {
+  border-color: #52c41a;
+  background: #52c41a;
+}
+
+.verification-progress .ant-steps-item-wait .ant-steps-item-icon {
+  border-color: #d9d9d9;
+  background: white;
+}
+
+/* Form Styling */
+.verification-content .ant-form-item-label {
+  font-weight: 600;
+}
+
+.verification-content .ant-input,
+.verification-content .ant-input-affix-wrapper {
+  border-radius: 8px;
+  border: 2px solid #f0f0f0;
+  padding: 12px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.verification-content .ant-input:focus,
+.verification-content .ant-input-affix-wrapper:focus,
+.verification-content .ant-input:hover,
+.verification-content .ant-input-affix-wrapper:hover {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+}
+
+.verification-content .ant-btn {
+  border-radius: 8px;
+  font-weight: 600;
+  height: 40px;
+  padding: 0 24px;
+  transition: all 0.3s ease;
+}
+
+.verification-content .ant-btn-primary {
+  background: #1890ff;
+  border-color: #1890ff;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+}
+
+.verification-content .ant-btn-primary:hover {
+  background: #40a9ff;
+  border-color: #40a9ff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4);
+}
+
+/* Upload Component */
+.verification-content .ant-upload-list-picture-card .ant-upload-list-item {
+  border-radius: 8px;
+}
+
+.verification-content .ant-upload-select-picture-card {
+  border-radius: 8px;
+  border: 2px dashed #d9d9d9;
+  transition: all 0.3s ease;
+}
+
+.verification-content .ant-upload-select-picture-card:hover {
+  border-color: #1890ff;
+}
+
+/* Alert Styling */
+.verification-content .ant-alert {
+  border-radius: 8px;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.verification-content .ant-alert-success {
+  background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%);
+  border-left: 4px solid #52c41a;
+}
+
+.verification-content .ant-alert-warning {
+  background: linear-gradient(135deg, #fffbe6 0%, #fff1b8 100%);
+  border-left: 4px solid #faad14;
+}
+
+.verification-content .ant-alert-error {
+  background: linear-gradient(135deg, #fff2f0 0%, #ffccc7 100%);
+  border-left: 4px solid #ff4d4f;
+}
+
+/* Tags */
+.verification-content .ant-tag {
+  border-radius: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border: none;
+}
+
+.verification-content .ant-tag-success {
+  background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%);
+  color: #389e0d;
+}
+
+.verification-content .ant-tag-warning {
+  background: linear-gradient(135deg, #fffbe6 0%, #fff1b8 100%);
+  color: #d48806;
+}
+
+.verification-content .ant-tag-error {
+  background: linear-gradient(135deg, #fff2f0 0%, #ffccc7 100%);
+  color: #cf1322;
+}
+
+/* Progress Circle */
+.verification-score .ant-progress-circle {
+  margin: 16px 0;
+}
+
+.verification-score .ant-progress-text {
+  font-weight: 700;
+  font-size: 24px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .verification-screen {
+    padding: 16px;
+  }
+  
+  .verification-header {
+    padding: 24px 16px;
+  }
+  
+  .verification-overview,
+  .verification-steps {
+    padding: 16px;
+  }
+  
+  .verification-progress {
+    margin: 0;
+  }
+  
+  .verification-content .ant-col {
+    margin-bottom: 16px;
+  }
+  
+  .verification-progress.ant-steps {
+    flex-direction: column;
+  }
+  
+  .verification-progress .ant-steps-item {
+    margin-bottom: 16px;
+  }
+  
+  .verification-benefits {
+    padding: 16px;
+  }
+  
+  .benefits-list li {
+    font-size: 13px;
+    padding: 6px 0;
+  }
+}
+
+@media (max-width: 576px) {
+  .verification-screen {
+    padding: 12px;
+  }
+  
+  .verification-header h2 {
+    font-size: 20px;
+  }
+  
+  .verification-header p {
+    font-size: 14px;
+  }
+  
+  .verification-content .ant-card {
+    margin-bottom: 16px;
+  }
+  
+  .verification-content .ant-btn {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+  
+  .verification-progress .ant-steps-item-title {
+    font-size: 14px;
+  }
+  
+  .verification-progress .ant-steps-item-description {
+    font-size: 12px;
+  }
+}

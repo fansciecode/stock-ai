@@ -17,9 +17,13 @@ import SignupScreen from "./screens/auth/SignupScreen";
 import ForgotPasswordScreen from "./screens/auth/ForgotPasswordScreen";
 
 // Main Screens
+import LandingPage from "./screens/landing/LandingPage";
 import HomeScreen from "./screens/home/HomeScreen";
 import DashboardScreen from "./screens/dashboard/DashboardScreen";
 import EnterpriseDashboardScreen from "./screens/dashboard/EnterpriseDashboardScreen";
+
+// Verification Screen
+import VerificationScreen from "./screens/verification/VerificationScreen";
 
 // Event Screens
 import EventBrowseScreen from "./screens/event/EventBrowseScreen";
@@ -132,8 +136,9 @@ function App() {
                         />
 
                         {/* Main Routes */}
+                        <Route path="/" element={<LandingPage />} />
                         <Route
-                          path="/"
+                          path="/app"
                           element={
                             <ProtectedRoute>
                               <HomeScreen />
@@ -163,6 +168,16 @@ function App() {
                           element={
                             <ProtectedRoute>
                               <EnterpriseDashboardScreen />
+                            </ProtectedRoute>
+                          }
+                        />
+
+                        {/* Verification Route */}
+                        <Route
+                          path="/verification"
+                          element={
+                            <ProtectedRoute>
+                              <VerificationScreen />
                             </ProtectedRoute>
                           }
                         />
@@ -496,7 +511,7 @@ function App() {
                         />
 
                         {/* Catch all route */}
-                        <Route path="*" element={<Navigate to="/" />} />
+                        <Route path="*" element={<Navigate to="/app" />} />
                       </Routes>
 
                       {/* Bottom Navigation for mobile */}

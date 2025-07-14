@@ -10,7 +10,7 @@ const BottomNavigation = () => {
 
   // Map routes to navigation values
   const getValueFromPath = (pathname) => {
-    if (pathname === '/' || pathname === '/home') return 0;
+    if (pathname === '/app' || pathname === '/home') return 0;
     if (pathname === '/events' || pathname.startsWith('/events')) return 1;
     if (pathname === '/search') return 2;
     if (pathname === '/messages' || pathname.startsWith('/chat')) return 3;
@@ -27,7 +27,7 @@ const BottomNavigation = () => {
 
     switch (newValue) {
       case 0:
-        navigate('/');
+        navigate('/app');
         break;
       case 1:
         navigate('/events');
@@ -42,7 +42,7 @@ const BottomNavigation = () => {
         navigate('/profile');
         break;
       default:
-        navigate('/');
+        navigate('/app');
     }
   };
 

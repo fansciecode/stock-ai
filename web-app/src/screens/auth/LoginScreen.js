@@ -25,7 +25,7 @@ const LoginScreen = () => {
 
       if (result.success) {
         showSuccess('Login Successful', 'Welcome back!');
-        navigate('/dashboard');
+        navigate('/app');
       } else {
         setError(result.message);
         showError('Login Failed', result.message);
