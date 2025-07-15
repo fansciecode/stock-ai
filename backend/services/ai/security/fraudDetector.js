@@ -1,12 +1,11 @@
-import OpenAI from 'openai';
+import axios from 'axios';
 import { TransactionModel } from '../../../models/transactionModel.js';
 import { UserModel } from '../../../models/userModel.js';
 import { SecurityLogModel } from '../../../models/securityLogModel.js';
 import { NotificationService } from '../../notification/notificationService.js';
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-});
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8001';
+const AI_SERVICE_API_KEY = process.env.AI_SERVICE_API_KEY || 'development_key';
 
 export const FraudDetectorService = {
     // 1. Transaction Analysis
@@ -186,25 +185,14 @@ export const FraudDetectorService = {
 // Helper functions for fraud detection
 const performRiskAnalysis = async (transaction, history) => {
     try {
-        const response = await openai.chat.completions.create({
-            model: "gpt-4",
-            messages: [{
-                role: "system",
-                content: "Analyze the following transaction and user history for fraud risk:"
-            }, {
-                role: "user",
-                content: JSON.stringify({ transaction, history })
-            }]
+        const response = await axios.post(`${AI_SERVICE_URL}/analyze-fraud`, { transaction, history }, {
+            headers: { 'X-API-KEY': AI_SERVICE_API_KEY }
         });
-
-        return {
-            analysis: extractRiskAnalysis(response),
-            confidence: calculateConfidenceScore(response),
-            recommendations: extractRecommendations(response)
-        };
+        return response.data;
     } catch (error) {
         console.error('Risk analysis error:', error);
-        throw error;
+        // Fallback: return empty analysis
+        return {};
     }
 };
 
