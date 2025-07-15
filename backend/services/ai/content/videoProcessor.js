@@ -1,43 +1,21 @@
-import OpenAI from 'openai';
+import axios from 'axios';
 import ffmpeg from 'fluent-ffmpeg';
 import { CloudinaryService } from '../../utils/cloudinaryService.js';
 import { VideoModel } from '../../../models/videoModel.js';
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-});
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8001';
+const AI_SERVICE_API_KEY = process.env.AI_SERVICE_API_KEY || 'development_key';
 
 export const VideoProcessorService = {
     // 1. Video Analysis and Content Recognition
     analyzeVideo: async (videoData) => {
         try {
-            // Extract frames for analysis
-            const frames = await extractKeyFrames(videoData);
-            // Process audio for transcription
-            const audioTrack = await extractAudioTrack(videoData);
-
-            const [visualAnalysis, audioAnalysis] = await Promise.all([
-                analyzeVisualContent(frames),
-                analyzeAudioContent(audioTrack)
-            ]);
-
-            return {
-                content: {
-                    summary: generateVideoSummary(visualAnalysis, audioAnalysis),
-                    topics: identifyKeyTopics(visualAnalysis, audioAnalysis),
-                    timeline: createContentTimeline(visualAnalysis, audioAnalysis)
-                },
-                technical: {
-                    quality: assessVideoQuality(videoData),
-                    duration: videoData.duration,
-                    format: analyzeVideoFormat(videoData)
-                },
-                recommendations: {
-                    improvements: suggestQualityImprovements(videoData),
-                    optimization: recommendOptimization(videoData),
-                    engagement: suggestEngagementEnhancements(visualAnalysis)
-                }
-            };
+            const response = await axios.post(`${AI_SERVICE_URL}/analyze-video`, {
+                video_url: videoData.url
+            }, {
+                headers: { 'X-API-KEY': AI_SERVICE_API_KEY }
+            });
+            return response.data;
         } catch (error) {
             console.error('Video analysis error:', error);
             return null;
@@ -108,31 +86,13 @@ export const VideoProcessorService = {
     // 4. Video Moderation and Safety
     moderateVideo: async (videoData) => {
         try {
-            const frames = await extractKeyFrames(videoData);
-            const audioTrack = await extractAudioTrack(videoData);
-
-            const [visualModeration, audioModeration] = await Promise.all([
-                moderateVisualContent(frames),
-                moderateAudioContent(audioTrack)
-            ]);
-
-            return {
-                safety: {
-                    rating: determineContentRating(visualModeration, audioModeration),
-                    warnings: identifyContentWarnings(visualModeration, audioModeration),
-                    restrictions: determineAgeRestrictions(visualModeration, audioModeration)
-                },
-                compliance: {
-                    status: checkComplianceStatus(visualModeration, audioModeration),
-                    violations: identifyViolations(visualModeration, audioModeration),
-                    recommendations: generateComplianceRecommendations(visualModeration, audioModeration)
-                },
-                moderation: {
-                    timestamps: identifyProblematicSegments(visualModeration, audioModeration),
-                    suggestions: provideModerationSuggestions(visualModeration, audioModeration),
-                    actions: recommendModerationActions(visualModeration, audioModeration)
-                }
-            };
+            const response = await axios.post(`${AI_SERVICE_URL}/analyze-video`, {
+                video_url: videoData.url,
+                moderation: true
+            }, {
+                headers: { 'X-API-KEY': AI_SERVICE_API_KEY }
+            });
+            return response.data;
         } catch (error) {
             console.error('Video moderation error:', error);
             return null;

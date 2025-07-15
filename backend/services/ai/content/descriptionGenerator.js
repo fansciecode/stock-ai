@@ -1,46 +1,26 @@
+import axios from 'axios';
+
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8001';
+const AI_SERVICE_API_KEY = process.env.AI_SERVICE_API_KEY || 'development_key';
+
 export const DescriptionGeneratorService = {
     generateEventDescription: async (eventData) => {
         try {
-            const completion = await openai.chat.completions.create({
-                model: "gpt-4",
-                messages: [{
-                    role: "system",
-                    content: "Generate engaging event description with SEO optimization"
-                }, {
-                    role: "user",
-                    content: JSON.stringify(eventData)
-                }]
+            const response = await axios.post(`${AI_SERVICE_URL}/generate-description`, eventData, {
+                headers: { 'X-API-KEY': AI_SERVICE_API_KEY }
             });
-
-            return {
-                description: completion.choices[0].message.content,
-                seoTags: generateSEOTags(eventData),
-                suggestedHashtags: generateHashtags(eventData)
-            };
+            return response.data;
         } catch (error) {
             console.error('Description generation error:', error);
             return null;
         }
     },
-
     generateProductDescription: async (productData) => {
         try {
-            const completion = await openai.chat.completions.create({
-                model: "gpt-4",
-                messages: [{
-                    role: "system",
-                    content: "Generate compelling product description with features and benefits"
-                }, {
-                    role: "user",
-                    content: JSON.stringify(productData)
-                }]
+            const response = await axios.post(`${AI_SERVICE_URL}/generate-description`, productData, {
+                headers: { 'X-API-KEY': AI_SERVICE_API_KEY }
             });
-
-            return {
-                description: completion.choices[0].message.content,
-                features: extractFeatures(productData),
-                specifications: formatSpecifications(productData)
-            };
+            return response.data;
         } catch (error) {
             console.error('Product description error:', error);
             return null;
@@ -51,32 +31,22 @@ export const DescriptionGeneratorService = {
 export const ImageRecognitionService = {
     analyzeImage: async (imageData) => {
         try {
-            // Using OpenAI's DALL-E or Vision API for image analysis
-            const analysis = await openai.images.analyze({
-                image: imageData,
-                model: "gpt-4-vision-preview"
+            const response = await axios.post(`${AI_SERVICE_URL}/analyze-image`, { image_url: imageData }, {
+                headers: { 'X-API-KEY': AI_SERVICE_API_KEY }
             });
-
-            return {
-                tags: extractTags(analysis),
-                categories: identifyCategories(analysis),
-                contentModeration: checkContentGuidelines(analysis),
-                suggestedAltText: generateAltText(analysis)
-            };
+            return response.data;
         } catch (error) {
             console.error('Image analysis error:', error);
             return null;
         }
     },
-
     validateEventImages: async (images) => {
         try {
             const results = await Promise.all(
                 images.map(img => ImageRecognitionService.analyzeImage(img))
             );
-
             return {
-                isValid: results.every(r => r.contentModeration.isAppropriate),
+                isValid: results.every(r => r && r.contentModeration && r.contentModeration.isAppropriate),
                 suggestions: generateImageSuggestions(results),
                 optimizationTips: provideOptimizationTips(results)
             };
