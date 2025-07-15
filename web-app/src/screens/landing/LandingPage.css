@@ -552,3 +552,256 @@
     font-size: 14px;
   }
 }
+
+.aesthetic-hero {
+  position: relative;
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  background: linear-gradient(120deg, #e0e7ff 0%, #f8fafc 100%);
+  overflow: hidden;
+}
+.hero-bg-media {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  z-index: 0;
+  opacity: 0.15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hero-bg-img {
+  width: 100vw;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(2px) brightness(0.8);
+}
+.hero-row {
+  position: relative;
+  z-index: 1;
+  padding: 64px 0 32px 0;
+}
+.hero-title {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 16px;
+}
+.hero-description {
+  font-size: 1.25rem;
+  color: #334155;
+  margin-bottom: 32px;
+}
+.cta-button {
+  font-size: 1.1rem;
+  font-weight: 600;
+  background: #2563eb;
+  border: none;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.08);
+}
+.demo-button {
+  font-size: 1.1rem;
+  font-weight: 500;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+}
+.hero-image .hero-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+}
+.app-mockup-img {
+  width: 320px;
+  max-width: 90vw;
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(30,41,59,0.12);
+  background: #fff;
+}
+
+/* Features Section */
+.aesthetic-features {
+  background: #f1f5f9;
+  padding: 64px 0 32px 0;
+}
+.features-grid {
+  margin-top: 32px;
+}
+.feature-card {
+  border-radius: 18px;
+  min-height: 220px;
+  box-shadow: 0 2px 16px rgba(30,41,59,0.07);
+  transition: transform 0.2s, box-shadow 0.2s;
+  background: #fff;
+}
+.feature-card:hover {
+  transform: translateY(-8px) scale(1.03);
+  box-shadow: 0 8px 32px rgba(37,99,235,0.13);
+}
+.animated-feature {
+  animation: fadeInUp 0.7s cubic-bezier(.23,1.01,.32,1) both;
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: none; }
+}
+.feature-icon {
+  font-size: 2.5rem;
+  color: #2563eb;
+  margin-bottom: 12px;
+}
+.feature-title {
+  font-weight: 700;
+  color: #1e293b;
+}
+.feature-description {
+  color: #475569;
+}
+
+/* How It Works Section */
+.how-it-works-section {
+  background: #fff;
+  padding: 64px 0 32px 0;
+}
+.how-steps {
+  margin-top: 32px;
+}
+.how-step {
+  text-align: center;
+  padding: 24px 8px;
+}
+.how-icon {
+  font-size: 2.2rem;
+  color: #0ea5e9;
+  margin-bottom: 12px;
+}
+
+/* Testimonials Section */
+.testimonials-section {
+  background: #f8fafc;
+  padding: 64px 0 32px 0;
+}
+.testimonial-carousel {
+  margin-top: 32px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.testimonial-slide {
+  display: flex;
+  justify-content: center;
+}
+.testimonial-card {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 2px 16px rgba(30,41,59,0.07);
+  padding: 32px 24px;
+  text-align: center;
+  max-width: 400px;
+}
+.testimonial-img {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 16px;
+  border: 2px solid #2563eb;
+}
+.testimonial-quote {
+  font-style: italic;
+  color: #334155;
+  margin-top: 12px;
+}
+
+/* Download Section */
+.download-section {
+  background: #e0e7ff;
+  padding: 64px 0 32px 0;
+}
+.download-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+}
+.download-buttons .download-btn {
+  width: 220px;
+  font-size: 1.1rem;
+  margin-bottom: 12px;
+}
+.download-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.app-demo-img {
+  width: 320px;
+  max-width: 90vw;
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(30,41,59,0.12);
+  background: #fff;
+}
+
+/* Footer */
+.landing-footer {
+  background: #1e293b;
+  color: #fff;
+  padding: 48px 0 16px 0;
+}
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.footer-title {
+  color: #fff;
+}
+.footer-section-title {
+  color: #cbd5e1;
+  margin-bottom: 12px;
+}
+.footer-links .ant-btn-link {
+  color: #cbd5e1;
+  font-size: 1rem;
+  margin-right: 8px;
+  margin-bottom: 4px;
+}
+.footer-links .ant-btn-link:hover {
+  color: #38bdf8;
+}
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24px;
+  color: #cbd5e1;
+}
+.legal-links .ant-btn-link {
+  color: #cbd5e1;
+  font-size: 0.95rem;
+}
+.legal-links .ant-btn-link:hover {
+  color: #38bdf8;
+}
+.copyright {
+  color: #cbd5e1;
+}
+
+/* Logo */
+.ibcm-logo {
+  width: 48px;
+  height: 48px;
+  margin-right: 12px;
+  vertical-align: middle;
+}
+
+@media (max-width: 900px) {
+  .hero-title { font-size: 2.2rem; }
+  .app-mockup-img, .app-demo-img { width: 220px; }
+  .download-section, .features-section, .testimonials-section, .how-it-works-section, .aesthetic-hero { padding: 32px 0 16px 0; }
+}
+
+@media (max-width: 600px) {
+  .hero-title { font-size: 1.5rem; }
+  .app-mockup-img, .app-demo-img { width: 120px; }
+  .footer-content { padding: 0 8px; }
+}
