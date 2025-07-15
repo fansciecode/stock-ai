@@ -1,46 +1,72 @@
 import React, { useEffect, useRef } from 'react';
-import { Typography, Row, Col, Card, Button, Space, Tag, Timeline, Avatar, Steps } from 'antd';
-import { CalendarOutlined, UserOutlined, ShopOutlined, MessageOutlined, StarOutlined, CheckCircleOutlined, RocketOutlined, EnvironmentOutlined, SmileOutlined, PhoneOutlined, TeamOutlined, PlusOutlined, LoginOutlined } from '@ant-design/icons';
+import { Typography, Row, Col, Card, Button, Space, Tag, Avatar } from 'antd';
+import { CalendarOutlined, UserOutlined, ShopOutlined, MessageOutlined, StarOutlined, CheckCircleOutlined, RocketOutlined, EnvironmentOutlined, SmileOutlined, PhoneOutlined, TeamOutlined, PlusOutlined, LoginOutlined, BulbOutlined, DollarOutlined, GlobalOutlined, QrcodeOutlined, SearchOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import './LandingPage.css';
 
 const { Title, Paragraph, Text } = Typography;
-const { Step } = Steps;
 
 const testimonials = [
   {
-    name: 'Sarah',
-    role: 'Musician',
+    name: 'Amit',
+    role: 'Event Creator',
     avatar: <Avatar size={64} style={{ background: '#fadb14' }} icon={<UserOutlined />} />,
-    quote: 'IBCM helped me get my first 100 event attendees!'
+    quote: 'IBCM lets me reach new audiences every day, and AI helps me plan the best events!'
   },
   {
-    name: 'Mike',
-    role: 'Gym Owner',
+    name: 'Priya',
+    role: 'Traveler',
     avatar: <Avatar size={64} style={{ background: '#52c41a' }} icon={<UserOutlined />} />,
-    quote: 'Now I promote fitness boot camps & get new clients weekly!'
+    quote: 'Wherever I go, IBCM shows me what’s happening and what’s on offer nearby.'
   },
   {
-    name: 'Local Café',
+    name: 'FreshMart',
     role: 'Business',
     avatar: <Avatar size={64} style={{ background: '#1890ff' }} icon={<ShopOutlined />} />,
-    quote: 'We hosted a "Weekend Coffee Tasting" event and saw a 30% increase in sales!'
+    quote: 'We boosted our sales and got new customers with real-time offers and analytics.'
+  }
+];
+
+const howSteps = [
+  {
+    icon: <GlobalOutlined style={{ fontSize: 32 }} />,
+    title: 'Open IBCM',
+    desc: 'Wherever you are, whenever you want.'
+  },
+  {
+    icon: <StarOutlined style={{ fontSize: 32 }} />,
+    title: 'See Dynamic Data',
+    desc: 'Get real-time, location-based activities, offers, services.'
+  },
+  {
+    icon: <SearchOutlined style={{ fontSize: 32 }} />,
+    title: 'Search & Discover',
+    desc: 'Find anything—events, products, services, and more.'
+  },
+  {
+    icon: <CheckCircleOutlined style={{ fontSize: 32 }} />,
+    title: 'Book & Pay',
+    desc: 'Easy, secure payments and instant booking.'
+  },
+  {
+    icon: <QrcodeOutlined style={{ fontSize: 32 }} />,
+    title: 'Check In & Enjoy',
+    desc: 'QR-based check-in for events, seamless product delivery.'
   }
 ];
 
 const LandingPage = () => {
   const animationRef = useRef(null);
-  
+
   useEffect(() => {
-    // Animation interactions could be added here
     const animationElement = animationRef.current;
     if (animationElement) {
-      // You could add interactive animations here
+      // Interactive animation logic if needed
     }
   }, []);
 
   return (
-    <div className="landing-page">
+    <div className="landing-page rich-bg-gradient">
       {/* Landing NavBar */}
       <nav className="landing-navbar">
         <div className="landing-logo">
@@ -59,16 +85,18 @@ const LandingPage = () => {
         </div>
       </nav>
 
-      {/* Hero Section */}
+      {/* Hero Section with Lottie Animation */}
       <section className="landing-section hero-section">
-        <Row justify="center" align="middle" style={{ minHeight: 400 }}>
+        <Row justify="center" align="middle" style={{ minHeight: 420 }}>
           <Col xs={24} md={12} style={{ textAlign: 'left' }}>
-            <Title level={1} style={{ fontWeight: 800, marginBottom: 0, color: '#222' }}>Discover. Connect. Experience.</Title>
+            <Title level={1} style={{ fontWeight: 800, marginBottom: 0, color: '#222' }}>Your Day. Your Place. Your Dynamic World.</Title>
             <Paragraph style={{ fontSize: 22, margin: '24px 0 8px 0', color: '#555' }}>
-              <Text strong>The all-in-one platform for hyperlocal events, business promotions, and community experiences.</Text>
+              <Text strong>IBCM is your real-time, location-based discovery engine for everything happening around you—events, offers, services, and more.</Text>
             </Paragraph>
             <Paragraph style={{ fontSize: 18, color: '#666' }}>
-              Find, create, and join events near you. Promote your business, connect with your community, and never miss out again.
+              Whether you’re traveling or at home, open IBCM and instantly see the most active events, best deals, trending products, and available services—<b>all tailored to your location, time, and interests</b>.<br />
+              <br />
+              <Tag color="blue">Events</Tag> <Tag color="green">Products</Tag> <Tag color="orange">Services</Tag> <Tag color="purple">AI Suggestions</Tag>
             </Paragraph>
             <Space>
               <Link to="/signup">
@@ -79,64 +107,107 @@ const LandingPage = () => {
               </Link>
             </Space>
           </Col>
-          <Col xs={24} md={12} className="hero-image-container">
-            <img src="/hero-events.svg" alt="Events Hero" className="hero-image" />
+          <Col xs={24} md={12} className="hero-image-container" style={{ textAlign: 'center' }}>
+            <img src="/hero-events.svg" alt="Dynamic, real-time discovery" style={{ width: 320, height: 320, margin: '0 auto' }} />
+            <div style={{ marginTop: 16, color: '#888' }}>Dynamic, real-time discovery</div>
           </Col>
         </Row>
       </section>
 
-      {/* Animation Section */}
-      <section className="landing-section animation-section">
+      {/* Explanatory Video Section */}
+      <section className="landing-section video-section" style={{ background: 'rgba(255,255,255,0.9)', padding: '32px 0' }}>
         <Row justify="center">
-          <Col xs={24} md={20} lg={18}>
-            <div className="animation-container" ref={animationRef}>
-              <object type="image/svg+xml" data="/connect-animation.svg" className="connection-animation">
-                Interactive community connections
-              </object>
+          <Col xs={24} md={16} style={{ textAlign: 'center' }}>
+            <Title level={2}>See IBCM in Action</Title>
+            <video
+              src="/ibcm-explainer.mp4"
+              controls
+              poster="/hero-events.svg"
+              style={{ width: '100%', maxWidth: 600, borderRadius: 16, boxShadow: '0 4px 32px rgba(0,0,0,0.08)' }}
+            >
+              Sorry, your browser does not support embedded videos.
+            </video>
+            <Paragraph style={{ marginTop: 16, color: '#666' }}>
+              Watch how IBCM helps you discover, connect, and experience the best around you—anywhere, anytime.
+            </Paragraph>
+          </Col>
+        </Row>
+      </section>
+
+      {/* Value Proposition Section */}
+      <section className="landing-section value-section">
+        <Row gutter={[32, 32]} justify="center">
+          <Col xs={24} md={8}>
+            <Card bordered={false} className="feature-card" hoverable>
+              <BulbOutlined style={{ fontSize: 36, color: '#faad14' }} />
+              <Title level={3}>For Users</Title>
+              <Paragraph>
+                <b>Instantly see what’s happening nearby</b>—from concerts, sports, and cultural events to flash sales, food offers, and local services. Search for anything, anytime, anywhere. Get AI-powered, distance- and price-optimized suggestions based on your interests and previous activity.
+              </Paragraph>
+            </Card>
+          </Col>
+          <Col xs={24} md={8}>
+            <Card bordered={false} className="feature-card" hoverable>
+              <RocketOutlined style={{ fontSize: 36, color: '#52c41a' }} />
+              <Title level={3}>For Creators</Title>
+              <Paragraph>
+                <b>Update your activities for the day</b>—events, offers, or services. Get AI-suggested content, demand prediction analytics, and user insights to maximize your reach. Promote your business, engage with your audience, and grow with real-time feedback.
+              </Paragraph>
+            </Card>
+          </Col>
+          <Col xs={24} md={8}>
+            <Card bordered={false} className="feature-card" hoverable>
+              <DollarOutlined style={{ fontSize: 36, color: '#1890ff' }} />
+              <Title level={3}>For Businesses</Title>
+              <Paragraph>
+                <b>Promote your products and services</b> to a dynamic, competitive marketplace. Use AI and analytics to optimize pricing, boost sales, and reach new customers. Enjoy easy payment processing, QR-based event check-in, and full e-commerce management—including returns.
+              </Paragraph>
+            </Card>
+          </Col>
+        </Row>
+      </section>
+
+      {/* How IBCM Works Section (Improved Flex Layout) */}
+      <section className="landing-section how-section" style={{ background: 'linear-gradient(90deg, #f0f7ff 0%, #e6f7ff 100%)', padding: '48px 0' }}>
+        <Title level={2} style={{ textAlign: 'center', marginBottom: 32 }}>How IBCM Works</Title>
+        <div className="how-steps-flex improved-flex">
+          {howSteps.map((step, idx) => (
+            <div className="how-step-item improved-step" key={idx}>
+              <div className="how-step-icon">{step.icon}</div>
+              <div className="how-step-title">{step.title}</div>
+              <div className="how-step-desc">{step.desc}</div>
             </div>
-          </Col>
-        </Row>
+          ))}
+        </div>
       </section>
 
-      {/* Features Section */}
-      <section className="landing-section features-section">
-        <Title level={2} style={{ textAlign: 'center', marginBottom: 32 }}>Powerful Features</Title>
-        <Row justify="center" gutter={[32, 32]}>
-          <Col xs={24} md={8}>
+      {/* AI & Analytics Section with Animation */}
+      <section className="landing-section ai-section">
+        <Row justify="center" gutter={[32, 32]} align="middle">
+          <Col xs={24} md={12} style={{ textAlign: 'center' }}>
             <Card bordered={false} className="feature-card" hoverable>
-              <StarOutlined style={{ fontSize: 36, color: '#faad14' }} />
-              <Title level={3}>AI-Powered Suggestions</Title>
-              <Paragraph>Personalized event recommendations based on your interests and location.</Paragraph>
+              <BulbOutlined style={{ fontSize: 36, color: '#722ed1' }} />
+              <Title level={4}>AI for Everyone</Title>
+              <Paragraph>
+                <b>For users:</b> Get personalized, AI-driven suggestions for activities, products, and services.<br />
+                <b>For creators & businesses:</b> Use AI to create content, predict demand, and optimize your offerings.
+              </Paragraph>
+              <div style={{ margin: '24px auto 0', maxWidth: 220 }}>
+                <img src="/hero-events.svg" alt="AI Animation" style={{ width: 180, height: 180 }} />
+              </div>
             </Card>
           </Col>
-          <Col xs={24} md={8}>
+          <Col xs={24} md={12} style={{ textAlign: 'center' }}>
             <Card bordered={false} className="feature-card" hoverable>
-              <EnvironmentOutlined style={{ fontSize: 36, color: '#52c41a' }} />
-              <Title level={3}>Live Map View</Title>
-              <Paragraph>Explore events happening around you in real-time, visually.</Paragraph>
+              <RocketOutlined style={{ fontSize: 36, color: '#eb2f96' }} />
+              <Title level={4}>Business & Community Growth</Title>
+              <Paragraph>
+                <b>Leverage analytics</b> to understand user demand, optimize pricing, and promote your business. Get support from the IBCM team for event hosting, sales, and more.
+              </Paragraph>
+              <div style={{ margin: '24px auto 0', maxWidth: 320 }}>
+                <video src="/ibcm-business.mp4" controls poster="/business-growth.svg" style={{ width: '100%', borderRadius: 12, boxShadow: '0 2px 16px rgba(0,0,0,0.06)' }} />
+              </div>
             </Card>
-          </Col>
-          <Col xs={24} md={8}>
-            <Card bordered={false} className="feature-card" hoverable>
-              <ShopOutlined style={{ fontSize: 36, color: '#1890ff' }} />
-              <Title level={3}>Business Promotions</Title>
-              <Paragraph>Promote your products & services through event listings and reach new customers.</Paragraph>
-            </Card>
-          </Col>
-        </Row>
-      </section>
-
-      {/* How It Works Section */}
-      <section className="landing-section how-section">
-        <Title level={2} style={{ textAlign: 'center', marginBottom: 32 }}>How It Works</Title>
-        <Row justify="center">
-          <Col xs={24} md={18}>
-            <Steps direction="horizontal" responsive current={-1} className="landing-steps">
-              <Step title="Discover" icon={<CalendarOutlined />} description="Browse & find events that match your interests." />
-              <Step title="Join or Book" icon={<CheckCircleOutlined />} description="Book tickets or join instantly with secure payments." />
-              <Step title="Create & Promote" icon={<PlusOutlined />} description="Host your own events and promote your business." />
-              <Step title="Connect" icon={<MessageOutlined />} description="Chat with organizers & attendees in real time." />
-            </Steps>
           </Col>
         </Row>
       </section>
@@ -159,7 +230,7 @@ const LandingPage = () => {
       {/* Call to Action Section */}
       <section className="landing-section cta-section" style={{ textAlign: 'center' }}>
         <Title level={2}>Ready to Experience IBCM?</Title>
-        <Paragraph style={{ fontSize: 18 }}>Sign up now and join a growing community of event lovers, creators, and businesses!</Paragraph>
+        <Paragraph style={{ fontSize: 18 }}>Sign up now and get real-time, dynamic, and personalized experiences—wherever you are!</Paragraph>
         <Space>
           <Link to="/signup">
             <Button type="primary" size="large" icon={<PlusOutlined />}>Sign Up Free</Button>

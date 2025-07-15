@@ -52,8 +52,43 @@
 
 /* Hero section styles */
 .hero-section {
-  padding-top: 80px;
-  padding-bottom: 60px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(120deg, #e0e7ff 0%, #fffbe6 100%);
+}
+.hero-section::before {
+  content: '';
+  position: absolute;
+  top: -80px;
+  left: -80px;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, #bae7ff 0%, transparent 80%);
+  z-index: 0;
+  animation: float1 8s ease-in-out infinite alternate;
+}
+.hero-section::after {
+  content: '';
+  position: absolute;
+  bottom: -100px;
+  right: -100px;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, #ffd6e7 0%, transparent 80%);
+  z-index: 0;
+  animation: float2 10s ease-in-out infinite alternate;
+}
+@keyframes float1 {
+  0% { transform: translateY(0) scale(1); }
+  100% { transform: translateY(30px) scale(1.08); }
+}
+@keyframes float2 {
+  0% { transform: translateY(0) scale(1); }
+  100% { transform: translateY(-24px) scale(1.04); }
+}
+.hero-section > * {
+  position: relative;
+  z-index: 1;
 }
 
 .hero-image-container {
@@ -128,6 +163,46 @@
   border-color: #1890ff;
 }
 
+/* --- How IBCM Works Section Improvements --- */
+.how-steps-flex.improved-flex {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: stretch;
+  gap: 32px;
+  margin: 0 auto;
+  max-width: 1100px;
+}
+.how-step-item.improved-step {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+  padding: 32px 24px 24px 24px;
+  min-width: 180px;
+  max-width: 220px;
+  flex: 1 1 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: box-shadow 0.2s;
+}
+.how-step-item.improved-step:hover {
+  box-shadow: 0 6px 32px rgba(24,144,255,0.12);
+}
+.how-step-icon {
+  margin-bottom: 12px;
+}
+.how-step-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 6px;
+}
+.how-step-desc {
+  color: #666;
+  font-size: 1rem;
+}
+
 /* Testimonials section */
 .testimonials-section {
   background: #fff;
@@ -146,6 +221,17 @@
 
 .cta-section .ant-typography {
   color: white;
+}
+
+/* --- Lottie Animation & Video Section --- */
+.lottie-animation {
+  margin: 0 auto;
+  display: block;
+}
+.video-section video,
+.ai-section video {
+  box-shadow: 0 4px 32px rgba(0,0,0,0.08);
+  border-radius: 16px;
 }
 
 /* Footer */
@@ -195,5 +281,18 @@
   
   .hero-image {
     margin-top: 30px;
+  }
+} 
+
+@media (max-width: 900px) {
+  .how-steps-flex.improved-flex {
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+  }
+  .how-step-item.improved-step {
+    max-width: 100%;
+    min-width: 0;
+    width: 90vw;
   }
 } 
