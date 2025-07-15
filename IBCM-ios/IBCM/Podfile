@@ -7,6 +7,9 @@ project 'IBCM.xcodeproj'
 target 'IBCM' do
   # Comment the next line if you don't want to use dynamic frameworks
   use_frameworks!
+  
+  # Force modular headers
+  use_modular_headers!
 
   # Firebase - using a more stable version
   pod 'Firebase/Core', '~> 9.6.0'
@@ -37,8 +40,8 @@ post_install do |installer|
       # Fix for Xcode 15
       config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
       
-      # For libraries that don't support arm64 simulators
-      config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
+      # For libraries that don't support arm64 simulators - REMOVED
+      # config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
       
       # Fix code signing issues
       config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'

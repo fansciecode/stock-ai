@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="600" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background elements -->
+  <rect x="0" y="0" width="800" height="600" fill="#f0f5ff" opacity="0.3"/>
+  <circle cx="650" cy="100" r="50" fill="#1890ff" opacity="0.2"/>
+  <circle cx="100" cy="500" r="70" fill="#52c41a" opacity="0.2"/>
+  
+  <!-- City skyline -->
+  <g transform="translate(100, 400)">
+    <rect x="0" y="-120" width="60" height="120" fill="#1890ff" opacity="0.8"/>
+    <rect x="70" y="-200" width="80" height="200" fill="#096dd9" opacity="0.9"/>
+    <rect x="160" y="-150" width="70" height="150" fill="#1890ff" opacity="0.7"/>
+    <rect x="240" y="-180" width="50" height="180" fill="#096dd9" opacity="0.8"/>
+    <rect x="300" y="-100" width="80" height="100" fill="#1890ff" opacity="0.6"/>
+    <rect x="390" y="-220" width="60" height="220" fill="#096dd9" opacity="0.9"/>
+    <rect x="460" y="-140" width="70" height="140" fill="#1890ff" opacity="0.7"/>
+    <rect x="540" y="-160" width="60" height="160" fill="#096dd9" opacity="0.8"/>
+    
+    <!-- Windows -->
+    <g fill="#ffffff" opacity="0.8">
+      <!-- Building 1 -->
+      <rect x="10" y="-110" width="15" height="20"/>
+      <rect x="35" y="-110" width="15" height="20"/>
+      <rect x="10" y="-80" width="15" height="20"/>
+      <rect x="35" y="-80" width="15" height="20"/>
+      <rect x="10" y="-50" width="15" height="20"/>
+      <rect x="35" y="-50" width="15" height="20"/>
+      
+      <!-- Building 2 -->
+      <rect x="85" y="-190" width="15" height="20"/>
+      <rect x="120" y="-190" width="15" height="20"/>
+      <rect x="85" y="-160" width="15" height="20"/>
+      <rect x="120" y="-160" width="15" height="20"/>
+      <rect x="85" y="-130" width="15" height="20"/>
+      <rect x="120" y="-130" width="15" height="20"/>
+      <rect x="85" y="-100" width="15" height="20"/>
+      <rect x="120" y="-100" width="15" height="20"/>
+      <rect x="85" y="-70" width="15" height="20"/>
+      <rect x="120" y="-70" width="15" height="20"/>
+    </g>
+  </g>
+  
+  <!-- Event location pins -->
+  <g>
+    <path d="M300,250 c0,-30 50,-30 50,0 c0,30 -25,40 -25,40 c0,0 -25,-10 -25,-40" fill="#f5222d"/>
+    <circle cx="325" cy="240" r="10" fill="white"/>
+    
+    <path d="M450,200 c0,-30 50,-30 50,0 c0,30 -25,40 -25,40 c0,0 -25,-10 -25,-40" fill="#faad14"/>
+    <circle cx="475" cy="190" r="10" fill="white"/>
+    
+    <path d="M200,300 c0,-30 50,-30 50,0 c0,30 -25,40 -25,40 c0,0 -25,-10 -25,-40" fill="#52c41a"/>
+    <circle cx="225" cy="290" r="10" fill="white"/>
+  </g>
+  
+  <!-- People icons -->
+  <g>
+    <!-- Person 1 -->
+    <circle cx="350" cy="150" r="20" fill="#1890ff"/>
+    <circle cx="350" cy="140" r="8" fill="white"/>
+    <rect x="342" y="150" width="16" height="25" rx="8" fill="white"/>
+    
+    <!-- Person 2 -->
+    <circle cx="400" cy="180" r="20" fill="#52c41a"/>
+    <circle cx="400" cy="170" r="8" fill="white"/>
+    <rect x="392" cy="180" width="16" height="25" rx="8" fill="white"/>
+    
+    <!-- Person 3 -->
+    <circle cx="450" cy="150" r="20" fill="#faad14"/>
+    <circle cx="450" cy="140" r="8" fill="white"/>
+    <rect x="442" y="150" width="16" height="25" rx="8" fill="white"/>
+  </g>
+  
+  <!-- Connection lines -->
+  <g stroke="#1890ff" stroke-width="2" stroke-dasharray="5,5" fill="none">
+    <path d="M350,170 C380,200 370,220 325,240"/>
+    <path d="M400,205 C420,230 450,210 475,190"/>
+    <path d="M450,175 C430,220 300,260 225,290"/>
+  </g>
+  
+  <!-- Calendar icon -->
+  <g transform="translate(550, 300)">
+    <rect x="0" y="0" width="80" height="80" rx="10" fill="#1890ff"/>
+    <rect x="10" y="10" width="60" height="60" rx="5" fill="white"/>
+    <rect x="20" y="30" width="10" height="10" fill="#1890ff"/>
+    <rect x="35" y="30" width="10" height="10" fill="#1890ff"/>
+    <rect x="50" y="30" width="10" height="10" fill="#1890ff"/>
+    <rect x="20" y="45" width="10" height="10" fill="#1890ff"/>
+    <rect x="35" y="45" width="10" height="10" fill="#1890ff"/>
+    <rect x="50" y="45" width="10" height="10" fill="#1890ff"/>
+  </g>
+  
+  <!-- Chat bubbles -->
+  <g transform="translate(150, 150)">
+    <path d="M0,0 L80,0 Q100,0 100,20 L100,60 Q100,80 80,80 L20,80 L0,100 L0,0 Z" fill="#1890ff" opacity="0.8"/>
+    <path d="M120,30 L200,30 Q220,30 220,50 L220,90 Q220,110 200,110 L140,110 L120,130 L120,30 Z" fill="#52c41a" opacity="0.8"/>
+  </g>
+</svg> 

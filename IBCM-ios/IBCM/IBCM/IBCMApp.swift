@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import Firebase
+// import Firebase
 import Foundation
 
 // MARK: - AppState
@@ -150,7 +150,7 @@ struct IBCMApp: App {
     // MARK: - Initialization
     init() {
         // Configure Firebase
-        FirebaseApp.configure()
+        // FirebaseApp.configure()
     }
     
     // MARK: - Body

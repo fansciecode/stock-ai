@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import './Home.css';
 
 // Services
-import EventService from '../../services/EventService';
-import CategoryService from '../../services/CategoryService';
+import EventService from '../../services/eventService';
+import CategoryService from '../../services/categoryService';
 import { useAuth } from '../../contexts/AuthContext';
 
 // Components
