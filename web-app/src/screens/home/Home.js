@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import './Home.css';
 
 // Services
-import EventService from '../../services/EventService';
-import CategoryService from '../../services/CategoryService';
+import EventService from '../../services/eventService';
+import categoryService from '../../services/categoryService';
 import { useAuth } from '../../contexts/AuthContext';
 
 // Components
@@ -39,7 +39,6 @@ const Home = () => {
 
   // Services
   const eventService = new EventService();
-  const categoryService = new CategoryService();
 
   // Effects
   useEffect(() => {
