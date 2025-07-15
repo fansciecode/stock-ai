@@ -1,12 +1,11 @@
-import OpenAI from 'openai';
+import axios from 'axios';
 import { UserModel } from '../../../models/userModel.js';
 import { EventModel } from '../../../models/eventModel.js';
 import { ProductModel } from '../../../models/productModel.js';
 import { CategoryService } from '../../utils/categoryService.js';
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-});
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8001';
+const AI_SERVICE_API_KEY = process.env.AI_SERVICE_API_KEY || 'development_key';
 
 export const ContentFilterService = {
     // 1. User Profile Building and Analysis
@@ -189,25 +188,14 @@ export const ContentFilterService = {
 // Helper functions for content analysis
 const analyzeContent = async (content) => {
     try {
-        const response = await openai.chat.completions.create({
-            model: "gpt-4",
-            messages: [{
-                role: "system",
-                content: "Analyze the following content for classification and moderation:"
-            }, {
-                role: "user",
-                content: JSON.stringify(content)
-            }]
+        const response = await axios.post(`${AI_SERVICE_URL}/analyze-content`, { content }, {
+            headers: { 'X-API-KEY': AI_SERVICE_API_KEY }
         });
-        
-        return {
-            classification: extractClassification(response),
-            moderation: extractModerationResults(response),
-            metadata: generateContentMetadata(response)
-        };
+        return response.data;
     } catch (error) {
         console.error('Content analysis error:', error);
-        throw error;
+        // Fallback: return empty analysis
+        return {};
     }
 };
 
