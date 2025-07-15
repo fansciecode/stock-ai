@@ -1,13 +1,12 @@
-import OpenAI from 'openai';
+import axios from 'axios';
 import { UserModel } from '../../../models/userModel.js';
 import { BusinessModel } from '../../../models/businessModel.js';
 import { DocumentModel } from '../../../models/documentModel.js';
 import { NotificationService } from '../../notification/notificationService.js';
 import { OCRService } from '../../utils/ocrService.js';
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-});
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8001';
+const AI_SERVICE_API_KEY = process.env.AI_SERVICE_API_KEY || 'development_key';
 
 export const VerificationService = {
     // 1. Identity Verification
@@ -190,25 +189,14 @@ export const VerificationService = {
 const analyzeDocuments = async (documents) => {
     try {
         const textExtraction = await OCRService.extractText(documents);
-        const response = await openai.chat.completions.create({
-            model: "gpt-4",
-            messages: [{
-                role: "system",
-                content: "Analyze the following document text for verification:"
-            }, {
-                role: "user",
-                content: JSON.stringify(textExtraction)
-            }]
+        const response = await axios.post(`${AI_SERVICE_URL}/analyze-verification`, { text: textExtraction }, {
+            headers: { 'X-API-KEY': AI_SERVICE_API_KEY }
         });
-
-        return {
-            analysis: extractDocumentAnalysis(response),
-            confidence: calculateAnalysisConfidence(response),
-            recommendations: extractVerificationRecommendations(response)
-        };
+        return response.data;
     } catch (error) {
         console.error('Document analysis error:', error);
-        throw error;
+        // Fallback: return empty analysis
+        return {};
     }
 };
 

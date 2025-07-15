@@ -1,11 +1,10 @@
-import OpenAI from 'openai';
+import axios from 'axios';
 import { EventModel } from '../../../models/eventModel.js';
 import { EventOptimizer } from './eventOptimizer.js';
 import { TrendAnalyzerService } from '../analytics/trendAnalyzer.js';
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-});
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8001';
+const AI_SERVICE_API_KEY = process.env.AI_SERVICE_API_KEY || 'development_key';
 
 export class EventAutoGenerator {
     constructor() {
@@ -15,23 +14,17 @@ export class EventAutoGenerator {
     // Generate complete event from minimal input
     async generateFromMinimalInput(basicInfo) {
         try {
-            const { eventType, title, expectedAttendance } = basicInfo;
-            
             // Generate complete event details using AI
             const eventDetails = await this.generateEventDetails(basicInfo);
-            
             // Get optimizations
             const optimizations = await this.eventOptimizer.optimizeEventCreation(
                 eventDetails,
                 basicInfo.creatorType || 'USER'
             );
-
             // Generate ticketing structure
             const ticketing = await this.generateTicketingStructure(eventDetails, optimizations);
-
             // Generate inventory requirements
             const inventory = await this.generateInventoryRequirements(eventDetails, optimizations);
-
             return {
                 eventDetails: {
                     ...eventDetails,
@@ -49,28 +42,20 @@ export class EventAutoGenerator {
 
     // Generate complete event details from basic info
     async generateEventDetails(basicInfo) {
-        const prompt = `Generate comprehensive event details for a ${basicInfo.eventType} event titled "${basicInfo.title}" 
-                       with expected attendance of ${basicInfo.expectedAttendance}. Include venue suggestions, 
-                       timing, pricing strategy, and required resources.`;
-
-        const response = await openai.chat.completions.create({
-            model: "gpt-4",
-            messages: [{
-                role: "system",
-                content: "You are an expert event planner. Generate detailed event specifications."
-            }, {
-                role: "user",
-                content: prompt
-            }]
-        });
-
-        return this.parseEventDetails(response.choices[0].message.content);
+        try {
+            const response = await axios.post(`${AI_SERVICE_URL}/generate-event-details`, basicInfo, {
+                headers: { 'X-API-KEY': AI_SERVICE_API_KEY }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Event details generation error:', error);
+            return basicInfo; // fallback
+        }
     }
 
-    // Generate ticketing structure
+    // Generate ticketing structure (unchanged)
     async generateTicketingStructure(eventDetails, optimizations) {
         const basePrice = optimizations.pricing?.basePrice || 0;
-        
         return {
             ticketTypes: [
                 {
@@ -108,54 +93,31 @@ export class EventAutoGenerator {
 
     // Generate inventory requirements
     async generateInventoryRequirements(eventDetails, optimizations) {
-        const inventoryPrompt = `Generate inventory requirements for a ${eventDetails.eventType} event 
-                               with ${eventDetails.expectedAttendance} attendees. Consider essentials, 
-                               merchandise, and consumables.`;
-
-        const response = await openai.chat.completions.create({
-            model: "gpt-4",
-            messages: [{
-                role: "system",
-                content: "You are an inventory management expert. Generate detailed inventory requirements."
-            }, {
-                role: "user",
-                content: inventoryPrompt
-            }]
-        });
-
-        return {
-            essentials: this.parseInventoryList(response.choices[0].message.content),
-            autoReorderThresholds: this.calculateReorderThresholds(eventDetails),
-            suppliers: await this.suggestSuppliers(eventDetails),
-            qrCodeEnabled: true,
-            batchTracking: true
-        };
+        try {
+            const response = await axios.post(`${AI_SERVICE_URL}/generate-inventory`, eventDetails, {
+                headers: { 'X-API-KEY': AI_SERVICE_API_KEY }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Inventory requirements generation error:', error);
+            return { essentials: [], autoReorderThresholds: {}, suppliers: [], qrCodeEnabled: true, batchTracking: true };
+        }
     }
 
     // Generate marketing materials
     async generateMarketingMaterials(eventDetails) {
-        const marketingPrompt = `Create marketing content for ${eventDetails.title}. 
-                               Include social media posts, email templates, and promotional offers.`;
-
-        const response = await openai.chat.completions.create({
-            model: "gpt-4",
-            messages: [{
-                role: "system",
-                content: "You are a marketing expert. Generate engaging marketing content."
-            }, {
-                role: "user",
-                content: marketingPrompt
-            }]
-        });
-
-        return {
-            socialMedia: this.parseSocialMediaContent(response.choices[0].message.content),
-            emailTemplates: this.parseEmailTemplates(response.choices[0].message.content),
-            promotionalOffers: this.parsePromotionalOffers(response.choices[0].message.content)
-        };
+        try {
+            const response = await axios.post(`${AI_SERVICE_URL}/generate-marketing`, eventDetails, {
+                headers: { 'X-API-KEY': AI_SERVICE_API_KEY }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Marketing materials generation error:', error);
+            return { socialMedia: [], emailTemplates: [], promotionalOffers: [] };
+        }
     }
 
-    // Helper methods
+    // Helper methods (unchanged)
     parseEventDetails(content) {
         try {
             return JSON.parse(content);

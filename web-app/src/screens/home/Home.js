@@ -39,7 +39,6 @@ const Home = () => {
 
   // Services
   const eventService = new EventService();
-  const categoryService = new CategoryService();
 
   // Effects
   useEffect(() => {
@@ -58,7 +57,7 @@ const Home = () => {
 
     try {
       // Load categories
-      const categoriesData = await categoryService.getCategories();
+      const categoriesData = await CategoryService.getCategories();
       setCategories(categoriesData);
 
       // Load events

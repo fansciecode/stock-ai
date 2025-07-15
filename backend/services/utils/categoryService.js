@@ -1,11 +1,7 @@
-import OpenAI from 'openai';
+import axios from 'axios';
 
 export class CategoryService {
     constructor() {
-        this.openai = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY
-        });
-        
         // Predefined category hierarchies
         this.categories = {
             events: {
@@ -24,27 +20,24 @@ export class CategoryService {
                 audience: ['beginner', 'intermediate', 'advanced', 'all']
             }
         };
+        this.AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8001';
+        this.AI_SERVICE_API_KEY = process.env.AI_SERVICE_API_KEY || 'development_key';
     }
 
     async categorizeContent(content, type = 'content') {
         try {
-            // Use OpenAI to analyze and categorize content
-            const response = await this.openai.chat.completions.create({
-                model: "gpt-4",
-                messages: [{
-                    role: "system",
-                    content: `Analyze and categorize the following ${type} content using the predefined categories.`
-                }, {
-                    role: "user",
-                    content: JSON.stringify(content)
-                }]
+            // Use IBCM-ai microservice to analyze and categorize content
+            const response = await axios.post(`${this.AI_SERVICE_URL}/categorize-content`, {
+                content,
+                type
+            }, {
+                headers: { 'X-API-KEY': this.AI_SERVICE_API_KEY }
             });
-
-            const analysis = response.choices[0].message.content;
-            return this.parseCategories(analysis, type);
+            return response.data;
         } catch (error) {
             console.error('Content categorization error:', error);
-            throw error;
+            // Fallback: use local keyword matching
+            return this.suggestCategories(Object.values(content).join(' '), type);
         }
     }
 
