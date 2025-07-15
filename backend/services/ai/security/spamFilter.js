@@ -1,12 +1,11 @@
-import OpenAI from 'openai';
+import axios from 'axios';
 import { ContentModel } from '../../../models/contentModel.js';
 import { UserModel } from '../../../models/userModel.js';
 import { SpamLogModel } from '../../../models/spamLogModel.js';
 import { NotificationService } from '../../notification/notificationService.js';
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-});
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8001';
+const AI_SERVICE_API_KEY = process.env.AI_SERVICE_API_KEY || 'development_key';
 
 export const SpamFilterService = {
     // 1. Content Analysis
@@ -195,25 +194,14 @@ export const SpamFilterService = {
 // Helper functions for content analysis
 const performContentAnalysis = async (content) => {
     try {
-        const response = await openai.chat.completions.create({
-            model: "gpt-4",
-            messages: [{
-                role: "system",
-                content: "Analyze the following content for spam characteristics:"
-            }, {
-                role: "user",
-                content: JSON.stringify(content)
-            }]
+        const response = await axios.post(`${AI_SERVICE_URL}/analyze-spam`, { content }, {
+            headers: { 'X-API-KEY': AI_SERVICE_API_KEY }
         });
-
-        return {
-            analysis: extractSpamAnalysis(response),
-            confidence: calculateConfidence(response),
-            recommendations: extractRecommendations(response)
-        };
+        return response.data;
     } catch (error) {
         console.error('Content analysis error:', error);
-        throw error;
+        // Fallback: return empty analysis
+        return {};
     }
 };
 
