@@ -3,6 +3,9 @@ import SwiftUI
 struct SettingsView: View {
     @StateObject private var viewModel = SettingsViewModel()
     @State private var showingLogoutAlert = false
+    var onNavigateBack: () -> Void
+    var onLogout: () -> Void
+    var authViewModel: AuthViewModel
     
     var body: some View {
         NavigationView {
@@ -76,6 +79,15 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: onNavigateBack) {
+                        Image(systemName: "arrow.left")
+                            .foregroundColor(.primary)
+                    }
+                }
+            }
             .refreshable {
                 await viewModel.loadSettings()
             }
@@ -87,10 +99,23 @@ struct SettingsView: View {
             .alert("Log Out", isPresented: $showingLogoutAlert) {
                 Button("Cancel", role: .cancel) {}
                 Button("Log Out", role: .destructive) {
-                    // TODO: Handle logout
+                    logout()
                 }
             } message: {
                 Text("Are you sure you want to log out?")
+            }
+        }
+        .navigationBarHidden(true)
+    }
+    
+    private func logout() {
+        Task {
+            do {
+                try await authViewModel.logout()
+                onLogout()
+            } catch {
+                viewModel.showError = true
+                viewModel.errorMessage = "Failed to log out: \(error.localizedDescription)"
             }
         }
     }
@@ -313,6 +338,12 @@ struct LanguageSettingsView: View {
     }
 }
 
-#Preview {
-    SettingsView()
+struct SettingsView_Previews: PreviewProvider {
+    static var previews: some View {
+        SettingsView(
+            onNavigateBack: {},
+            onLogout: {},
+            authViewModel: AuthViewModel()
+        )
+    }
 } 

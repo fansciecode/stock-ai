@@ -1,584 +1,293 @@
-import api from "./api";
+/**
+ * Event Service
+ * 
+ * This service handles all event-related API calls and data management.
+ * It's designed to match the functionality of the Android and iOS event services.
+ */
 
 class EventService {
-  // Get all events with pagination and filters
-  async getEvents(page = 1, limit = 10, filters = {}) {
+  constructor() {
+    this.apiBaseUrl = process.env.REACT_APP_API_URL || '/api';
+    this.eventsEndpoint = `${this.apiBaseUrl}/events`;
+  }
+
+  /**
+   * Get all events
+   * @returns {Promise<Array>} - Array of events
+   */
+  async getEvents() {
     try {
-      const response = await api.get("/events", {
-        params: { page, limit, ...filters },
-      });
-      return response.data;
+      // In a real app, this would be an API call
+      // For now, we'll return mock data
+      return this.generateMockEvents();
     } catch (error) {
-      console.error("Error fetching events:", error);
+      console.error('Error fetching events:', error);
       throw error;
     }
   }
 
-  // Get single event by ID
-  async getEventById(eventId) {
+  /**
+   * Get event details by ID
+   * @param {string} eventId - Event ID
+   * @returns {Promise<Object>} - Event details
+   */
+  async getEventDetails(eventId) {
     try {
-      const response = await api.get(`/events/${eventId}`);
-      return response.data;
+      // In a real app, this would be an API call
+      // For now, we'll return mock data
+      const events = this.generateMockEvents();
+      const event = events.find(event => event.id === eventId);
+      
+      if (!event) {
+        throw new Error('Event not found');
+      }
+      
+      return event;
     } catch (error) {
-      console.error("Error fetching event:", error);
+      console.error(`Error fetching event ${eventId}:`, error);
       throw error;
     }
   }
 
-  // Create new event
+  /**
+   * Create a new event
+   * @param {Object} eventData - Event data
+   * @returns {Promise<Object>} - Created event
+   */
   async createEvent(eventData) {
     try {
-      const response = await api.post("/events", eventData);
-      return response.data;
+      // In a real app, this would be an API call
+      // For now, we'll simulate creating an event
+      const newEvent = {
+        id: Math.random().toString(36).substring(2, 15),
+        title: eventData.title,
+        description: eventData.description,
+        imageUrl: eventData.imageUrl || 'https://picsum.photos/800/400?random=new',
+        startDate: eventData.startDate || new Date(),
+        endDate: eventData.endDate || new Date(Date.now() + 86400000), // Tomorrow
+        location: {
+          address: eventData.address,
+          coordinates: [eventData.longitude, eventData.latitude]
+        },
+        category: {
+          id: eventData.categoryId,
+          name: "Category",
+          icon: "star"
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      return newEvent;
     } catch (error) {
-      console.error("Error creating event:", error);
+      console.error('Error creating event:', error);
       throw error;
     }
   }
 
-  // Update existing event
+  /**
+   * Update an existing event
+   * @param {string} eventId - Event ID
+   * @param {Object} eventData - Updated event data
+   * @returns {Promise<Object>} - Updated event
+   */
   async updateEvent(eventId, eventData) {
     try {
-      const response = await api.put(`/events/${eventId}`, eventData);
-      return response.data;
+      // In a real app, this would be an API call
+      // For now, we'll simulate updating an event
+      const events = this.generateMockEvents();
+      const eventIndex = events.findIndex(event => event.id === eventId);
+      
+      if (eventIndex === -1) {
+        throw new Error('Event not found');
+      }
+      
+      const updatedEvent = {
+        ...events[eventIndex],
+        ...eventData,
+        location: {
+          address: eventData.address || events[eventIndex].location.address,
+          coordinates: [
+            eventData.longitude || events[eventIndex].location.coordinates[0],
+            eventData.latitude || events[eventIndex].location.coordinates[1]
+          ]
+        },
+        updatedAt: new Date()
+      };
+      
+      return updatedEvent;
     } catch (error) {
-      console.error("Error updating event:", error);
+      console.error(`Error updating event ${eventId}:`, error);
       throw error;
     }
   }
 
-  // Delete event
+  /**
+   * Delete an event
+   * @param {string} eventId - Event ID
+   * @returns {Promise<boolean>} - Success status
+   */
   async deleteEvent(eventId) {
     try {
-      const response = await api.delete(`/events/${eventId}`);
-      return response.data;
+      // In a real app, this would be an API call
+      // For now, we'll simulate deleting an event
+      return true;
     } catch (error) {
-      console.error("Error deleting event:", error);
+      console.error(`Error deleting event ${eventId}:`, error);
       throw error;
     }
   }
 
-  // Search events
-  async searchEvents(query, filters = {}) {
+  /**
+   * Search events by query
+   * @param {string} query - Search query
+   * @returns {Promise<Array>} - Filtered events
+   */
+  async searchEvents(query) {
     try {
-      const response = await api.get("/events/search", {
-        params: { q: query, ...filters },
-      });
-      return response.data;
-    } catch (error) {
-      console.error("Error searching events:", error);
-      throw error;
-    }
-  }
-
-  // Get events by category
-  async getEventsByCategory(categoryId, page = 1, limit = 10) {
-    try {
-      const response = await api.get(`/events/category/${categoryId}`, {
-        params: { page, limit },
-      });
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching events by category:", error);
-      throw error;
-    }
-  }
-
-  // Get user's attending events
-  async getAttendingEvents() {
-    try {
-      const response = await api.get("/events/user/attending");
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching attending events:", error);
-      throw error;
-    }
-  }
-
-  // Get user's created events
-  async getCreatedEvents() {
-    try {
-      const response = await api.get("/events/user/created");
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching created events:", error);
-      throw error;
-    }
-  }
-
-  // Book event ticket
-  async bookEvent(eventId, bookingData) {
-    try {
-      const response = await api.post(
-        `/events/${eventId}/book`,
-        bookingData,
+      // In a real app, this would be an API call
+      // For now, we'll filter mock data
+      const events = this.generateMockEvents();
+      const searchQuery = query.toLowerCase();
+      
+      return events.filter(event => 
+        event.title.toLowerCase().includes(searchQuery) ||
+        event.description.toLowerCase().includes(searchQuery) ||
+        (event.location.address && event.location.address.toLowerCase().includes(searchQuery))
       );
-      return response.data;
     } catch (error) {
-      console.error("Error booking event:", error);
+      console.error('Error searching events:', error);
       throw error;
     }
   }
 
-  // Cancel event booking
-  async cancelBooking(eventId, bookingId) {
+  /**
+   * Get events by category
+   * @param {string} categoryId - Category ID
+   * @returns {Promise<Array>} - Filtered events
+   */
+  async getEventsByCategory(categoryId) {
     try {
-      const response = await api.delete(
-        `/events/${eventId}/booking/${bookingId}`,
+      // In a real app, this would be an API call
+      // For now, we'll filter mock data
+      const events = this.generateMockEvents();
+      
+      return events.filter(event => 
+        event.category && event.category.id === categoryId
       );
-      return response.data;
     } catch (error) {
-      console.error("Error canceling booking:", error);
+      console.error(`Error fetching events for category ${categoryId}:`, error);
       throw error;
     }
   }
 
-  // Join event (for free events)
-  async joinEvent(eventId) {
-    try {
-      const response = await api.post(`/events/${eventId}/join`);
-      return response.data;
-    } catch (error) {
-      console.error("Error joining event:", error);
-      throw error;
-    }
-  }
-
-  // Leave event
-  async leaveEvent(eventId) {
-    try {
-      const response = await api.post(`/events/${eventId}/leave`);
-      return response.data;
-    } catch (error) {
-      console.error("Error leaving event:", error);
-      throw error;
-    }
-  }
-
-  // Get event reviews
-  async getEventReviews(eventId, page = 1, limit = 10) {
-    try {
-      const response = await api.get(`/events/${eventId}/reviews`, {
-        params: { page, limit },
-      });
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching event reviews:", error);
-      throw error;
-    }
-  }
-
-  // Add event review
-  async addEventReview(eventId, reviewData) {
-    try {
-      const response = await api.post(
-        `/events/${eventId}/reviews`,
-        reviewData,
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error adding event review:", error);
-      throw error;
-    }
-  }
-
-  // Update event review
-  async updateEventReview(eventId, reviewId, reviewData) {
-    try {
-      const response = await api.put(
-        `/events/${eventId}/reviews/${reviewId}`,
-        reviewData,
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error updating event review:", error);
-      throw error;
-    }
-  }
-
-  // Delete event review
-  async deleteEventReview(eventId, reviewId) {
-    try {
-      const response = await api.delete(
-        `/events/${eventId}/reviews/${reviewId}`,
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error deleting event review:", error);
-      throw error;
-    }
-  }
-
-  // Mark review as helpful
-  async markReviewHelpful(eventId, reviewId) {
-    try {
-      const response = await api.post(
-        `/events/${eventId}/reviews/${reviewId}/helpful`,
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error marking review as helpful:", error);
-      throw error;
-    }
-  }
-
-  // Report event review
-  async reportEventReview(eventId, reviewId, reportData) {
-    try {
-      const response = await api.post(
-        `/events/${eventId}/reviews/${reviewId}/report`,
-        reportData,
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error reporting event review:", error);
-      throw error;
-    }
-  }
-
-  // Get event analytics
-  async getEventAnalytics(eventId) {
-    try {
-      const response = await api.get(`/events/${eventId}/analytics`);
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching event analytics:", error);
-      throw error;
-    }
-  }
-
-  // Upload event media
-  async uploadEventMedia(eventId, mediaFiles) {
-    try {
-      const formData = new FormData();
-
-      if (Array.isArray(mediaFiles)) {
-        mediaFiles.forEach((file) => {
-          formData.append("media", file);
-        });
-      } else {
-        formData.append("media", mediaFiles);
+  /**
+   * Generate mock events for development
+   * @returns {Array} - Array of mock events
+   */
+  generateMockEvents() {
+    const categories = [
+      { id: "1", name: "Music", icon: "music" },
+      { id: "2", name: "Sports", icon: "football-ball" },
+      { id: "3", name: "Food", icon: "utensils" },
+      { id: "4", name: "Art", icon: "palette" },
+      { id: "5", name: "Technology", icon: "laptop-code" },
+      { id: "6", name: "Business", icon: "briefcase" }
+    ];
+    
+    return [
+      {
+        id: "1",
+        title: "Summer Music Festival",
+        description: "Join us for an amazing experience with great music and food!",
+        imageUrl: "https://picsum.photos/800/400?random=1",
+        startDate: new Date(Date.now() + 86400000), // Tomorrow
+        endDate: new Date(Date.now() + 172800000), // Day after tomorrow
+        location: {
+          address: "Central Park, New York",
+          coordinates: [-73.965355, 40.782865]
+        },
+        category: categories[0],
+        createdAt: new Date(Date.now() - 604800000), // 7 days ago
+        updatedAt: new Date(Date.now() - 86400000) // 1 day ago
+      },
+      {
+        id: "2",
+        title: "Tech Conference 2023",
+        description: "Learn about the latest technologies and network with professionals.",
+        imageUrl: "https://picsum.photos/800/400?random=2",
+        startDate: new Date(Date.now() + 259200000), // 3 days from now
+        endDate: new Date(Date.now() + 345600000), // 4 days from now
+        location: {
+          address: "Moscone Center, San Francisco",
+          coordinates: [-122.401557, 37.783909]
+        },
+        category: categories[4],
+        createdAt: new Date(Date.now() - 1209600000), // 14 days ago
+        updatedAt: new Date(Date.now() - 604800000) // 7 days ago
+      },
+      {
+        id: "3",
+        title: "Food Truck Festival",
+        description: "Taste delicious food from the best food trucks in the city.",
+        imageUrl: "https://picsum.photos/800/400?random=3",
+        startDate: new Date(Date.now() + 432000000), // 5 days from now
+        endDate: new Date(Date.now() + 518400000), // 6 days from now
+        location: {
+          address: "Riverside Park, Chicago",
+          coordinates: [-87.637596, 41.878876]
+        },
+        category: categories[2],
+        createdAt: new Date(Date.now() - 2592000000), // 30 days ago
+        updatedAt: new Date(Date.now() - 1209600000) // 14 days ago
+      },
+      {
+        id: "4",
+        title: "Art Gallery Opening",
+        description: "Discover amazing artworks from local and international artists.",
+        imageUrl: "https://picsum.photos/800/400?random=4",
+        startDate: new Date(Date.now() + 604800000), // 7 days from now
+        endDate: new Date(Date.now() + 691200000), // 8 days from now
+        location: {
+          address: "Downtown Gallery, Los Angeles",
+          coordinates: [-118.243683, 34.052235]
+        },
+        category: categories[3],
+        createdAt: new Date(Date.now() - 3456000000), // 40 days ago
+        updatedAt: new Date(Date.now() - 2592000000) // 30 days ago
+      },
+      {
+        id: "5",
+        title: "Business Networking",
+        description: "Connect with business professionals and expand your network.",
+        imageUrl: "https://picsum.photos/800/400?random=5",
+        startDate: new Date(Date.now() + 777600000), // 9 days from now
+        endDate: new Date(Date.now() + 864000000), // 10 days from now
+        location: {
+          address: "Business District, Boston",
+          coordinates: [-71.060511, 42.358162]
+        },
+        category: categories[5],
+        createdAt: new Date(Date.now() - 5184000000), // 60 days ago
+        updatedAt: new Date(Date.now() - 3456000000) // 40 days ago
+      },
+      {
+        id: "6",
+        title: "Marathon Training",
+        description: "Get ready for the marathon with professional training sessions.",
+        imageUrl: "https://picsum.photos/800/400?random=6",
+        startDate: new Date(Date.now() + 950400000), // 11 days from now
+        endDate: new Date(Date.now() + 1036800000), // 12 days from now
+        location: {
+          address: "City Stadium, Miami",
+          coordinates: [-80.219742, 25.958045]
+        },
+        category: categories[1],
+        createdAt: new Date(Date.now() - 7776000000), // 90 days ago
+        updatedAt: new Date(Date.now() - 5184000000) // 60 days ago
       }
-
-      const response = await api.put(
-        `/events/${eventId}/media`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        },
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error uploading event media:", error);
-      throw error;
-    }
+    ];
   }
-
-  // Add event products
-  async addEventProducts(eventId, products) {
-    try {
-      const response = await api.put(`/events/${eventId}/products`, {
-        products,
-      });
-      return response.data;
-    } catch (error) {
-      console.error("Error adding event products:", error);
-      throw error;
-    }
-  }
-
-  // Get event attendees
-  async getEventAttendees(eventId, page = 1, limit = 10) {
-    try {
-      const response = await api.get(`/events/${eventId}/attendees`, {
-        params: { page, limit },
-      });
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching event attendees:", error);
-      throw error;
-    }
-  }
-
-  // Create optimized event with AI
-  async createOptimizedEvent(eventData) {
-    try {
-      const response = await api.post(
-        "/events/create-optimized",
-        eventData,
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error creating optimized event:", error);
-      throw error;
-    }
-  }
-
-  // Get event optimizations
-  async getEventOptimizations(eventData) {
-    try {
-      const response = await api.post("/events/optimize", eventData);
-      return response.data;
-    } catch (error) {
-      console.error("Error getting event optimizations:", error);
-      throw error;
-    }
-  }
-
-  // Auto-generate event
-  async autoGenerateEvent(basicData) {
-    try {
-      const response = await api.post(
-        "/events/auto-generate",
-        basicData,
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error auto-generating event:", error);
-      throw error;
-    }
-  }
-
-  // Get featured events
-  async getFeaturedEvents(limit = 10) {
-    try {
-      const response = await api.get("/events/featured", {
-        params: { limit },
-      });
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching featured events:", error);
-      throw error;
-    }
-  }
-
-  // Get trending events
-  async getTrendingEvents(period = "week", limit = 10) {
-    try {
-      const response = await api.get("/events/trending", {
-        params: { period, limit },
-      });
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching trending events:", error);
-      throw error;
-    }
-  }
-
-  // Get nearby events
-  async getNearbyEvents(latitude, longitude, radius = 10, limit = 10) {
-    try {
-      const response = await api.get("/events/nearby", {
-        params: { lat: latitude, lng: longitude, radius, limit },
-      });
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching nearby events:", error);
-      throw error;
-    }
-  }
-
-  // Get event suggestions
-  async getEventSuggestions(limit = 10) {
-    try {
-      const response = await api.get("/events/suggestions", {
-        params: { limit },
-      });
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching event suggestions:", error);
-      throw error;
-    }
-  }
-
-  // Share event
-  async shareEvent(eventId, shareData) {
-    try {
-      const response = await api.post(
-        `/events/${eventId}/share`,
-        shareData,
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error sharing event:", error);
-      throw error;
-    }
-  }
-
-  // Report event
-  async reportEvent(eventId, reportData) {
-    try {
-      const response = await api.post(
-        `/events/${eventId}/report`,
-        reportData,
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error reporting event:", error);
-      throw error;
-    }
-  }
-
-  // Follow event organizer
-  async followOrganizer(organizerId) {
-    try {
-      const response = await api.post(
-        `/events/organizer/${organizerId}/follow`,
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error following organizer:", error);
-      throw error;
-    }
-  }
-
-  // Unfollow event organizer
-  async unfollowOrganizer(organizerId) {
-    try {
-      const response = await api.delete(
-        `/events/organizer/${organizerId}/follow`,
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error unfollowing organizer:", error);
-      throw error;
-    }
-  }
-
-  // Get organizer's events
-  async getOrganizerEvents(organizerId, page = 1, limit = 10) {
-    try {
-      const response = await api.get(
-        `/events/organizer/${organizerId}`,
-        {
-          params: { page, limit },
-        },
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching organizer events:", error);
-      throw error;
-    }
-  }
-
-  // Utility functions
-  formatEventDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
-
-  formatEventDuration(startDate, endDate) {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const duration = end - start;
-
-    const hours = Math.floor(duration / (1000 * 60 * 60));
-    const minutes = Math.floor((duration % (1000 * 60 * 60)) / (1000 * 60));
-
-    if (hours > 0) {
-      return `${hours}h ${minutes}m`;
-    }
-    return `${minutes}m`;
-  }
-
-  formatEventPrice(price, currency = "INR") {
-    if (price === 0) return "Free";
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: currency,
-    }).format(price);
-  }
-
-  getEventStatus(event) {
-    const now = new Date();
-    const startDate = new Date(event.startDate);
-    const endDate = new Date(event.endDate);
-
-    if (now < startDate) return "upcoming";
-    if (now >= startDate && now <= endDate) return "ongoing";
-    if (now > endDate) return "completed";
-    return "unknown";
-  }
-
-  getEventTypeIcon(eventType) {
-    const iconMap = {
-      informative: "📖",
-      booking: "🎫",
-      product: "🛍️",
-      service: "⚙️",
-      workshop: "🛠️",
-      conference: "🎤",
-      webinar: "💻",
-      meetup: "👥",
-      party: "🎉",
-      festival: "🎊",
-      exhibition: "🖼️",
-      competition: "🏆",
-      charity: "❤️",
-      sports: "⚽",
-      music: "🎵",
-      art: "🎨",
-      food: "🍽️",
-      technology: "💻",
-      business: "💼",
-      health: "🏥",
-      education: "🎓",
-    };
-    return iconMap[eventType] || "📅";
-  }
-
-  // Event type constants
-  static EVENT_TYPES = {
-    INFORMATIVE: "informative",
-    BOOKING: "booking",
-    PRODUCT: "product",
-    SERVICE: "service",
-    WORKSHOP: "workshop",
-    CONFERENCE: "conference",
-    WEBINAR: "webinar",
-    MEETUP: "meetup",
-    PARTY: "party",
-    FESTIVAL: "festival",
-    EXHIBITION: "exhibition",
-    COMPETITION: "competition",
-    CHARITY: "charity",
-  };
-
-  // Event status constants
-  static EVENT_STATUS = {
-    DRAFT: "draft",
-    PUBLISHED: "published",
-    CANCELLED: "cancelled",
-    COMPLETED: "completed",
-    ARCHIVED: "archived",
-  };
-
-  // Event visibility constants
-  static EVENT_VISIBILITY = {
-    PUBLIC: "public",
-    PRIVATE: "private",
-    MEMBERS_ONLY: "members_only",
-  };
-
-  // Booking status constants
-  static BOOKING_STATUS = {
-    PENDING: "pending",
-    CONFIRMED: "confirmed",
-    CANCELLED: "cancelled",
-    COMPLETED: "completed",
-    REFUNDED: "refunded",
-  };
 }
 
-const eventService = new EventService();
-
-export { eventService };
-export default eventService;
+export default EventService;

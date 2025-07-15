@@ -1,0 +1,66 @@
+.app-header {
+  background-color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: 0;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+  height: 64px;
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.logo a {
+  color: #1890ff;
+  text-decoration: none;
+}
+
+.menu-section {
+  display: flex;
+  align-items: center;
+}
+
+.desktop-menu {
+  display: flex;
+  align-items: center;
+}
+
+.main-menu {
+  background: transparent;
+  border-bottom: none;
+}
+
+.auth-buttons {
+  margin-left: 24px;
+}
+
+.mobile-menu {
+  display: none;
+}
+
+.menu-button {
+  border: none;
+  font-size: 18px;
+}
+
+@media (max-width: 768px) {
+  .desktop-menu {
+    display: none;
+  }
+  
+  .mobile-menu {
+    display: block;
+  }
+} 

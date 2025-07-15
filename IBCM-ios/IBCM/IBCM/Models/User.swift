@@ -151,6 +151,51 @@ struct User: Codable, Identifiable {
         lastSeen = try container.decodeIfPresent(String.self, forKey: .lastSeen)
         preferences = try container.decodeIfPresent(UserPreferences.self, forKey: .preferences)
     }
+
+    // MARK: - Mock Data
+    static func mockUser(id: String = UUID().uuidString) -> User {
+        let decoder = JSONDecoder()
+        let jsonData = """
+        {
+            "id": "\(id)",
+            "firstName": "John",
+            "lastName": "Doe",
+            "email": "john.doe@example.com",
+            "profilePictureUrl": "https://randomuser.me/api/portraits/men/1.jpg",
+            "backgroundImageUrl": "https://picsum.photos/800/200",
+            "phoneNumber": "+1234567890",
+            "dateOfBirth": "1990-01-01T00:00:00.000Z",
+            "gender": "MALE",
+            "location": {
+                "type": "Point",
+                "coordinates": [37.7749, -122.4194],
+                "city": "San Francisco",
+                "address": "123 Main St",
+                "country": "USA"
+            },
+            "bio": "Software developer passionate about creating amazing user experiences.",
+            "interests": ["technology", "music", "sports"],
+            "joinDate": "2023-01-01T00:00:00.000Z",
+            "isVerified": true,
+            "isAdmin": false,
+            "role": "USER",
+            "status": "ACTIVE",
+            "followersCount": 120,
+            "followingCount": 85,
+            "eventsCreated": 5,
+            "eventsAttended": 12,
+            "totalSpent": 350.0,
+            "isOnline": true
+        }
+        """.data(using: .utf8)!
+        
+        do {
+            return try decoder.decode(User.self, from: jsonData)
+        } catch {
+            print("Error creating mock user: \(error)")
+            fatalError("Could not create mock user")
+        }
+    }
 }
 
 // MARK: - User Role Enum

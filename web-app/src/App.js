@@ -1,531 +1,201 @@
-import React from "react";
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
-import { ConfigProvider, App as AntApp } from "antd";
-import { AuthProvider } from "./contexts/AuthContext";
-import { ThemeProvider } from "./contexts/ThemeContext";
-import { LocationProvider } from "./contexts/LocationContext";
-import { NotificationProvider } from "./contexts/NotificationContext";
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import './App.css';
 
 // Auth Screens
-import LoginScreen from "./screens/auth/LoginScreen";
-import SignupScreen from "./screens/auth/SignupScreen";
-import ForgotPasswordScreen from "./screens/auth/ForgotPasswordScreen";
+import Login from './screens/auth/Login';
+import Signup from './screens/auth/Signup';
+import ForgotPassword from './screens/auth/ForgotPassword';
 
 // Main Screens
-import LandingPage from "./screens/landing/LandingPage";
-import HomeScreen from "./screens/home/HomeScreen";
-import DashboardScreen from "./screens/dashboard/DashboardScreen";
-import EnterpriseDashboardScreen from "./screens/dashboard/EnterpriseDashboardScreen";
-
-// Verification Screen
-import VerificationScreen from "./screens/verification/VerificationScreen";
+import Home from './screens/home/Home';
+import Dashboard from './screens/dashboard/Dashboard';
+import Profile from './screens/profile/Profile';
+import Settings from './screens/settings/Settings';
+import CategorySelection from './screens/category/CategorySelection';
 
 // Event Screens
-import EventBrowseScreen from "./screens/event/EventBrowseScreen";
-import EventCreationScreen from "./screens/event/EventCreationScreen";
-import EventDetailsScreen from "./screens/event/EventDetailsScreen";
-import EventDisplayScreen from "./screens/event/EventDisplayScreen";
-import AddEventScreen from "./screens/event/AddEventScreen";
-import LocationPickerScreen from "./screens/event/LocationPickerScreen";
-import TicketBookingScreen from "./screens/event/TicketBookingScreen";
-import WishlistScreen from "./screens/event/WishlistScreen";
-import PhotoViewerScreen from "./screens/event/PhotoViewerScreen";
+import EventDetails from './screens/eventdetails/EventDetails';
+import EventCreation from './screens/event/EventCreation';
+import EventSearch from './screens/search/EventSearch';
+import BrowseEvents from './screens/event/BrowseEvents';
+import CategoryEvents from './screens/category/CategoryEvents';
 
-// Profile Screens
-import EnhancedUserProfileScreen from "./screens/profile/EnhancedUserProfileScreen";
-import PublicProfileScreen from "./screens/profile/PublicProfileScreen";
-import SettingsScreen from "./screens/profile/SettingsScreen";
-import UserProfileScreen from "./screens/profile/UserProfileScreen";
+// User Screens
+import UserProfile from './screens/profile/UserProfile';
+import Orders from './screens/order/Orders';
+import EventAnalytics from './screens/event/EventAnalytics';
 
-// Product/Service Screens
-import ProductDetailsScreen from "./screens/product/ProductDetailsScreen";
+// Other Screens
+import Notifications from './screens/notifications/Notifications';
+import TicketBooking from './screens/event/TicketBooking';
+import TicketDetails from './screens/event/TicketDetails';
+import PaymentDetails from './screens/payment/PaymentDetails';
+import ChatDetail from './screens/chat/ChatDetail';
+import Report from './screens/report/Report';
+import Review from './screens/review/Review';
+import LocationPicker from './screens/event/LocationPicker';
+import ServiceDetails from './screens/event/ServiceDetails';
+import LandingPage from './screens/LandingPage';
 
-// Order Screens
-import OrderScreen from "./screens/order/OrderScreen";
-import OrderDetailsScreen from "./screens/order/OrderDetailsScreen";
-import OrderManagementScreen from "./screens/order/OrderManagementScreen";
-
-// Payment Screens
-import PaymentScreen from "./screens/payment/PaymentScreen";
-import PackageScreen from "./screens/package/PackageScreen";
-import PackagesScreen from "./screens/packages/PackageScreen";
-
-// External Event Screens
-import ExternalEventScreen from "./screens/external/ExternalEventScreen";
-
-// Event Details Screens
-import EventDetailsScreenNew from "./screens/eventdetails/EventDetailsScreen";
-
-// Chat Screens
-import ChatScreen from "./screens/chat/ChatScreen";
-
-// Notification Screens
-import NotificationScreen from "./screens/notifications/NotificationScreen";
-
-// Review Screens
-import EventReviewScreen from "./screens/review/EventReviewScreen";
-import ProductReviewScreen from "./screens/review/ProductReviewScreen";
-
-// Report Screen
-import ReportScreen from "./screens/report/ReportScreen";
-
-// Category Screen
-import CategorySelectionScreen from "./screens/category/CategorySelectionScreen";
-
-// Debug Screen
-import ApiDebugScreen from "./screens/debug/ApiDebugScreen";
+// Context
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 // Components
-import ProtectedRoute from "./components/ProtectedRoute";
-import ErrorBoundary from "./components/ErrorBoundary";
-import LoadingScreen from "./components/LoadingScreen";
-import BottomNavigation from "./components/BottomNavigation";
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
+import LoadingSpinner from './components/LoadingSpinner';
 
-import "./App.css";
-import "antd/dist/reset.css";
+// Protected Route Component
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
 
-const theme = {
-  token: {
-    colorPrimary: "#1976d2",
-    colorSuccess: "#52c41a",
-    colorWarning: "#faad14",
-    colorError: "#ff4d4f",
-    colorInfo: "#1890ff",
-    borderRadius: 8,
-    fontFamily:
-      "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-  },
-  components: {
-    Button: {
-      borderRadius: 8,
-      controlHeight: 40,
-    },
-    Card: {
-      borderRadius: 12,
-    },
-    Input: {
-      borderRadius: 8,
-      controlHeight: 40,
-    },
-  },
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  return children;
 };
 
-function App() {
+// App Component
+const App = () => {
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    // Initialize app
+    setInitialized(true);
+  }, []);
+
+  if (!initialized) {
+    return <LoadingSpinner />;
+  }
+
   return (
-    <ConfigProvider theme={theme}>
-      <AntApp>
         <AuthProvider>
-          <ThemeProvider>
-            <LocationProvider>
-              <NotificationProvider>
-                <ErrorBoundary>
                   <Router>
-                    <div className="App">
+        <div className="app">
+          <Navbar />
+          <main className="main-content">
                       <Routes>
+                        {/* Public Landing Page */}
+              <Route path="/" element={<LandingPage />} />
                         {/* Auth Routes */}
-                        <Route path="/login" element={<LoginScreen />} />
-                        <Route path="/signup" element={<SignupScreen />} />
-                        <Route
-                          path="/forgot-password"
-                          element={<ForgotPasswordScreen />}
-                        />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
 
                         {/* Main Routes */}
-                        <Route path="/" element={<LandingPage />} />
-                        <Route
-                          path="/app"
-                          element={
+              <Route path="/home" element={<Home />} />
+              <Route path="/dashboard" element={
                             <ProtectedRoute>
-                              <HomeScreen />
+                  <Dashboard />
                             </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/home"
-                          element={
+              } />
+              
+              {/* Profile Routes */}
+              <Route path="/profile" element={
                             <ProtectedRoute>
-                              <HomeScreen />
+                  <Profile />
                             </ProtectedRoute>
-                          }
-                        />
-
-                        {/* Dashboard Routes */}
-                        <Route
-                          path="/dashboard"
-                          element={
+              } />
+              <Route path="/user-profile/:userId" element={<UserProfile />} />
+              <Route path="/settings" element={
                             <ProtectedRoute>
-                              <DashboardScreen />
+                  <Settings />
                             </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/enterprise-dashboard"
-                          element={
+              } />
+              
+              {/* Category Routes */}
+              <Route path="/category-selection" element={
                             <ProtectedRoute>
-                              <EnterpriseDashboardScreen />
+                  <CategorySelection />
                             </ProtectedRoute>
-                          }
-                        />
-
-                        {/* Verification Route */}
-                        <Route
-                          path="/verification"
-                          element={
-                            <ProtectedRoute>
-                              <VerificationScreen />
-                            </ProtectedRoute>
-                          }
-                        />
+              } />
+              <Route path="/category/:categoryId" element={<CategoryEvents />} />
 
                         {/* Event Routes */}
-                        <Route
-                          path="/browse-events"
-                          element={
+              <Route path="/events/:eventId" element={<EventDetails />} />
+              <Route path="/create-event" element={
                             <ProtectedRoute>
-                              <EventBrowseScreen />
+                  <EventCreation />
                             </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/events"
-                          element={
+              } />
+              <Route path="/event-search" element={<EventSearch />} />
+              <Route path="/browse-events" element={<BrowseEvents />} />
+              <Route path="/event-analytics/:eventId" element={
                             <ProtectedRoute>
-                              <EventDisplayScreen />
+                  <EventAnalytics />
                             </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/events/:eventId"
-                          element={
-                            <ProtectedRoute>
-                              <EventDetailsScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/create-event"
-                          element={
-                            <ProtectedRoute>
-                              <EventCreationScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/add-event"
-                          element={
-                            <ProtectedRoute>
-                              <AddEventScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/location-picker"
-                          element={
-                            <ProtectedRoute>
-                              <LocationPickerScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/ticket-booking/:eventId"
-                          element={
-                            <ProtectedRoute>
-                              <TicketBookingScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/wishlist"
-                          element={
-                            <ProtectedRoute>
-                              <WishlistScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/photo-viewer"
-                          element={
-                            <ProtectedRoute>
-                              <PhotoViewerScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        {/* Profile Routes */}
-                        <Route
-                          path="/profile"
-                          element={
-                            <ProtectedRoute>
-                              <EnhancedUserProfileScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/profile/:userId"
-                          element={
-                            <ProtectedRoute>
-                              <PublicProfileScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/user-profile/:userId"
-                          element={
-                            <ProtectedRoute>
-                              <UserProfileScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/settings"
-                          element={
-                            <ProtectedRoute>
-                              <SettingsScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        {/* Product/Service Routes */}
-                        <Route
-                          path="/product/:productId"
-                          element={
-                            <ProtectedRoute>
-                              <ProductDetailsScreen />
-                            </ProtectedRoute>
-                          }
-                        />
+              } />
 
                         {/* Order Routes */}
-                        <Route
-                          path="/orders"
-                          element={
+              <Route path="/orders/:userId" element={
                             <ProtectedRoute>
-                              <OrderScreen />
+                  <Orders />
                             </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/orders/:orderId"
-                          element={
+              } />
+              <Route path="/order-details/:orderId" element={
                             <ProtectedRoute>
-                              <OrderDetailsScreen />
+                  <Orders />
                             </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/order-management"
-                          element={
-                            <ProtectedRoute>
-                              <OrderManagementScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        {/* Payment Routes */}
-                        <Route
-                          path="/payment/:eventId"
-                          element={
-                            <ProtectedRoute>
-                              <PaymentScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/packages"
-                          element={
-                            <ProtectedRoute>
-                              <PackagesScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/package"
-                          element={
-                            <ProtectedRoute>
-                              <PackageScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        {/* External Events Routes */}
-                        <Route
-                          path="/external-events"
-                          element={
-                            <ProtectedRoute>
-                              <ExternalEventScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        {/* Event Details Routes */}
-                        <Route
-                          path="/event-details/:eventId"
-                          element={
-                            <ProtectedRoute>
-                              <EventDetailsScreenNew />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/event-details/:eventId/:source"
-                          element={
-                            <ProtectedRoute>
-                              <EventDetailsScreenNew />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        {/* Chat Routes */}
-                        <Route
-                          path="/chat"
-                          element={
-                            <ProtectedRoute>
-                              <ChatScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/chat/:chatId"
-                          element={
-                            <ProtectedRoute>
-                              <ChatScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        {/* Notification Routes */}
-                        <Route
-                          path="/notifications"
-                          element={
-                            <ProtectedRoute>
-                              <NotificationScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/notification/:notificationId"
-                          element={
-                            <ProtectedRoute>
-                              <NotificationScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        {/* Review Routes */}
-                        <Route
-                          path="/event-review/:eventId"
-                          element={
-                            <ProtectedRoute>
-                              <EventReviewScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/product-review/:productId"
-                          element={
-                            <ProtectedRoute>
-                              <ProductReviewScreen />
-                            </ProtectedRoute>
-                          }
-                        />
+              } />
 
                         {/* Other Routes */}
-                        <Route
-                          path="/report"
-                          element={
+              <Route path="/notifications" element={
                             <ProtectedRoute>
-                              <ReportScreen />
+                  <Notifications />
                             </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/category-selection"
-                          element={
+              } />
+              <Route path="/ticket-booking" element={
                             <ProtectedRoute>
-                              <CategorySelectionScreen />
+                  <TicketBooking />
                             </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/api-debug"
-                          element={
+              } />
+              <Route path="/ticket-details/:ticketId" element={
                             <ProtectedRoute>
-                              <ApiDebugScreen />
+                  <TicketDetails />
                             </ProtectedRoute>
-                          }
-                        />
+              } />
+              <Route path="/payment-details/:paymentId" element={
+                            <ProtectedRoute>
+                  <PaymentDetails />
+                            </ProtectedRoute>
+              } />
+              <Route path="/chat-detail/:chatId" element={
+                            <ProtectedRoute>
+                  <ChatDetail />
+                            </ProtectedRoute>
+              } />
+              <Route path="/report" element={
+                            <ProtectedRoute>
+                  <Report />
+                            </ProtectedRoute>
+              } />
+              <Route path="/review" element={
+                            <ProtectedRoute>
+                  <Review />
+                            </ProtectedRoute>
+              } />
+              <Route path="/location-picker" element={
+                            <ProtectedRoute>
+                  <LocationPicker />
+                            </ProtectedRoute>
+              } />
+              <Route path="/service-details/:serviceId" element={<ServiceDetails />} />
 
-                        {/* Category Events */}
-                        <Route
-                          path="/category/:categoryId"
-                          element={
-                            <ProtectedRoute>
-                              <EventBrowseScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        {/* Event Analytics */}
-                        <Route
-                          path="/event-analytics/:eventId"
-                          element={
-                            <ProtectedRoute>
-                              <DashboardScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        {/* Ticket Details */}
-                        <Route
-                          path="/ticket/:ticketId"
-                          element={
-                            <ProtectedRoute>
-                              <TicketBookingScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        {/* Payment Details */}
-                        <Route
-                          path="/payment-details/:paymentId"
-                          element={
-                            <ProtectedRoute>
-                              <PaymentScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        {/* Service Details */}
-                        <Route
-                          path="/service/:serviceId"
-                          element={
-                            <ProtectedRoute>
-                              <ProductDetailsScreen />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        {/* Catch all route */}
-                        <Route path="*" element={<Navigate to="/app" />} />
+              {/* 404 Route */}
+              <Route path="*" element={<div>Page not found</div>} />
                       </Routes>
-
-                      {/* Bottom Navigation for mobile */}
-                      <BottomNavigation />
+          </main>
+          <Footer />
                     </div>
                   </Router>
-                </ErrorBoundary>
-              </NotificationProvider>
-            </LocationProvider>
-          </ThemeProvider>
         </AuthProvider>
-      </AntApp>
-    </ConfigProvider>
   );
-}
+};
 
 export default App;

@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkibcm_web_app=self.webpackChunkibcm_web_app||[]).push([[392],{392:(e,p,b)=>{b.r(p),b.d(p,{default:()=>c});const c={}}}]);

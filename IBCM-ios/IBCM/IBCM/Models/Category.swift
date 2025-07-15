@@ -1,56 +1,95 @@
 import Foundation
 
-struct Category: Identifiable, Codable {
+struct Category: Codable, Identifiable, Hashable {
     let id: String
     let name: String
     let description: String?
-    let imageUrl: String?
+    let iconName: String?
+    let color: String?
     let parentId: String?
-    let level: Int
-    let order: Int
     let isActive: Bool
-    let createdAt: Date
-    let updatedAt: Date
-    var subcategories: [Category]?
+    let createdAt: String?
+    let updatedAt: String?
     
-    // Added property for icon name used in UI
-    var iconName: String {
-        // Default icon mapping based on category name
-        switch name.lowercased() {
-        case let n where n.contains("music"):
-            return "music.note"
-        case let n where n.contains("sport"):
-            return "sportscourt"
-        case let n where n.contains("food"):
-            return "fork.knife"
-        case let n where n.contains("art"):
-            return "paintpalette"
-        case let n where n.contains("tech"):
-            return "laptopcomputer"
-        case let n where n.contains("business"):
-            return "briefcase"
-        case let n where n.contains("education"):
-            return "book"
-        case let n where n.contains("health"):
-            return "heart"
-        case let n where n.contains("travel"):
-            return "airplane"
-        default:
-            return "star"
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case description
+        case iconName
+        case color
+        case parentId
+        case isActive
+        case createdAt
+        case updatedAt
+    }
+    
+    init(id: String, name: String, description: String? = nil, iconName: String? = nil, color: String? = nil, parentId: String? = nil, isActive: Bool = true, createdAt: String? = nil, updatedAt: String? = nil) {
+        self.id = id
+        self.name = name
+        self.description = description
+        self.iconName = iconName
+        self.color = color
+        self.parentId = parentId
+        self.isActive = isActive
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+    
+    // Convenience initializer for creating test data
+    static func mock(id: String = UUID().uuidString, name: String) -> Category {
+        return Category(
+            id: id,
+            name: name,
+            description: "Description for \(name)",
+            iconName: getIconName(for: name),
+            color: getColor(for: name),
+            isActive: true
+        )
+    }
+    
+    static func getIconName(for category: String) -> String {
+        switch category.lowercased() {
+        case "music": return "music.note"
+        case "sports": return "sportscourt"
+        case "food": return "fork.knife"
+        case "art": return "paintpalette"
+        case "technology", "tech": return "laptopcomputer"
+        case "business": return "briefcase"
+        case "education": return "book"
+        case "health": return "heart"
+        case "travel": return "airplane"
+        case "entertainment": return "film"
+        default: return "star"
+        }
+    }
+    
+    static func getColor(for category: String) -> String {
+        switch category.lowercased() {
+        case "music": return "red"
+        case "sports": return "blue"
+        case "food": return "orange"
+        case "art": return "purple"
+        case "technology", "tech": return "cyan"
+        case "business": return "indigo"
+        case "education": return "teal"
+        case "health": return "green"
+        case "travel": return "yellow"
+        case "entertainment": return "pink"
+        default: return "gray"
         }
     }
 }
 
-// MARK: - Response Types
+// MARK: - API Response Models
 struct CategoryResponse: Codable {
     let success: Bool
     let data: Category
     let message: String?
 }
 
-struct CategoryListResponse: Codable {
+struct CategoriesResponse: Codable {
     let success: Bool
     let data: [Category]
     let message: String?
-    let metadata: ListMetadata
+    let pagination: PaginationInfo?
 } 

@@ -8,716 +8,321 @@
 import Foundation
 import Combine
 
-class EventService: ObservableObject {
+class EventService {
     static let shared = EventService()
-
-    @Published var events: [Event] = []
-    @Published var featuredEvents: [Event] = []
-    @Published var trendingEvents: [Event] = []
-    @Published var nearbyEvents: [Event] = []
-    @Published var userEvents: [Event] = []
-    @Published var userBookings: [EventBooking] = []
-    @Published var isLoading = false
-    @Published var lastError: Error?
-
-    private let networkService = NetworkService.shared
-    private var cancellables = Set<AnyCancellable>()
-
-    private init() {}
-
-    // MARK: - Event Management
-    func getAllEvents(page: Int = 1, limit: Int = 20, filters: EventFilter? = nil) -> AnyPublisher<EventsResponse, Error> {
-        var urlComponents = URLComponents(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.events)")!
-
-        var queryItems: [URLQueryItem] = [
+    
+    // API endpoints
+    private let eventsEndpoint = "events"
+    private let categoriesEndpoint = "categories"
+    private let bookingsEndpoint = "bookings"
+    private let reviewsEndpoint = "reviews"
+    
+    // API service for network calls
+    private let apiService = APIService.shared
+    
+    // MARK: - Event Methods
+    
+    func getEvents(page: Int = 1, limit: Int = 20, filters: EventFilters? = nil) async throws -> EventsResponse {
+        var queryItems = [
             URLQueryItem(name: "page", value: "\(page)"),
             URLQueryItem(name: "limit", value: "\(limit)")
         ]
-
-        // Add filters if provided
+        
         if let filters = filters {
-            if let search = filters.search {
-                queryItems.append(URLQueryItem(name: "search", value: search))
-            }
             if let categoryId = filters.categoryId {
                 queryItems.append(URLQueryItem(name: "categoryId", value: categoryId))
             }
-            if let eventType = filters.eventType {
-                queryItems.append(URLQueryItem(name: "eventType", value: eventType.rawValue))
+            
+            if let searchQuery = filters.searchQuery, !searchQuery.isEmpty {
+                queryItems.append(URLQueryItem(name: "search", value: searchQuery))
             }
+            
+            if let location = filters.location, let lat = location.coordinates?[0], let lng = location.coordinates?[1] {
+                queryItems.append(URLQueryItem(name: "lat", value: "\(lat)"))
+                queryItems.append(URLQueryItem(name: "lng", value: "\(lng)"))
+                
+                if let radius = filters.radius {
+                    queryItems.append(URLQueryItem(name: "radius", value: "\(radius)"))
+                }
+            }
+            
             if let startDate = filters.startDate {
-                queryItems.append(URLQueryItem(name: "startDate", value: ISO8601DateFormatter().string(from: startDate)))
+                queryItems.append(URLQueryItem(name: "startDate", value: startDate))
             }
+            
             if let endDate = filters.endDate {
-                queryItems.append(URLQueryItem(name: "endDate", value: ISO8601DateFormatter().string(from: endDate)))
+                queryItems.append(URLQueryItem(name: "endDate", value: endDate))
             }
+            
             if let minPrice = filters.minPrice {
                 queryItems.append(URLQueryItem(name: "minPrice", value: "\(minPrice)"))
             }
+            
             if let maxPrice = filters.maxPrice {
                 queryItems.append(URLQueryItem(name: "maxPrice", value: "\(maxPrice)"))
             }
-            if let location = filters.location {
-                queryItems.append(URLQueryItem(name: "location", value: location))
-            }
-            if let latitude = filters.latitude {
-                queryItems.append(URLQueryItem(name: "latitude", value: "\(latitude)"))
-            }
-            if let longitude = filters.longitude {
-                queryItems.append(URLQueryItem(name: "longitude", value: "\(longitude)"))
-            }
-            if let radius = filters.radius {
-                queryItems.append(URLQueryItem(name: "radius", value: "\(radius)"))
-            }
-            if let isOnline = filters.isOnline {
-                queryItems.append(URLQueryItem(name: "isOnline", value: "\(isOnline)"))
-            }
-            if let isFeatured = filters.isFeatured {
-                queryItems.append(URLQueryItem(name: "isFeatured", value: "\(isFeatured)"))
-            }
-            if let hasAvailableSpots = filters.hasAvailableSpots {
-                queryItems.append(URLQueryItem(name: "hasAvailableSpots", value: "\(hasAvailableSpots)"))
-            }
+            
             if let sortBy = filters.sortBy {
-                queryItems.append(URLQueryItem(name: "sortBy", value: sortBy.rawValue))
+                queryItems.append(URLQueryItem(name: "sortBy", value: sortBy))
             }
+            
             if let sortOrder = filters.sortOrder {
-                queryItems.append(URLQueryItem(name: "sortOrder", value: sortOrder.rawValue))
+                queryItems.append(URLQueryItem(name: "sortOrder", value: sortOrder))
             }
         }
-
-        urlComponents.queryItems = queryItems
-
-        return networkService.request(url: urlComponents.url!)
-            .handleEvents(receiveOutput: { [weak self] (response: EventsResponse) in
-                if response.success, let eventsData = response.data {
-                    DispatchQueue.main.async {
-                        if page == 1 {
-                            self?.events = eventsData.events
-                        } else {
-                            self?.events.append(contentsOf: eventsData.events)
-                        }
-                    }
-                }
-            })
-            .eraseToAnyPublisher()
+        
+        return try await apiService.request(
+            endpoint: eventsEndpoint,
+            method: "GET",
+            queryItems: queryItems
+        )
     }
-
-    func getEventById(_ eventId: String) -> AnyPublisher<EventResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.eventDetails.replacingOccurrences(of: "{id}", with: eventId))")!
-
-        return networkService.request(url: url)
-            .eraseToAnyPublisher()
+    
+    func getEventById(eventId: String) async throws -> Event {
+        let response: EventResponse = try await apiService.request(
+            endpoint: "\(eventsEndpoint)/\(eventId)",
+            method: "GET"
+        )
+        
+        return response.data
     }
-
-    func createEvent(_ eventRequest: EventRequest) -> AnyPublisher<EventResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.createEvent)")!
-
-        return networkService.request(url: url, method: .POST, body: eventRequest)
-            .eraseToAnyPublisher()
+    
+    func createEvent(event: CreateEventRequest) async throws -> Event {
+        let data = try JSONEncoder().encode(event)
+        
+        let response: EventResponse = try await apiService.request(
+            endpoint: eventsEndpoint,
+            method: "POST",
+            body: data
+        )
+        
+        return response.data
     }
-
-    func updateEvent(_ eventId: String, eventRequest: EventRequest) -> AnyPublisher<EventResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.updateEvent.replacingOccurrences(of: "{id}", with: eventId))")!
-
-        return networkService.request(url: url, method: .PUT, body: eventRequest)
-            .eraseToAnyPublisher()
+    
+    func updateEvent(eventId: String, event: UpdateEventRequest) async throws -> Event {
+        let data = try JSONEncoder().encode(event)
+        
+        let response: EventResponse = try await apiService.request(
+            endpoint: "\(eventsEndpoint)/\(eventId)",
+            method: "PUT",
+            body: data
+        )
+        
+        return response.data
     }
-
-    func deleteEvent(_ eventId: String) -> AnyPublisher<EventResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.deleteEvent.replacingOccurrences(of: "{id}", with: eventId))")!
-
-        return networkService.request(url: url, method: .DELETE)
-            .eraseToAnyPublisher()
+    
+    func deleteEvent(eventId: String) async throws -> Bool {
+        let response: ApiResponse<Bool> = try await apiService.request(
+            endpoint: "\(eventsEndpoint)/\(eventId)",
+            method: "DELETE"
+        )
+        
+        return response.success
     }
-
-    // MARK: - Event Search
-    func searchEvents(query: String, filters: EventFilter? = nil) -> AnyPublisher<EventsResponse, Error> {
-        var urlComponents = URLComponents(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.searchEvents)")!
-
-        var queryItems: [URLQueryItem] = [
-            URLQueryItem(name: "q", value: query)
-        ]
-
-        // Add filters if provided
-        if let filters = filters {
-            if let categoryId = filters.categoryId {
-                queryItems.append(URLQueryItem(name: "categoryId", value: categoryId))
-            }
-            if let eventType = filters.eventType {
-                queryItems.append(URLQueryItem(name: "eventType", value: eventType.rawValue))
-            }
-            if let minPrice = filters.minPrice {
-                queryItems.append(URLQueryItem(name: "minPrice", value: "\(minPrice)"))
-            }
-            if let maxPrice = filters.maxPrice {
-                queryItems.append(URLQueryItem(name: "maxPrice", value: "\(maxPrice)"))
-            }
-            if let location = filters.location {
-                queryItems.append(URLQueryItem(name: "location", value: location))
-            }
-            if let sortBy = filters.sortBy {
-                queryItems.append(URLQueryItem(name: "sortBy", value: sortBy.rawValue))
-            }
-            if let sortOrder = filters.sortOrder {
-                queryItems.append(URLQueryItem(name: "sortOrder", value: sortOrder.rawValue))
-            }
-        }
-
-        urlComponents.queryItems = queryItems
-
-        return networkService.request(url: urlComponents.url!)
-            .eraseToAnyPublisher()
-    }
-
-    // MARK: - Featured and Trending Events
-    func getFeaturedEvents(limit: Int = 10) -> AnyPublisher<EventsResponse, Error> {
-        var urlComponents = URLComponents(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.featuredEvents)")!
-        urlComponents.queryItems = [URLQueryItem(name: "limit", value: "\(limit)")]
-
-        return networkService.request(url: urlComponents.url!)
-            .handleEvents(receiveOutput: { [weak self] (response: EventsResponse) in
-                if response.success, let eventsData = response.data {
-                    DispatchQueue.main.async {
-                        self?.featuredEvents = eventsData.events
-                    }
-                }
-            })
-            .eraseToAnyPublisher()
-    }
-
-    func getTrendingEvents(period: String = "week", limit: Int = 10) -> AnyPublisher<EventsResponse, Error> {
-        var urlComponents = URLComponents(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.trendingEvents)")!
-        urlComponents.queryItems = [
-            URLQueryItem(name: "period", value: period),
+    
+    func getEventsByCategory(categoryId: String, page: Int = 1, limit: Int = 20) async throws -> EventsResponse {
+        let queryItems = [
+            URLQueryItem(name: "categoryId", value: categoryId),
+            URLQueryItem(name: "page", value: "\(page)"),
             URLQueryItem(name: "limit", value: "\(limit)")
         ]
-
-        return networkService.request(url: urlComponents.url!)
-            .handleEvents(receiveOutput: { [weak self] (response: EventsResponse) in
-                if response.success, let eventsData = response.data {
-                    DispatchQueue.main.async {
-                        self?.trendingEvents = eventsData.events
-                    }
-                }
-            })
-            .eraseToAnyPublisher()
+        
+        return try await apiService.request(
+            endpoint: eventsEndpoint,
+            method: "GET",
+            queryItems: queryItems
+        )
     }
-
-    func getNearbyEvents(latitude: Double, longitude: Double, radius: Double = 10.0, limit: Int = 10) -> AnyPublisher<EventsResponse, Error> {
-        var urlComponents = URLComponents(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.nearbyEvents)")!
-        urlComponents.queryItems = [
-            URLQueryItem(name: "latitude", value: "\(latitude)"),
-            URLQueryItem(name: "longitude", value: "\(longitude)"),
+    
+    func getEventsByUser(userId: String, page: Int = 1, limit: Int = 20) async throws -> EventsResponse {
+        let queryItems = [
+            URLQueryItem(name: "userId", value: userId),
+            URLQueryItem(name: "page", value: "\(page)"),
+            URLQueryItem(name: "limit", value: "\(limit)")
+        ]
+        
+        return try await apiService.request(
+            endpoint: eventsEndpoint,
+            method: "GET",
+            queryItems: queryItems
+        )
+    }
+    
+    func searchEvents(query: String, page: Int = 1, limit: Int = 20) async throws -> EventsResponse {
+        let queryItems = [
+            URLQueryItem(name: "search", value: query),
+            URLQueryItem(name: "page", value: "\(page)"),
+            URLQueryItem(name: "limit", value: "\(limit)")
+        ]
+        
+        return try await apiService.request(
+            endpoint: eventsEndpoint,
+            method: "GET",
+            queryItems: queryItems
+        )
+    }
+    
+    func getNearbyEvents(latitude: Double, longitude: Double, radius: Int = 10, page: Int = 1, limit: Int = 20) async throws -> EventsResponse {
+        let queryItems = [
+            URLQueryItem(name: "lat", value: "\(latitude)"),
+            URLQueryItem(name: "lng", value: "\(longitude)"),
             URLQueryItem(name: "radius", value: "\(radius)"),
-            URLQueryItem(name: "limit", value: "\(limit)")
-        ]
-
-        return networkService.request(url: urlComponents.url!)
-            .handleEvents(receiveOutput: { [weak self] (response: EventsResponse) in
-                if response.success, let eventsData = response.data {
-                    DispatchQueue.main.async {
-                        self?.nearbyEvents = eventsData.events
-                    }
-                }
-            })
-            .eraseToAnyPublisher()
-    }
-
-    // MARK: - Event Categories
-    func getEventsByCategory(_ categoryId: String, page: Int = 1, limit: Int = 20) -> AnyPublisher<EventsResponse, Error> {
-        var urlComponents = URLComponents(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.eventsByCategory.replacingOccurrences(of: "{categoryId}", with: categoryId))")!
-        urlComponents.queryItems = [
             URLQueryItem(name: "page", value: "\(page)"),
             URLQueryItem(name: "limit", value: "\(limit)")
         ]
-
-        return networkService.request(url: urlComponents.url!)
-            .eraseToAnyPublisher()
+        
+        return try await apiService.request(
+            endpoint: "\(eventsEndpoint)/nearby",
+            method: "GET",
+            queryItems: queryItems
+        )
     }
-
-    // MARK: - User Events
-    func getUserAttendingEvents() -> AnyPublisher<EventsResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.getUserEvents)?type=attending")!
-
-        return networkService.request(url: url)
-            .eraseToAnyPublisher()
-    }
-
-    func getUserCreatedEvents() -> AnyPublisher<EventsResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.getUserEvents)?type=created")!
-
-        return networkService.request(url: url)
-            .handleEvents(receiveOutput: { [weak self] (response: EventsResponse) in
-                if response.success, let eventsData = response.data {
-                    DispatchQueue.main.async {
-                        self?.userEvents = eventsData.events
-                    }
-                }
-            })
-            .eraseToAnyPublisher()
-    }
-
-    func getUserBookings() -> AnyPublisher<EventBookingsResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.getUserBookings)")!
-
-        return networkService.request(url: url)
-            .handleEvents(receiveOutput: { [weak self] (response: EventBookingsResponse) in
-                if response.success, let bookings = response.data {
-                    DispatchQueue.main.async {
-                        self?.userBookings = bookings
-                    }
-                }
-            })
-            .eraseToAnyPublisher()
-    }
-
-    // MARK: - Event Participation
-    func joinEvent(_ eventId: String) -> AnyPublisher<EventResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.joinEvent.replacingOccurrences(of: "{id}", with: eventId))")!
-
-        return networkService.request(url: url, method: .POST)
-            .eraseToAnyPublisher()
-    }
-
-    func leaveEvent(_ eventId: String) -> AnyPublisher<EventResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.leaveEvent.replacingOccurrences(of: "{id}", with: eventId))")!
-
-        return networkService.request(url: url, method: .POST)
-            .eraseToAnyPublisher()
-    }
-
-    func bookEvent(_ eventId: String, bookingRequest: EventBookingRequest) -> AnyPublisher<EventBookingResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.bookEvent.replacingOccurrences(of: "{id}", with: eventId))")!
-
-        return networkService.request(url: url, method: .POST, body: bookingRequest)
-            .eraseToAnyPublisher()
-    }
-
-    func cancelBooking(_ eventId: String, bookingId: String) -> AnyPublisher<EventBookingResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.cancelBooking.replacingOccurrences(of: "{id}", with: eventId).replacingOccurrences(of: "{bookingId}", with: bookingId))")!
-
-        return networkService.request(url: url, method: .DELETE)
-            .eraseToAnyPublisher()
-    }
-
-    // MARK: - Event Reviews
-    func getEventReviews(_ eventId: String, page: Int = 1, limit: Int = 20) -> AnyPublisher<EventReviewsResponse, Error> {
-        var urlComponents = URLComponents(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.eventReviews.replacingOccurrences(of: "{id}", with: eventId))")!
-        urlComponents.queryItems = [
+    
+    func getEventReviews(eventId: String, page: Int = 1, limit: Int = 20) async throws -> ReviewsResponse {
+        let queryItems = [
             URLQueryItem(name: "page", value: "\(page)"),
             URLQueryItem(name: "limit", value: "\(limit)")
         ]
-
-        return networkService.request(url: urlComponents.url!)
-            .eraseToAnyPublisher()
+        
+        return try await apiService.request(
+            endpoint: "\(eventsEndpoint)/\(eventId)/reviews",
+            method: "GET",
+            queryItems: queryItems
+        )
     }
-
-    func addEventReview(_ eventId: String, reviewRequest: EventReviewRequest) -> AnyPublisher<EventReviewResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.eventReviews.replacingOccurrences(of: "{id}", with: eventId))")!
-
-        return networkService.request(url: url, method: .POST, body: reviewRequest)
-            .eraseToAnyPublisher()
+    
+    func addEventReview(eventId: String, review: CreateReviewRequest) async throws -> Review {
+        let data = try JSONEncoder().encode(review)
+        
+        let response: ReviewResponse = try await apiService.request(
+            endpoint: "\(eventsEndpoint)/\(eventId)/reviews",
+            method: "POST",
+            body: data
+        )
+        
+        return response.data
     }
-
-    func updateEventReview(_ eventId: String, reviewId: String, reviewRequest: EventReviewRequest) -> AnyPublisher<EventReviewResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.eventReviews.replacingOccurrences(of: "{id}", with: eventId))/\(reviewId)")!
-
-        return networkService.request(url: url, method: .PUT, body: reviewRequest)
-            .eraseToAnyPublisher()
+    
+    func bookEvent(eventId: String, booking: CreateBookingRequest) async throws -> Booking {
+        let data = try JSONEncoder().encode(booking)
+        
+        let response: BookingResponse = try await apiService.request(
+            endpoint: "\(eventsEndpoint)/\(eventId)/bookings",
+            method: "POST",
+            body: data
+        )
+        
+        return response.data
     }
-
-    func deleteEventReview(_ eventId: String, reviewId: String) -> AnyPublisher<EventReviewResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.eventReviews.replacingOccurrences(of: "{id}", with: eventId))/\(reviewId)")!
-
-        return networkService.request(url: url, method: .DELETE)
-            .eraseToAnyPublisher()
-    }
-
-    func markReviewHelpful(_ eventId: String, reviewId: String) -> AnyPublisher<EventReviewResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.eventReviews.replacingOccurrences(of: "{id}", with: eventId))/\(reviewId)/helpful")!
-
-        return networkService.request(url: url, method: .POST)
-            .eraseToAnyPublisher()
-    }
-
-    func reportEventReview(_ eventId: String, reviewId: String, reportRequest: ReportRequest) -> AnyPublisher<ReportResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.eventReviews.replacingOccurrences(of: "{id}", with: eventId))/\(reviewId)/report")!
-
-        return networkService.request(url: url, method: .POST, body: reportRequest)
-            .eraseToAnyPublisher()
-    }
-
-    // MARK: - Event Attendees
-    func getEventAttendees(_ eventId: String, page: Int = 1, limit: Int = 20) -> AnyPublisher<EventAttendeesResponse, Error> {
-        var urlComponents = URLComponents(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.eventAttendees.replacingOccurrences(of: "{id}", with: eventId))")!
-        urlComponents.queryItems = [
-            URLQueryItem(name: "page", value: "\(page)"),
-            URLQueryItem(name: "limit", value: "\(limit)")
+    
+    func uploadEventImage(eventId: String, imageData: Data, fileName: String) async throws -> String {
+        let multipartData = [
+            "image": MultipartData(
+                data: imageData,
+                mimeType: "image/jpeg",
+                filename: fileName
+            )
         ]
-
-        return networkService.request(url: urlComponents.url!)
-            .eraseToAnyPublisher()
+        
+        let response: ImageUploadResponse = try await apiService.request(
+            endpoint: "\(eventsEndpoint)/\(eventId)/images",
+            method: "POST",
+            multipartData: multipartData
+        )
+        
+        return response.imageUrl
     }
-
-    // MARK: - Event Media
-    func uploadEventMedia(_ eventId: String, mediaData: Data, fileName: String, mimeType: String) -> AnyPublisher<EventMediaResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.uploadEventMedia.replacingOccurrences(of: "{id}", with: eventId))")!
-
-        return networkService.upload(url: url, data: mediaData, fileName: fileName, mimeType: mimeType)
-            .eraseToAnyPublisher()
-    }
-
-    // MARK: - Event Analytics
-    func getEventAnalytics(_ eventId: String) -> AnyPublisher<EventAnalyticsResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)\(APIConfig.Endpoints.eventAnalytics.replacingOccurrences(of: "{id}", with: eventId))")!
-
-        return networkService.request(url: url)
-            .eraseToAnyPublisher()
-    }
-
-    // MARK: - AI-Enhanced Features
-    func createOptimizedEvent(_ eventRequest: EventRequest) -> AnyPublisher<EventResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)/events/create-optimized")!
-
-        return networkService.request(url: url, method: .POST, body: eventRequest)
-            .eraseToAnyPublisher()
-    }
-
-    func getEventOptimizations(_ eventRequest: EventRequest) -> AnyPublisher<EventOptimizationsResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)/events/optimize")!
-
-        return networkService.request(url: url, method: .POST, body: eventRequest)
-            .eraseToAnyPublisher()
-    }
-
-    func autoGenerateEvent(_ basicData: EventGenerationRequest) -> AnyPublisher<EventResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)/events/auto-generate")!
-
-        return networkService.request(url: url, method: .POST, body: basicData)
-            .eraseToAnyPublisher()
-    }
-
-    // MARK: - Event Suggestions
-    func getEventSuggestions(limit: Int = 10) -> AnyPublisher<EventsResponse, Error> {
-        var urlComponents = URLComponents(string: "\(APIConfig.baseURL)/events/suggestions")!
-        urlComponents.queryItems = [URLQueryItem(name: "limit", value: "\(limit)")]
-
-        return networkService.request(url: urlComponents.url!)
-            .eraseToAnyPublisher()
-    }
-
-    // MARK: - Event Sharing
-    func shareEvent(_ eventId: String, shareRequest: EventShareRequest) -> AnyPublisher<EventShareResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)/events/\(eventId)/share")!
-
-        return networkService.request(url: url, method: .POST, body: shareRequest)
-            .eraseToAnyPublisher()
-    }
-
-    func reportEvent(_ eventId: String, reportRequest: ReportRequest) -> AnyPublisher<ReportResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)/events/\(eventId)/report")!
-
-        return networkService.request(url: url, method: .POST, body: reportRequest)
-            .eraseToAnyPublisher()
-    }
-
-    // MARK: - Organizer Management
-    func followOrganizer(_ organizerId: String) -> AnyPublisher<FollowResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)/events/organizer/\(organizerId)/follow")!
-
-        return networkService.request(url: url, method: .POST)
-            .eraseToAnyPublisher()
-    }
-
-    func unfollowOrganizer(_ organizerId: String) -> AnyPublisher<FollowResponse, Error> {
-        let url = URL(string: "\(APIConfig.baseURL)/events/organizer/\(organizerId)/follow")!
-
-        return networkService.request(url: url, method: .DELETE)
-            .eraseToAnyPublisher()
-    }
-
-    func getOrganizerEvents(_ organizerId: String, page: Int = 1, limit: Int = 20) -> AnyPublisher<EventsResponse, Error> {
-        var urlComponents = URLComponents(string: "\(APIConfig.baseURL)/events/organizer/\(organizerId)")!
-        urlComponents.queryItems = [
-            URLQueryItem(name: "page", value: "\(page)"),
-            URLQueryItem(name: "limit", value: "\(limit)")
-        ]
-
-        return networkService.request(url: urlComponents.url!)
-            .eraseToAnyPublisher()
-    }
-
-    // MARK: - Utility Methods
-    func formatEventDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
-    }
-
-    func formatEventDuration(_ startDate: Date, _ endDate: Date) -> String {
-        let interval = endDate.timeIntervalSince(startDate)
-        let hours = Int(interval) / 3600
-        let minutes = Int(interval) % 3600 / 60
-
-        if hours > 0 {
-            return "\(hours)h \(minutes)m"
-        } else {
-            return "\(minutes)m"
-        }
-    }
-
-    func formatEventPrice(_ price: Double, currency: String = "INR") -> String {
-        if price == 0 {
-            return "Free"
-        }
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = currency
-        return formatter.string(from: NSNumber(value: price)) ?? "\(currency) \(price)"
-    }
-
-    func getEventStatus(_ event: Event) -> String {
-        let now = Date()
-        if now < event.startDate {
-            return "Upcoming"
-        } else if now >= event.startDate && now <= event.endDate {
-            return "Ongoing"
-        } else {
-            return "Completed"
-        }
-    }
-
-    func getEventTypeIcon(_ eventType: EventType) -> String {
-        return eventType.rawValue
-    }
-
-    func calculateDistance(from userLocation: CLLocation, to eventLocation: CLLocation) -> Double {
-        return userLocation.distance(from: eventLocation) / 1000.0 // Convert to kilometers
-    }
-
-    func isEventFavorited(_ eventId: String) -> Bool {
-        // Check if event is in user's favorites
-        // This would typically be stored in UserDefaults or Core Data
-        return UserDefaults.standard.bool(forKey: "favorite_\(eventId)")
-    }
-
-    func toggleEventFavorite(_ eventId: String) {
-        let currentState = isEventFavorited(eventId)
-        UserDefaults.standard.set(!currentState, forKey: "favorite_\(eventId)")
-    }
-
-    func getEventAvailability(_ event: Event) -> String {
-        guard let maxAttendees = event.maxAttendees else {
-            return "Unlimited"
-        }
-
-        let available = maxAttendees - event.currentAttendees
-        if available <= 0 {
-            return "Full"
-        } else if available <= 5 {
-            return "Only \(available) spots left"
-        } else {
-            return "\(available) spots available"
-        }
-    }
-
-    func canUserJoinEvent(_ event: Event) -> Bool {
-        // Check if user can join the event
-        let now = Date()
-        let isNotFull = event.maxAttendees == nil || event.currentAttendees < event.maxAttendees!
-        let isNotPast = event.startDate > now
-        let isPublic = event.visibility == .public
-
-        return isNotFull && isNotPast && isPublic
-    }
-
-    func getEventRegistrationDeadline(_ event: Event) -> Date? {
-        // Return registration deadline (e.g., 1 hour before event start)
-        return Calendar.current.date(byAdding: .hour, value: -1, to: event.startDate)
-    }
-
-    func isRegistrationOpen(_ event: Event) -> Bool {
-        guard let deadline = getEventRegistrationDeadline(event) else {
-            return event.startDate > Date()
-        }
-        return Date() < deadline
-    }
-}
-
-// MARK: - Response Models
-struct EventBookingsResponse: Codable {
-    let success: Bool
-    let data: [EventBooking]?
-    let message: String?
-    let error: String?
-}
-
-struct EventReviewsResponse: Codable {
-    let success: Bool
-    let data: EventReviewsData?
-    let message: String?
-    let error: String?
-}
-
-struct EventReviewsData: Codable {
-    let reviews: [Review]
-    let total: Int
-    let page: Int
-    let limit: Int
-    let averageRating: Double
-}
-
-struct EventReviewResponse: Codable {
-    let success: Bool
-    let data: Review?
-    let message: String?
-    let error: String?
-}
-
-struct EventAttendeesResponse: Codable {
-    let success: Bool
-    let data: EventAttendeesData?
-    let message: String?
-    let error: String?
-}
-
-struct EventAttendeesData: Codable {
-    let attendees: [EventAttendee]
-    let total: Int
-    let page: Int
-    let limit: Int
-}
-
-struct EventAttendee: Identifiable, Codable {
-    let id: String
-    let name: String
-    let avatar: String?
-    let joinedAt: Date
-    let isOrganizer: Bool
-    let role: String?
-}
-
-struct EventMediaResponse: Codable {
-    let success: Bool
-    let data: EventMediaData?
-    let message: String?
-    let error: String?
-}
-
-struct EventMediaData: Codable {
-    let mediaUrls: [String]
-    let thumbnails: [String]
-}
-
-struct EventOptimizationsResponse: Codable {
-    let success: Bool
-    let data: EventOptimizations?
-    let message: String?
-    let error: String?
-}
-
-struct EventOptimizations: Codable {
-    let titleSuggestions: [String]
-    let descriptionSuggestions: [String]
-    let pricingRecommendations: [PricingRecommendation]
-    let timingRecommendations: [TimingRecommendation]
-    let categoryRecommendations: [String]
-    let tagSuggestions: [String]
-}
-
-struct PricingRecommendation: Codable {
-    let price: Double
-    let reasoning: String
-    let expectedAttendees: Int
-}
-
-struct TimingRecommendation: Codable {
-    let startTime: Date
-    let endTime: Date
-    let reasoning: String
-    let expectedAttendance: Double
-}
-
-struct EventShareResponse: Codable {
-    let success: Bool
-    let data: EventShareData?
-    let message: String?
-    let error: String?
-}
-
-struct EventShareData: Codable {
-    let shareUrl: String
-    let shareCount: Int
-}
-
-struct FollowResponse: Codable {
-    let success: Bool
-    let data: FollowData?
-    let message: String?
-    let error: String?
-}
-
-struct FollowData: Codable {
-    let isFollowing: Bool
-    let followersCount: Int
 }
 
 // MARK: - Request Models
-struct EventBookingRequest: Codable {
-    let ticketTypeId: String?
-    let quantity: Int
-    let attendeeDetails: [AttendeeDetail]
-    let notes: String?
-    let paymentMethodId: String?
+struct EventFilters {
+    let categoryId: String?
+    let searchQuery: String?
+    let location: Location?
+    let radius: Int?
+    let startDate: String?
+    let endDate: String?
+    let minPrice: Double?
+    let maxPrice: Double?
+    let sortBy: String?
+    let sortOrder: String?
 }
 
-struct EventBookingResponse: Codable {
-    let success: Bool
-    let data: EventBooking?
-    let message: String?
-    let error: String?
+struct CreateEventRequest: Codable {
+    let title: String
+    let description: String
+    let categoryId: String
+    let location: Location
+    let startDate: String
+    let endDate: String
+    let price: Double?
+    let capacity: Int?
+    let isPublic: Bool
+    let images: [String]?
+    let tags: [String]?
 }
 
-struct EventReviewRequest: Codable {
+struct UpdateEventRequest: Codable {
+    let title: String?
+    let description: String?
+    let categoryId: String?
+    let location: Location?
+    let startDate: String?
+    let endDate: String?
+    let price: Double?
+    let capacity: Int?
+    let isPublic: Bool?
+    let images: [String]?
+    let tags: [String]?
+}
+
+struct CreateReviewRequest: Codable {
     let rating: Int
-    let comment: String
+    let comment: String?
     let images: [String]?
 }
 
-struct EventGenerationRequest: Codable {
-    let title: String
-    let description: String
-    let category: String
-    let eventType: EventType
-    let targetAudience: String?
-    let budget: Double?
-    let duration: Int? // in minutes
-    let preferences: [String: String]?
+struct CreateBookingRequest: Codable {
+    let quantity: Int
+    let paymentMethod: String
+    let notes: String?
 }
 
-struct EventShareRequest: Codable {
-    let platform: String
-    let customMessage: String?
-}
-
-struct ReportRequest: Codable {
-    let reason: String
-    let description: String
-    let evidence: [String]?
-}
-
-struct ReportResponse: Codable {
+// MARK: - Response Models
+struct EventsResponse: Codable {
     let success: Bool
-    let data: ReportData?
+    let data: [Event]
+    let pagination: PaginationInfo?
     let message: String?
-    let error: String?
 }
 
-struct ReportData: Codable {
-    let reportId: String
-    let status: String
+struct EventResponse: Codable {
+    let success: Bool
+    let data: Event
+    let message: String?
 }
 
-import CoreLocation
+struct ReviewsResponse: Codable {
+    let success: Bool
+    let data: [Review]
+    let pagination: PaginationInfo?
+    let message: String?
+}
+
+struct ReviewResponse: Codable {
+    let success: Bool
+    let data: Review
+    let message: String?
+}
+
+struct BookingResponse: Codable {
+    let success: Bool
+    let data: Booking
+    let message: String?
+}
+
+struct ImageUploadResponse: Codable {
+    let success: Bool
+    let imageUrl: String
+    let message: String?
+}

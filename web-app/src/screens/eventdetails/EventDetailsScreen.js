@@ -25,9 +25,11 @@ import {
   AttachMoney,
   Event,
 } from "@mui/icons-material";
-import { eventService } from "../../services/eventService";
+import EventService from "../../services/eventService";
 import { externalEventService } from "../../services/ExternalEventService";
 import "./EventDetailsScreen.css";
+
+const eventService = new EventService();
 
 const EventDetailsScreen = () => {
   const { eventId } = useParams();
@@ -61,7 +63,7 @@ const EventDetailsScreen = () => {
         }
       } else {
         // Load internal event
-        eventData = await eventService.getEventById(eventId);
+        eventData = await eventService.getEventDetails(eventId);
       }
 
       setEvent(eventData);
