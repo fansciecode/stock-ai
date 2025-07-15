@@ -57,7 +57,8 @@ const allowedOrigins = [
     'http://127.0.0.1:3000',
     'http://127.0.0.1:5000',
     'https://ibcm.app',
-    'https://www.ibcm.app'
+    'https://www.ibcm.app',
+    'https://admin.ibcm.app'
 ].filter(Boolean); // Remove any undefined values
 
 console.log('Allowed CORS origins:', allowedOrigins);
