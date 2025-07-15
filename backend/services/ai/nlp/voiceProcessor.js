@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import axios from 'axios';
 import ffmpeg from 'fluent-ffmpeg';
 import { SpeechClient } from '@google-cloud/speech';
 import { readFileSync, writeFileSync } from 'fs';
@@ -6,9 +6,8 @@ import path from 'path';
 import { LanguageDetector } from '../../utils/languageDetector.js';
 import { AudioModel } from '../../../models/audioModel.js';
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-});
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8001';
+const AI_SERVICE_API_KEY = process.env.AI_SERVICE_API_KEY || 'development_key';
 
 const speechClient = new SpeechClient({
     keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS
@@ -20,13 +19,10 @@ export class VoiceProcessor {
         try {
             // First enhance the audio
             const enhancedAudio = await this.enhanceAudio(audioData);
-            
             // Then transcribe it
             const transcription = await this.transcribeAudio(enhancedAudio);
-            
             // Finally analyze the intent
             const intent = await this.analyzeIntent(transcription);
-            
             return {
                 text: {
                     raw: transcription.text,
@@ -58,27 +54,21 @@ export class VoiceProcessor {
     // 2. Audio Transcription
     async transcribeAudio(audioData) {
         try {
-            // Try OpenAI's Whisper API first
+            // Try IBCM-ai microservice first
             try {
-                const response = await openai.audio.transcriptions.create({
-                    file: audioData.path,
-                    model: "whisper-1"
+                const response = await axios.post(`${AI_SERVICE_URL}/transcribe-audio`, {
+                    audio_path: audioData.path
+                }, {
+                    headers: { 'X-API-KEY': AI_SERVICE_API_KEY }
                 });
-                
-                return {
-                    text: response.text,
-                    language: response.language,
-                    confidence: 0.95 // Whisper typically has high confidence
-                };
-            } catch (openaiError) {
-                console.warn('OpenAI transcription failed, falling back to Google Speech:', openaiError);
-                
+                return response.data;
+            } catch (aiError) {
+                console.warn('IBCM-ai transcription failed, falling back to Google Speech:', aiError);
                 // Fallback to Google Speech-to-Text
                 const audioContent = readFileSync(audioData.path);
                 const audio = {
                     content: audioContent.toString('base64')
                 };
-
                 const config = {
                     encoding: 'LINEAR16',
                     sampleRateHertz: 16000,
@@ -86,17 +76,14 @@ export class VoiceProcessor {
                     enableAutomaticPunctuation: true,
                     model: 'latest_long'
                 };
-
                 const request = {
                     audio: audio,
                     config: config
                 };
-
                 const [response] = await speechClient.recognize(request);
                 const transcription = response.results
                     .map(result => result.alternatives[0].transcript)
                     .join('\n');
-
                 return {
                     text: transcription,
                     language: 'en-US',
@@ -136,18 +123,12 @@ export class VoiceProcessor {
     // 4. Intent Analysis
     async analyzeIntent(transcription) {
         try {
-            const response = await openai.chat.completions.create({
-                model: "gpt-4",
-                messages: [{
-                    role: "system",
-                    content: "Analyze the following text for user intent and extract key parameters:"
-                }, {
-                    role: "user",
-                    content: transcription.text
-                }]
+            const response = await axios.post(`${AI_SERVICE_URL}/analyze-intent`, {
+                text: transcription.text
+            }, {
+                headers: { 'X-API-KEY': AI_SERVICE_API_KEY }
             });
-
-            const analysis = response.choices[0].message.content;
+            const analysis = response.data;
             
             return {
                 mainIntent: this.extractMainIntent(analysis),
