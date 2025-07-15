@@ -1,129 +1,56 @@
-import OpenAI from 'openai';
+import axios from 'axios';
 import { CloudinaryService } from '../../utils/cloudinaryService.js';
 import { ImageModel } from '../../../models/imageModel.js';
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-});
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8001';
+const AI_SERVICE_API_KEY = process.env.AI_SERVICE_API_KEY || 'development_key';
 
 export const ImageRecognitionService = {
     // 1. Analyze Event Images
     analyzeEventImage: async (imageData) => {
         try {
-            const analysis = await openai.chat.completions.create({
-                model: "gpt-4-vision-preview",
-                messages: [{
-                    role: "system",
-                    content: "Analyze this event image for content, safety, and relevance"
-                }, {
-                    role: "user",
-                    content: [
-                        { type: "image", image_url: imageData.url }
-                    ]
-                }]
+            const response = await axios.post(`${AI_SERVICE_URL}/analyze-image`, {
+                image_url: imageData.url,
+                type: 'event'
+            }, {
+                headers: { 'X-API-KEY': AI_SERVICE_API_KEY }
             });
-
-            return {
-                content: {
-                    description: extractImageDescription(analysis),
-                    tags: generateImageTags(analysis),
-                    category: determineEventCategory(analysis)
-                },
-                safety: {
-                    isAppropriate: checkContentSafety(analysis),
-                    warnings: identifyContentWarnings(analysis),
-                    restrictions: determineAgeRestrictions(analysis)
-                },
-                quality: {
-                    score: assessImageQuality(imageData),
-                    improvements: suggestImageImprovements(imageData),
-                    optimization: recommendOptimization(imageData)
-                }
-            };
+            return response.data;
         } catch (error) {
             console.error('Event image analysis error:', error);
             return null;
         }
     },
-
     // 2. Process Product Images
     analyzeProductImage: async (imageData) => {
         try {
-            const analysis = await openai.chat.completions.create({
-                model: "gpt-4-vision-preview",
-                messages: [{
-                    role: "system",
-                    content: "Analyze this product image for details and quality"
-                }, {
-                    role: "user",
-                    content: [
-                        { type: "image", image_url: imageData.url }
-                    ]
-                }]
+            const response = await axios.post(`${AI_SERVICE_URL}/analyze-image`, {
+                image_url: imageData.url,
+                type: 'product'
+            }, {
+                headers: { 'X-API-KEY': AI_SERVICE_API_KEY }
             });
-
-            return {
-                product: {
-                    features: extractProductFeatures(analysis),
-                    category: identifyProductCategory(analysis),
-                    attributes: detectProductAttributes(analysis)
-                },
-                presentation: {
-                    quality: assessProductImageQuality(imageData),
-                    background: analyzeBackground(analysis),
-                    lighting: assessLighting(analysis)
-                },
-                recommendations: {
-                    improvements: suggestProductImageImprovements(analysis),
-                    angles: recommendAdditionalAngles(analysis),
-                    display: suggestDisplayOptions(analysis)
-                }
-            };
+            return response.data;
         } catch (error) {
             console.error('Product image analysis error:', error);
             return null;
         }
     },
-
     // 3. Verify Business/User Profile Images
     verifyProfileImage: async (imageData) => {
         try {
-            const analysis = await openai.chat.completions.create({
-                model: "gpt-4-vision-preview",
-                messages: [{
-                    role: "system",
-                    content: "Verify this profile image for authenticity and appropriateness"
-                }, {
-                    role: "user",
-                    content: [
-                        { type: "image", image_url: imageData.url }
-                    ]
-                }]
+            const response = await axios.post(`${AI_SERVICE_URL}/analyze-image`, {
+                image_url: imageData.url,
+                type: 'profile'
+            }, {
+                headers: { 'X-API-KEY': AI_SERVICE_API_KEY }
             });
-
-            return {
-                verification: {
-                    isAuthentic: verifyImageAuthenticity(analysis),
-                    isFace: detectFace(analysis),
-                    isAppropriate: checkProfileImageGuidelines(analysis)
-                },
-                quality: {
-                    resolution: checkResolution(imageData),
-                    clarity: assessClarity(analysis),
-                    composition: analyzeComposition(analysis)
-                },
-                suggestions: {
-                    improvements: suggestProfileImageImprovements(analysis),
-                    cropping: recommendCropping(imageData),
-                    alternatives: suggestAlternativeStyles(analysis)
-                }
-            };
+            return response.data;
         } catch (error) {
             console.error('Profile image verification error:', error);
             return null;
         }
     },
-
     // 4. Bulk Image Processing
     processBulkImages: async (images) => {
         try {
@@ -138,11 +65,10 @@ export const ImageRecognitionService = {
                         case 'profile':
                             return await ImageRecognitionService.verifyProfileImage(image);
                         default:
-                            return await ImageRecognitionService.analyzeGenericImage(image);
+                            return await ImageRecognitionService.analyzeEventImage(image);
                     }
                 })
             );
-
             return {
                 processed: results.filter(r => r !== null),
                 failed: results.filter(r => r === null).length,
@@ -153,8 +79,7 @@ export const ImageRecognitionService = {
             return null;
         }
     },
-
-    // 5. Image Optimization and Enhancement
+    // 5. Image Optimization and Enhancement (unchanged)
     optimizeImage: async (imageData) => {
         try {
             const optimized = await CloudinaryService.optimize(imageData, {
@@ -162,7 +87,6 @@ export const ImageRecognitionService = {
                 format: 'auto',
                 responsive: true
             });
-
             return {
                 optimized: {
                     url: optimized.secure_url,
@@ -189,40 +113,16 @@ export const ImageRecognitionService = {
             return null;
         }
     },
-
     // 6. Image Moderation and Safety
     moderateImage: async (imageData) => {
         try {
-            const moderationResult = await openai.chat.completions.create({
-                model: "gpt-4-vision-preview",
-                messages: [{
-                    role: "system",
-                    content: "Moderate this image for safety and appropriateness"
-                }, {
-                    role: "user",
-                    content: [
-                        { type: "image", image_url: imageData.url }
-                    ]
-                }]
+            const response = await axios.post(`${AI_SERVICE_URL}/analyze-image`, {
+                image_url: imageData.url,
+                type: 'moderation'
+            }, {
+                headers: { 'X-API-KEY': AI_SERVICE_API_KEY }
             });
-
-            return {
-                safety: {
-                    isSafe: determineSafety(moderationResult),
-                    contentWarnings: identifyWarnings(moderationResult),
-                    ageRating: determineAgeRating(moderationResult)
-                },
-                compliance: {
-                    isPlatformCompliant: checkPlatformCompliance(moderationResult),
-                    violations: identifyViolations(moderationResult),
-                    recommendations: generateComplianceRecommendations(moderationResult)
-                },
-                action: {
-                    required: determineRequiredAction(moderationResult),
-                    suggestions: provideModerationSuggestions(moderationResult),
-                    alternatives: suggestAlternatives(moderationResult)
-                }
-            };
+            return response.data;
         } catch (error) {
             console.error('Image moderation error:', error);
             return null;
