@@ -120,7 +120,7 @@ const LandingPage = () => {
           <Col xs={24} md={16} style={{ textAlign: 'center' }}>
             <Title level={2}>See IBCM in Action</Title>
             <video
-              src="/ibcm-explainer.mp4"
+              src="/oneIbcm.mp4"
               controls
               poster="/hero-events.svg"
               style={{ width: '100%', maxWidth: 600, borderRadius: 16, boxShadow: '0 4px 32px rgba(0,0,0,0.08)' }}
@@ -205,7 +205,7 @@ const LandingPage = () => {
                 <b>Leverage analytics</b> to understand user demand, optimize pricing, and promote your business. Get support from the IBCM team for event hosting, sales, and more.
               </Paragraph>
               <div style={{ margin: '24px auto 0', maxWidth: 320 }}>
-                <video src="/ibcm-business.mp4" controls poster="/business-growth.svg" style={{ width: '100%', borderRadius: 12, boxShadow: '0 2px 16px rgba(0,0,0,0.06)' }} />
+                <video src="/twoIBCM.mp4" controls poster="/business-growth.svg" style={{ width: '100%', borderRadius: 12, boxShadow: '0 2px 16px rgba(0,0,0,0.06)' }} />
               </div>
             </Card>
           </Col>
