@@ -57,7 +57,7 @@ const howSteps = [
 
 const LandingPage = () => {
   const animationRef = useRef(null);
-
+  
   useEffect(() => {
     const animationElement = animationRef.current;
     if (animationElement) {

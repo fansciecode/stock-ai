@@ -94,128 +94,128 @@ const App = () => {
   return (
     <AuthProvider>
       <NotificationProvider>
-        <Router>
-          <div className="app">
-            <Routes>
-              {/* Public Landing Page */}
-              <Route path="/" element={<LandingPage />} />
-              
-              {/* All other routes with standard layout */}
-              <Route path="/*" element={
-                <AppLayout>
-                  <Routes>
-                    {/* Auth Routes */}
-                    <Route path="login" element={<Login />} />
-                    <Route path="signup" element={<Signup />} />
-                    <Route path="forgot-password" element={<ForgotPassword />} />
+      <Router>
+        <div className="app">
+          <Routes>
+            {/* Public Landing Page */}
+            <Route path="/" element={<LandingPage />} />
+            
+            {/* All other routes with standard layout */}
+            <Route path="/*" element={
+              <AppLayout>
+                <Routes>
+                  {/* Auth Routes */}
+                  <Route path="login" element={<Login />} />
+                  <Route path="signup" element={<Signup />} />
+                  <Route path="forgot-password" element={<ForgotPassword />} />
 
-                    {/* Main Routes */}
-                    <Route path="home" element={<Home />} />
-                    <Route path="dashboard" element={
-                      <ProtectedRoute>
-                        <Dashboard />
-                      </ProtectedRoute>
-                    } />
-                    
-                    {/* Profile Routes */}
-                    <Route path="profile" element={
-                      <ProtectedRoute>
-                        <Profile />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="user-profile/:userId" element={<UserProfile />} />
-                    <Route path="settings" element={
-                      <ProtectedRoute>
-                        <Settings />
-                      </ProtectedRoute>
-                    } />
-                    
-                    {/* Category Routes */}
-                    <Route path="category-selection" element={
-                      <ProtectedRoute>
-                        <CategorySelection />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="category/:categoryId" element={<CategoryEvents />} />
+                  {/* Main Routes */}
+                  <Route path="home" element={<Home />} />
+                  <Route path="dashboard" element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Profile Routes */}
+                  <Route path="profile" element={
+                    <ProtectedRoute>
+                      <Profile />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="user-profile/:userId" element={<UserProfile />} />
+                  <Route path="settings" element={
+                    <ProtectedRoute>
+                      <Settings />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Category Routes */}
+                  <Route path="category-selection" element={
+                    <ProtectedRoute>
+                      <CategorySelection />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="category/:categoryId" element={<CategoryEvents />} />
 
-                    {/* Event Routes */}
-                    <Route path="events/:eventId" element={<EventDetails />} />
-                    <Route path="create-event" element={
-                      <ProtectedRoute>
-                        <EventCreation />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="event-search" element={<EventSearch />} />
-                    <Route path="browse-events" element={<BrowseEvents />} />
-                    <Route path="event-analytics/:eventId" element={
-                      <ProtectedRoute>
-                        <EventAnalytics />
-                      </ProtectedRoute>
-                    } />
+                  {/* Event Routes */}
+                  <Route path="events/:eventId" element={<EventDetails />} />
+                  <Route path="create-event" element={
+                    <ProtectedRoute>
+                      <EventCreation />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="event-search" element={<EventSearch />} />
+                  <Route path="browse-events" element={<BrowseEvents />} />
+                  <Route path="event-analytics/:eventId" element={
+                    <ProtectedRoute>
+                      <EventAnalytics />
+                    </ProtectedRoute>
+                  } />
 
-                    {/* Order Routes */}
-                    <Route path="orders/:userId" element={
-                      <ProtectedRoute>
-                        <Orders />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="order-details/:orderId" element={
-                      <ProtectedRoute>
-                        <Orders />
-                      </ProtectedRoute>
-                    } />
+                  {/* Order Routes */}
+                  <Route path="orders/:userId" element={
+                    <ProtectedRoute>
+                      <Orders />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="order-details/:orderId" element={
+                    <ProtectedRoute>
+                      <Orders />
+                    </ProtectedRoute>
+                  } />
 
-                    {/* Other Routes */}
-                    <Route path="notifications" element={
-                      <ProtectedRoute>
-                        <Notifications />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="ticket-booking" element={
-                      <ProtectedRoute>
-                        <TicketBooking />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="ticket-details/:ticketId" element={
-                      <ProtectedRoute>
-                        <TicketDetails />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="payment-details/:paymentId" element={
-                      <ProtectedRoute>
-                        <PaymentDetails />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="chat-detail/:chatId" element={
-                      <ProtectedRoute>
-                        <ChatDetail />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="report" element={
-                      <ProtectedRoute>
-                        <Report />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="review" element={
-                      <ProtectedRoute>
-                        <Review />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="location-picker" element={
-                      <ProtectedRoute>
-                        <LocationPicker />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="service-details/:serviceId" element={<ServiceDetails />} />
+                  {/* Other Routes */}
+                  <Route path="notifications" element={
+                    <ProtectedRoute>
+                      <Notifications />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="ticket-booking" element={
+                    <ProtectedRoute>
+                      <TicketBooking />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="ticket-details/:ticketId" element={
+                    <ProtectedRoute>
+                      <TicketDetails />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="payment-details/:paymentId" element={
+                    <ProtectedRoute>
+                      <PaymentDetails />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="chat-detail/:chatId" element={
+                    <ProtectedRoute>
+                      <ChatDetail />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="report" element={
+                    <ProtectedRoute>
+                      <Report />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="review" element={
+                    <ProtectedRoute>
+                      <Review />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="location-picker" element={
+                    <ProtectedRoute>
+                      <LocationPicker />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="service-details/:serviceId" element={<ServiceDetails />} />
 
-                    {/* 404 Route */}
-                    <Route path="*" element={<div>Page not found</div>} />
-                  </Routes>
-                </AppLayout>
-              } />
-            </Routes>
-          </div>
-        </Router>
+                  {/* 404 Route */}
+                  <Route path="*" element={<div>Page not found</div>} />
+                </Routes>
+              </AppLayout>
+            } />
+          </Routes>
+        </div>
+      </Router>
       </NotificationProvider>
     </AuthProvider>
   );
