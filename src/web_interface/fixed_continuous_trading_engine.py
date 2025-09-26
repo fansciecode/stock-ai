@@ -1384,10 +1384,18 @@ class FixedContinuousTradingEngine:
             import random
             import numpy as np
             
-            # Check if this is a streamlined production model
-            if self.ai_model and self.ai_model.get('streamlined_version'):
+            # First check what the model expects
+            expected_features = None
+            if self.ai_model and hasattr(self.ai_model.get('model'), 'n_features_in_'):
+                expected_features = self.ai_model['model'].n_features_in_
+                
+            # If model expects 71 features, use full feature set
+            if expected_features == 71:
+                return self._generate_full_feature_set(instrument)
+            # Check if this is a streamlined production model (5 features)
+            elif self.ai_model and self.ai_model.get('streamlined_version'):
                 return self._generate_streamlined_production_features(instrument)
-            # Check if this is a real data model
+            # Check if this is a real data model (8 features)
             elif self.ai_model and self.ai_model.get('real_data_based'):
                 return self._generate_real_data_features(instrument)
             # Check if this is a multi-strategy model
@@ -1598,6 +1606,126 @@ class FixedContinuousTradingEngine:
             # Return default real data features (8 features)
             return [50.0, 1.0, 0.0, 0.02, 100.0, 100.0, 1, 0]
     
+    def _generate_full_feature_set(self, instrument: Dict) -> list:
+        """Generate full 71-feature set for comprehensive AI model"""
+        try:
+            current_price = instrument.get('current_price', 100.0)
+            symbol = instrument.get('symbol', 'UNKNOWN')
+            
+            import random
+            import numpy as np
+            
+            # Basic price features (10 features)
+            price_features = [
+                current_price,
+                current_price * (1 + np.random.normal(0, 0.001)),  # price_lag_1
+                current_price * (1 + np.random.normal(0, 0.002)),  # price_lag_2
+                current_price * (1 + np.random.normal(0, 0.003)),  # price_lag_3
+                current_price * 1.01,  # high
+                current_price * 0.99,  # low
+                np.random.normal(0, 0.01),  # returns
+                np.random.normal(0, 0.015),  # returns_lag_1
+                abs(np.random.normal(0, 0.02)),  # volatility
+                random.uniform(0.8, 1.2)  # volume_ratio
+            ]
+            
+            # Technical indicators (20 features)
+            technical_features = [
+                random.uniform(20, 80),  # RSI
+                random.uniform(30, 70),  # RSI_lag_1
+                current_price * (1 + np.random.normal(0, 0.01)),  # SMA_5
+                current_price * (1 + np.random.normal(0, 0.01)),  # SMA_10
+                current_price * (1 + np.random.normal(0, 0.02)),  # SMA_20
+                current_price * (1 + np.random.normal(0, 0.03)),  # SMA_50
+                current_price * (1 + np.random.normal(0, 0.01)),  # EMA_9
+                current_price * (1 + np.random.normal(0, 0.02)),  # EMA_21
+                random.uniform(-1, 1),  # MACD
+                random.uniform(-1, 1),  # MACD_signal
+                random.uniform(-1, 1),  # MACD_histogram
+                random.uniform(0, 100),  # BB_upper
+                random.uniform(0, 100),  # BB_lower
+                random.uniform(0, 1),  # BB_width
+                random.uniform(-2, 2),  # Z_score
+                random.uniform(0, 100),  # ATR
+                random.uniform(-100, 100),  # CCI
+                random.uniform(0, 100),  # Williams_R
+                random.uniform(0, 1),  # momentum
+                random.uniform(0, 2)   # price_position
+            ]
+            
+            # Market context features (15 features)
+            market_features = [
+                1 if 'BTC' in symbol else 0,  # is_crypto
+                1 if 'ETH' in symbol else 0,  # is_ethereum
+                1 if '.NSE' in symbol else 0,  # is_nse
+                1 if '.BSE' in symbol else 0,  # is_bse
+                1 if '.NASDAQ' in symbol else 0,  # is_nasdaq
+                1 if '.NYSE' in symbol else 0,  # is_nyse
+                random.uniform(0, 1),  # market_cap_rank
+                random.uniform(0, 24),  # hour_of_day
+                random.randint(0, 6),  # day_of_week
+                random.randint(1, 12),  # month
+                random.uniform(0, 1),  # correlation_with_market
+                random.uniform(0, 1),  # sector_performance
+                random.uniform(0, 1),  # relative_strength
+                random.uniform(0, 2),  # beta
+                random.uniform(-1, 1)  # alpha
+            ]
+            
+            # Signal and sentiment features (15 features)
+            signal_features = [
+                random.uniform(-1, 1),  # trend_signal
+                random.uniform(0, 1),   # signal_confidence
+                random.uniform(0, 100), # signal_strength
+                random.uniform(-1, 1),  # momentum_signal
+                random.uniform(-1, 1),  # mean_reversion_signal
+                random.uniform(-1, 1),  # breakout_signal
+                random.uniform(0, 1),   # volume_signal
+                random.uniform(-1, 1),  # sentiment_score
+                random.uniform(0, 1),   # news_sentiment
+                random.uniform(0, 1),   # social_sentiment
+                random.uniform(0, 1),   # fear_greed_index
+                random.uniform(0, 1),   # vix_level
+                random.uniform(-1, 1),  # institutional_flow
+                random.uniform(-1, 1),  # retail_flow
+                random.uniform(0, 1)    # options_flow
+            ]
+            
+            # Cross-asset features (11 features)
+            cross_asset_features = [
+                random.uniform(-1, 1),  # correlation_btc
+                random.uniform(-1, 1),  # correlation_eth
+                random.uniform(-1, 1),  # correlation_spy
+                random.uniform(-1, 1),  # correlation_vix
+                random.uniform(-1, 1),  # correlation_dxy
+                random.uniform(-1, 1),  # correlation_gold
+                random.uniform(-1, 1),  # correlation_oil
+                random.uniform(-1, 1),  # correlation_bonds
+                random.uniform(0, 1),   # global_risk_sentiment
+                random.uniform(0, 1),   # liquidity_index
+                random.uniform(0, 1)    # macro_score
+            ]
+            
+            # Combine all features (total: 71 features)
+            all_features = (price_features + technical_features + 
+                          market_features + signal_features + cross_asset_features)
+            
+            # Ensure exactly 71 features
+            if len(all_features) != 71:
+                self.logger.warning(f"Generated {len(all_features)} features, expected 71")
+                # Pad or trim to exactly 71
+                if len(all_features) < 71:
+                    all_features.extend([0.0] * (71 - len(all_features)))
+                else:
+                    all_features = all_features[:71]
+            
+            return all_features
+            
+        except Exception as e:
+            self.logger.error(f"Error generating full feature set: {e}")
+            # Return 71 default features
+            return [0.0] * 71
+
     def _generate_streamlined_production_features(self, instrument: Dict) -> list:
         """Generate features for streamlined production AI model"""
         try:

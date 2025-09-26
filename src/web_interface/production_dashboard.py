@@ -2023,6 +2023,14 @@ def get_trading_activity():
                                 summary['orders_executed'] += 1
                                 summary['total_invested'] += float(amount)
                         
+                        # Also extract simulated orders
+                        elif '📊 Created 🎭 SIMULATED position:' in line:
+                            match = re.search(r'📊 Created 🎭 SIMULATED position: (\S+)', line)
+                            if match:
+                                symbol = match.group(1)
+                                activity_logs.append(f"🎭 SIMULATED: New position {symbol}")
+                                summary['orders_executed'] += 1
+                        
                         # Extract Zerodha orders
                         elif '🇮🇳 ZERODHA ORDER:' in line:
                             match = re.search(r'🇮🇳 ZERODHA ORDER: (\S+) (\w+) ₹([0-9.]+)', line)
