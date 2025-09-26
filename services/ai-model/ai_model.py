@@ -26,7 +26,7 @@ sys.path.append(str(Path(__file__).parent.parent / "shared"))
 from utils import setup_logging, get_config
 
 class AIModelService:
-    """AI Model service for trading predictions"""
+    """AI Model service for trading predictions with auto-learning"""
     
     def __init__(self):
         self.logger = setup_logging("ai-model")
@@ -38,21 +38,30 @@ class AIModelService:
         self.feature_columns = []
         self.prediction_cache = {}
         
+        # Auto-learning integration
+        self.auto_learning_enabled = os.getenv("AUTO_LEARNING_ENABLED", "true").lower() == "true"
+        self.auto_learning_pipeline = None
+        
         # Performance metrics
         self.metrics = {
             "total_predictions": 0,
             "avg_prediction_time": 0.0,
             "model_accuracy": 0.0,
             "cache_hits": 0,
-            "service_start_time": datetime.now()
+            "service_start_time": datetime.now(),
+            "auto_learning_status": "initializing"
         }
         
-        self.logger.info("🤖 AI Model Service Initialized")
+        self.logger.info("🤖 AI Model Service Initialized with Auto-Learning")
         
     async def load_model(self):
-        """Load AI model and metadata"""
+        """Load AI model and start auto-learning if enabled"""
         try:
+            # Try to load auto-learning model first
             model_paths = [
+                "models/auto_learning_ai_model.pkl",
+                "../../models/auto_learning_ai_model.pkl", 
+                "/app/models/auto_learning_ai_model.pkl",
                 "../../models/streamlined_production_ai_model.pkl",
                 "models/streamlined_production_ai_model.pkl",
                 "/app/models/streamlined_production_ai_model.pkl"
@@ -66,25 +75,42 @@ class AIModelService:
                     model_data = joblib.load(model_path)
                     self.model = model_data.get("model")
                     self.feature_columns = model_data.get("feature_columns", [])
+                    
+                    # Check if this is an auto-learning model
+                    is_auto_learning = model_data.get("auto_learning_version", False)
+                    
                     self.model_metadata = {
                         "accuracy": model_data.get("accuracy", 0.0),
                         "training_samples": model_data.get("training_samples", 0),
                         "instrument_count": model_data.get("instrument_count", 0),
-                        "model_type": model_data.get("streamlined_version", False)
+                        "model_type": "auto_learning" if is_auto_learning else "static",
+                        "model_version": model_data.get("model_version", 1),
+                        "training_date": model_data.get("training_date", "unknown")
                     }
                     
                     self.metrics["model_accuracy"] = self.model_metadata["accuracy"]
                     model_loaded = True
-                    break
+                    
+                    if is_auto_learning:
+                        self.logger.info("🤖 Auto-learning model detected!")
+                        break
+                    else:
+                        continue  # Keep looking for auto-learning model
             
             if not model_loaded:
                 # Create fallback model
                 self.logger.warning("No model found, creating fallback model")
                 await self._create_fallback_model()
             
+            # Start auto-learning pipeline if enabled
+            if self.auto_learning_enabled:
+                await self._start_auto_learning()
+            
             self.logger.info(f"✅ AI model loaded successfully")
+            self.logger.info(f"   Type: {self.model_metadata.get('model_type', 'unknown')}")
             self.logger.info(f"   Accuracy: {self.metrics['model_accuracy']:.1%}")
             self.logger.info(f"   Features: {len(self.feature_columns)}")
+            self.logger.info(f"   Auto-learning: {'✅ ENABLED' if self.auto_learning_enabled else '❌ DISABLED'}")
             
         except Exception as e:
             self.logger.error(f"Model loading failed: {e}")
@@ -116,6 +142,63 @@ class AIModelService:
         self.metrics["model_accuracy"] = 0.85
         self.logger.info("✅ Fallback model created")
     
+    async def _start_auto_learning(self):
+        """Start the auto-learning pipeline"""
+        try:
+            # Import auto-learning pipeline
+            from auto_learning_pipeline import auto_learning_pipeline
+            
+            self.auto_learning_pipeline = auto_learning_pipeline
+            self.metrics["auto_learning_status"] = "starting"
+            
+            # Start pipeline in background
+            asyncio.create_task(self.auto_learning_pipeline.start_pipeline())
+            
+            self.metrics["auto_learning_status"] = "active"
+            self.logger.info("🚀 Auto-learning pipeline started successfully")
+            self.logger.info("📊 Collecting real-time data from 1000+ instruments")
+            self.logger.info("🤖 Model will auto-retrain every 6 hours")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to start auto-learning: {e}")
+            self.metrics["auto_learning_status"] = "failed"
+    
+    async def _reload_auto_learning_model(self):
+        """Reload model if auto-learning has updated it"""
+        try:
+            auto_model_path = "models/auto_learning_ai_model.pkl"
+            if os.path.exists(auto_model_path):
+                # Check if model is newer than current
+                model_time = os.path.getmtime(auto_model_path)
+                current_time = datetime.now().timestamp()
+                
+                # If model was updated in last 10 minutes, reload it
+                if current_time - model_time < 600:
+                    self.logger.info("🔄 Reloading updated auto-learning model...")
+                    
+                    model_data = joblib.load(auto_model_path)
+                    self.model = model_data.get("model")
+                    self.feature_columns = model_data.get("feature_columns", [])
+                    
+                    # Update metadata
+                    self.model_metadata.update({
+                        "accuracy": model_data.get("accuracy", 0.0),
+                        "training_samples": model_data.get("training_samples", 0),
+                        "model_version": model_data.get("model_version", 1),
+                        "training_date": model_data.get("training_date", "unknown")
+                    })
+                    
+                    self.metrics["model_accuracy"] = self.model_metadata["accuracy"]
+                    
+                    # Clear prediction cache
+                    self.prediction_cache.clear()
+                    
+                    self.logger.info(f"✅ Model reloaded - Version: {self.model_metadata['model_version']}")
+                    self.logger.info(f"   New accuracy: {self.metrics['model_accuracy']:.1%}")
+                    
+        except Exception as e:
+            self.logger.error(f"Model reload failed: {e}")
+    
     async def predict(self, instruments: List[Dict]) -> Dict[str, Any]:
         """Generate predictions for given instruments"""
         start_time = datetime.now()
@@ -123,6 +206,10 @@ class AIModelService:
         try:
             if not self.model:
                 await self.load_model()
+            
+            # Check for auto-learning model updates (every 100 predictions)
+            if self.auto_learning_enabled and self.metrics["total_predictions"] % 100 == 0:
+                await self._reload_auto_learning_model()
             
             predictions = []
             

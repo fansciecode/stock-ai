@@ -60,9 +60,13 @@ services:
       - ENVIRONMENT=production
       - PORT=8002
       - LOG_LEVEL=INFO
+      - AUTO_LEARNING_ENABLED=true
+      - BINANCE_API_KEY=${BINANCE_API_KEY:-demo_key}
+      - BINANCE_SECRET_KEY=${BINANCE_SECRET_KEY:-demo_secret}
     volumes:
       - ../../models:/app/models
       - ../../logs:/app/logs
+      - ../../data:/app/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
