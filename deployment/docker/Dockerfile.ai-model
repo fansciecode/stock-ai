@@ -1,0 +1,45 @@
+# AI Model Service Dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies for ML libraries
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    gcc \
+    g++ \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements (AI/ML focused)
+COPY requirements.txt .
+
+# Install Python dependencies with optimizations for ML
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY services/ai-model/ ./services/ai-model/
+COPY services/shared/ ./services/shared/
+COPY models/ ./models/
+
+# Create necessary directories
+RUN mkdir -p logs models cache
+
+# Set environment variables for ML optimization
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+ENV OMP_NUM_THREADS=4
+ENV MKL_NUM_THREADS=4
+ENV NUMEXPR_NUM_THREADS=4
+
+# Expose port
+EXPOSE 8002
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8002/health || exit 1
+
+# Run the application
+CMD ["python", "services/ai-model/ai_model.py"]

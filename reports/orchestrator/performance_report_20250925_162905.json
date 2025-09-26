@@ -1,0 +1,41 @@
+{
+  "timestamp": "2025-09-25T16:29:05.117356",
+  "system_metrics": {
+    "signals_generated": 1,
+    "orders_placed": 1,
+    "trades_completed": 0,
+    "total_pnl": 0.0,
+    "uptime_hours": 1.3333333333333334e-08
+  },
+  "agent_performance": {
+    "agent_1_trading_model": {
+      "message": "No completed trades"
+    }
+  },
+  "execution_stats": {
+    "total_trades": 1,
+    "total_volume": 20019.999999999996,
+    "avg_trade_size": 20019.999999999996,
+    "total_commission": 20.019999999999996,
+    "instruments_traded": 1,
+    "last_trade_time": "2025-09-25 16:29:05.114629"
+  },
+  "current_positions": {
+    "SAMPLE_STOCK": 203.6938975645699
+  },
+  "recent_trades": [
+    {
+      "trade_id": "2169db40-8e2b-4ddd-90dc-156a532a60e0",
+      "order_id": "268cc3a7-0273-4973-ac02-8e3f07db9143",
+      "instrument": "SAMPLE_STOCK",
+      "side": 1,
+      "quantity": 203.6938975645699,
+      "price": 98.2847313511381,
+      "commission": 20.019999999999996,
+      "agent_id": "agent_1_trading_model",
+      "strategy": "UNKNOWN",
+      "execution_time": "2025-09-25 16:29:05.114629",
+      "notional": 20019.999999999996
+    }
+  ]
+}
