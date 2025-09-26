@@ -1,0 +1,207 @@
+# Google Cloud Platform Configuration for Universal Trading AI
+# This file contains optimized configurations for different deployment scenarios
+
+# Production Configuration (Recommended)
+production:
+  machine_type: "n1-standard-8"         # 8 vCPUs, 30GB RAM
+  boot_disk_size: "200GB"               # SSD for better I/O performance
+  boot_disk_type: "pd-ssd"              # SSD Persistent Disk
+  zone: "us-central1-a"                 # Low latency for US markets
+  region: "us-central1"
+  estimated_cost_monthly: "$277"
+  performance:
+    max_instruments: 25000
+    concurrent_users: 100
+    ai_training_time: "15-30 minutes"
+    signal_generation: "< 2 seconds"
+  
+# High Performance Configuration (For Heavy Trading)
+high_performance:
+  machine_type: "c2-standard-16"        # 16 vCPUs, 64GB RAM
+  boot_disk_size: "500GB"
+  boot_disk_type: "pd-ssd"
+  zone: "us-central1-a"
+  region: "us-central1"
+  gpu: "nvidia-tesla-t4"                # Optional GPU for faster AI training
+  estimated_cost_monthly: "$650"
+  performance:
+    max_instruments: 50000
+    concurrent_users: 500
+    ai_training_time: "5-10 minutes"
+    signal_generation: "< 1 second"
+
+# Development/Testing Configuration (Cost-Optimized)
+development:
+  machine_type: "n1-standard-4"         # 4 vCPUs, 15GB RAM
+  boot_disk_size: "100GB"
+  boot_disk_type: "pd-standard"         # Standard disk for cost savings
+  zone: "us-central1-a"
+  region: "us-central1"
+  estimated_cost_monthly: "$140"
+  performance:
+    max_instruments: 10000
+    concurrent_users: 50
+    ai_training_time: "30-60 minutes"
+    signal_generation: "< 5 seconds"
+
+# Minimal Configuration (For Testing Only)
+minimal:
+  machine_type: "e2-standard-2"         # 2 vCPUs, 8GB RAM
+  boot_disk_size: "50GB"
+  boot_disk_type: "pd-standard"
+  zone: "us-central1-a"
+  region: "us-central1"
+  estimated_cost_monthly: "$70"
+  performance:
+    max_instruments: 5000
+    concurrent_users: 10
+    ai_training_time: "60+ minutes"
+    signal_generation: "< 10 seconds"
+
+# Network Configuration
+network:
+  firewall_rules:
+    - name: "trading-ai-dashboard"
+      port: 8000
+      protocol: "tcp"
+      description: "Trading AI Dashboard"
+    - name: "trading-ai-backend"
+      port: 8001
+      protocol: "tcp"
+      description: "Backend API"
+    - name: "trading-ai-model"
+      port: 8002
+      protocol: "tcp"
+      description: "AI Model API"
+    - name: "ssh-access"
+      port: 22
+      protocol: "tcp"
+      description: "SSH Access"
+
+# Storage Configuration
+storage:
+  boot_disk:
+    auto_delete: true
+    boot: true
+    mode: "rw"
+  data_backup:
+    enabled: true
+    frequency: "daily"
+    retention_days: 30
+    location: "us-central1"
+
+# Security Configuration
+security:
+  shielded_vm:
+    secure_boot: false
+    vtpm: true
+    integrity_monitoring: true
+  service_account: "default"
+  scopes:
+    - "https://www.googleapis.com/auth/cloud-platform"
+  os_login: false
+  
+# Monitoring Configuration
+monitoring:
+  stackdriver:
+    enabled: true
+    custom_metrics:
+      - "trading.pnl"
+      - "trading.accuracy"
+      - "system.cpu_usage"
+      - "system.memory_usage"
+  alerts:
+    - metric: "trading.pnl"
+      threshold: -1000
+      notification: "email"
+    - metric: "system.cpu_usage"
+      threshold: 90
+      notification: "sms"
+
+# Auto-scaling Configuration (Optional)
+autoscaling:
+  enabled: false  # Single VM deployment
+  min_instances: 1
+  max_instances: 3
+  target_cpu_utilization: 80
+  
+# Backup Configuration
+backup:
+  snapshots:
+    enabled: true
+    frequency: "daily"
+    retention_days: 30
+  database_backup:
+    enabled: true
+    frequency: "hourly"
+    retention_days: 7
+
+# Environment Variables Template
+environment:
+  AI_MODEL_PATH: "models/"
+  AUTO_LEARNING_ENABLED: "true"
+  MODEL_ACCURACY_THRESHOLD: "0.85"
+  TRAINING_DATA_DAYS: "60"
+  FEATURE_COUNT: "71"
+  FLASK_ENV: "production"
+  API_HOST: "0.0.0.0"
+  DASHBOARD_PORT: "8000"
+  BACKEND_PORT: "8001"
+  AI_MODEL_PORT: "8002"
+  MAX_INSTRUMENTS: "25000"
+  LOG_LEVEL: "INFO"
+
+# Regional Configurations for Global Deployment
+regions:
+  us_markets:
+    primary: "us-central1-a"
+    secondary: "us-east1-b"
+    description: "Optimal for US stock markets (NYSE, NASDAQ)"
+  
+  asian_markets:
+    primary: "asia-southeast1-a"
+    secondary: "asia-east1-b"
+    description: "Optimal for Asian markets (NSE, BSE, Tokyo)"
+  
+  european_markets:
+    primary: "europe-west1-b"
+    secondary: "europe-west4-a"
+    description: "Optimal for European markets (LSE, Euronext)"
+
+# Migration and Scaling Paths
+scaling:
+  single_vm:
+    description: "Current deployment - single VM"
+    cost: "Low"
+    complexity: "Simple"
+    max_performance: "High"
+  
+  multi_vm:
+    description: "Separate VMs for frontend, backend, AI"
+    cost: "Medium"
+    complexity: "Medium"
+    max_performance: "Very High"
+  
+  kubernetes:
+    description: "GKE deployment for maximum scalability"
+    cost: "High"
+    complexity: "Complex"
+    max_performance: "Unlimited"
+
+# Recommended Instance Types by Use Case
+recommendations:
+  day_trading:
+    machine_type: "c2-standard-8"
+    reason: "High CPU performance for real-time analysis"
+    
+  swing_trading:
+    machine_type: "n1-standard-4"
+    reason: "Balanced performance for longer-term strategies"
+    
+  portfolio_management:
+    machine_type: "n1-standard-8"
+    reason: "Good balance of compute and memory"
+    
+  research_and_backtesting:
+    machine_type: "n1-highmem-8"
+    reason: "High memory for large dataset analysis"
