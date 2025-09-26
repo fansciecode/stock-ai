@@ -2916,9 +2916,40 @@ def live_signals():
         
         # Get live AI-generated signals
         try:
-            # Get instruments and generate real AI signals
-            instruments = fixed_continuous_engine._get_random_instruments(20)  # Get 20 instruments
-            print(f"🔍 Got {len(instruments)} instruments for signal generation")
+            # Generate 20 readable, recognizable signals instead of cryptic database codes
+            print(f"🔍 Generating 20 readable trading signals")
+            
+            # Define recognizable instruments with proper names
+            recognizable_instruments = [
+                {'symbol': 'AAPL', 'name': 'Apple Inc', 'exchange': 'NASDAQ', 'asset_class': 'stock'},
+                {'symbol': 'MSFT', 'name': 'Microsoft Corporation', 'exchange': 'NASDAQ', 'asset_class': 'stock'},
+                {'symbol': 'GOOGL', 'name': 'Alphabet Inc', 'exchange': 'NASDAQ', 'asset_class': 'stock'},
+                {'symbol': 'AMZN', 'name': 'Amazon.com Inc', 'exchange': 'NASDAQ', 'asset_class': 'stock'},
+                {'symbol': 'TSLA', 'name': 'Tesla Inc', 'exchange': 'NASDAQ', 'asset_class': 'stock'},
+                {'symbol': 'META', 'name': 'Meta Platforms Inc', 'exchange': 'NASDAQ', 'asset_class': 'stock'},
+                {'symbol': 'NVDA', 'name': 'NVIDIA Corporation', 'exchange': 'NASDAQ', 'asset_class': 'stock'},
+                {'symbol': 'NFLX', 'name': 'Netflix Inc', 'exchange': 'NASDAQ', 'asset_class': 'stock'},
+                {'symbol': 'JPM', 'name': 'JPMorgan Chase & Co', 'exchange': 'NYSE', 'asset_class': 'stock'},
+                {'symbol': 'JNJ', 'name': 'Johnson & Johnson', 'exchange': 'NYSE', 'asset_class': 'stock'},
+                {'symbol': 'V', 'name': 'Visa Inc', 'exchange': 'NYSE', 'asset_class': 'stock'},
+                {'symbol': 'PG', 'name': 'Procter & Gamble', 'exchange': 'NYSE', 'asset_class': 'stock'},
+                {'symbol': 'HD', 'name': 'Home Depot Inc', 'exchange': 'NYSE', 'asset_class': 'stock'},
+                {'symbol': 'DIS', 'name': 'Walt Disney Company', 'exchange': 'NYSE', 'asset_class': 'stock'},
+                {'symbol': 'RELIANCE', 'name': 'Reliance Industries', 'exchange': 'NSE', 'asset_class': 'stock'},
+                {'symbol': 'TCS', 'name': 'Tata Consultancy Services', 'exchange': 'NSE', 'asset_class': 'stock'},
+                {'symbol': 'INFY', 'name': 'Infosys Limited', 'exchange': 'NSE', 'asset_class': 'stock'},
+                {'symbol': 'HDFC', 'name': 'HDFC Bank Limited', 'exchange': 'NSE', 'asset_class': 'stock'},
+                {'symbol': 'BTC/USDT', 'name': 'Bitcoin', 'exchange': 'Binance', 'asset_class': 'crypto'},
+                {'symbol': 'ETH/USDT', 'name': 'Ethereum', 'exchange': 'Binance', 'asset_class': 'crypto'},
+                {'symbol': 'ADA/USDT', 'name': 'Cardano', 'exchange': 'Binance', 'asset_class': 'crypto'},
+                {'symbol': 'SOL/USDT', 'name': 'Solana', 'exchange': 'Binance', 'asset_class': 'crypto'},
+                {'symbol': 'AVAX/USDT', 'name': 'Avalanche', 'exchange': 'Binance', 'asset_class': 'crypto'},
+                {'symbol': 'MATIC/USDT', 'name': 'Polygon', 'exchange': 'Binance', 'asset_class': 'crypto'}
+            ]
+            
+            # Randomly select 20 instruments
+            import random
+            instruments = random.sample(recognizable_instruments, min(20, len(recognizable_instruments)))
             
             for instrument in instruments:
                 # Add realistic current price based on symbol
@@ -2988,7 +3019,8 @@ def live_signals():
                     'current_price': current_price,
                     'target_price': target_price,
                     'name': instrument.get('name', symbol),
-                    'exchange': instrument.get('exchange', 'SIMULATED')
+                    'exchange': instrument.get('exchange', 'SIMULATED'),
+                    'display_name': f"{instrument.get('name', symbol)} ({symbol})"  # Add formatted display name
                 })
                 
             print(f"✅ Generated {len(signals)} live AI signals")
@@ -3003,19 +3035,41 @@ def live_signals():
             print("❌ No AI signals generated, creating random fallback signals")
             import random
             
-            # Create 20 completely random signals instead of the same 3
-            random_symbols = [
-                'MSFT.NASDAQ', 'GOOGL.NASDAQ', 'TSLA.NASDAQ', 'AMZN.NASDAQ', 'META.NASDAQ',
-                'NVDA.NASDAQ', 'NFLX.NASDAQ', 'ADBE.NASDAQ', 'CRM.NASDAQ', 'INTC.NASDAQ',
-                'TCS.NSE', 'INFY.NSE', 'WIPRO.NSE', 'HCL.NSE', 'TECHM.NSE',
-                'ETH/USDT', 'ADA/USDT', 'SOL/USDT', 'AVAX/USDT', 'MATIC/USDT'
+            # Create readable fallback signals using same format as above
+            fallback_instruments = [
+                {'symbol': 'MSFT', 'name': 'Microsoft Corporation', 'exchange': 'NASDAQ'},
+                {'symbol': 'GOOGL', 'name': 'Alphabet Inc', 'exchange': 'NASDAQ'},
+                {'symbol': 'TSLA', 'name': 'Tesla Inc', 'exchange': 'NASDAQ'},
+                {'symbol': 'AMZN', 'name': 'Amazon.com Inc', 'exchange': 'NASDAQ'},
+                {'symbol': 'META', 'name': 'Meta Platforms Inc', 'exchange': 'NASDAQ'},
+                {'symbol': 'NVDA', 'name': 'NVIDIA Corporation', 'exchange': 'NASDAQ'},
+                {'symbol': 'NFLX', 'name': 'Netflix Inc', 'exchange': 'NASDAQ'},
+                {'symbol': 'JPM', 'name': 'JPMorgan Chase & Co', 'exchange': 'NYSE'},
+                {'symbol': 'V', 'name': 'Visa Inc', 'exchange': 'NYSE'},
+                {'symbol': 'TCS', 'name': 'Tata Consultancy Services', 'exchange': 'NSE'},
+                {'symbol': 'INFY', 'name': 'Infosys Limited', 'exchange': 'NSE'},
+                {'symbol': 'RELIANCE', 'name': 'Reliance Industries', 'exchange': 'NSE'},
+                {'symbol': 'ETH/USDT', 'name': 'Ethereum', 'exchange': 'Binance'},
+                {'symbol': 'ADA/USDT', 'name': 'Cardano', 'exchange': 'Binance'},
+                {'symbol': 'SOL/USDT', 'name': 'Solana', 'exchange': 'Binance'},
+                {'symbol': 'AVAX/USDT', 'name': 'Avalanche', 'exchange': 'Binance'},
+                {'symbol': 'MATIC/USDT', 'name': 'Polygon', 'exchange': 'Binance'},
+                {'symbol': 'LINK/USDT', 'name': 'Chainlink', 'exchange': 'Binance'},
+                {'symbol': 'DOT/USDT', 'name': 'Polkadot', 'exchange': 'Binance'},
+                {'symbol': 'UNI/USDT', 'name': 'Uniswap', 'exchange': 'Binance'}
             ]
             
-            for symbol in random_symbols:
+            for instrument in fallback_instruments:
+                symbol = instrument['symbol']
+                name = instrument['name']
+                exchange = instrument['exchange']
+                
                 side = random.choice(['BUY', 'SELL', 'HOLD'])
+                
+                # Generate realistic prices
                 if 'USDT' in symbol:
                     price = random.uniform(0.1, 500)
-                elif 'NSE' in symbol:
+                elif exchange == 'NSE':
                     price = random.uniform(100, 5000)
                 else:
                     price = random.uniform(50, 400)
@@ -3028,8 +3082,9 @@ def live_signals():
                     'confidence': random.randint(70, 98),
                     'current_price': price,
                     'target_price': price * (1.02 if side == 'BUY' else (0.98 if side == 'SELL' else 1.0)),
-                    'name': symbol.split('.')[0] if '.' in symbol else symbol.split('/')[0],
-                    'exchange': symbol.split('.')[1] if '.' in symbol else ('Binance' if 'USDT' in symbol else 'NASDAQ')
+                    'name': name,
+                    'exchange': exchange,
+                    'display_name': f"{name} ({symbol})"
                 })
                 
     except Exception as e:
@@ -3066,13 +3121,13 @@ def live_signals():
         <div class="signals-grid">
             {% for signal in signals %}
             <div class="signal-card signal-{{ signal['signal'].lower() }}">
-                <h3>{{ signal['symbol'] }}</h3>
+                <h3>{{ signal.get('display_name', signal['name']) }}</h3>
+                <p><strong>Exchange:</strong> {{ signal['exchange'] }}</p>
                 <p><strong>Signal:</strong> {{ signal['signal_icon'] }} {{ signal['signal'] }}</p>
                 <p><strong>Strength:</strong> {{ signal['strength'] }}%</p>
                 <p><strong>Confidence:</strong> {{ signal['confidence'] }}%</p>
                 <p><strong>Current Price:</strong> ${{ "%.2f"|format(signal['current_price']) }}</p>
                 <p><strong>Target:</strong> ${{ "%.2f"|format(signal['target_price']) }}</p>
-                <p><small>{{ signal['name'] }} ({{ signal['exchange'] }})</small></p>
             </div>
             {% endfor %}
             {% if not signals %}
