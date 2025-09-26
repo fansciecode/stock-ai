@@ -1854,15 +1854,22 @@ def start_ai_trading():
         # Start AI trading directly
         from fixed_continuous_trading_engine import fixed_continuous_engine
         
-        # Check if already running
+        # First stop any existing sessions for this user (clean restart)
+        try:
+            print(f"🛑 Stopping any existing sessions for {user_email}")
+            fixed_continuous_engine.stop_continuous_trading(user_email)
+        except Exception as stop_error:
+            print(f"ℹ️ No existing sessions to stop: {stop_error}")
+        
+        # Check if already running (after attempting to stop)
         current_status = fixed_continuous_engine.get_trading_status(user_email)
         if current_status.get('active', False):
-            return jsonify({
-                'success': False,
-                'error': 'Continuous trading already active',
-                'session_id': current_status.get('session_id'),
-                'active_positions': current_status.get('active_positions', 0)
-            })
+            # Force stop if still active
+            print(f"🚨 Force stopping persistent session for {user_email}")
+            try:
+                fixed_continuous_engine.force_stop_all_sessions()
+            except:
+                pass
         
         # Start trading directly
         result = fixed_continuous_engine.start_continuous_trading(user_email, user_mode)
@@ -2092,16 +2099,52 @@ def get_trading_activity():
                                 symbol = match.group(1)
                                 activity_logs.append(f"⚠️ Order failed: {symbol} below minimum size")
                 
-                # Remove duplicates while preserving order and keep only recent logs
-                seen = set()
-                unique_logs = []
-                for log in reversed(activity_logs):  # Start from newest
-                    if log not in seen:
-                        seen.add(log)
-                        unique_logs.append(log)
-                
-                # Keep only the most recent 10 unique logs
-                activity_logs = list(reversed(unique_logs[:10]))
+                # Advanced deduplication to prevent spam logs
+                if activity_logs:
+                    # Remove exact duplicates
+                    seen = set()
+                    unique_logs = []
+                    for log in activity_logs:
+                        if log not in seen:
+                            seen.add(log)
+                            unique_logs.append(log)
+                    
+                    # Remove similar patterns (same symbol/action within short time)
+                    filtered_logs = []
+                    recent_patterns = {}  # pattern -> last_time
+                    
+                    for log in unique_logs:
+                        # Extract pattern key (symbol + action type)
+                        pattern_key = None
+                        if 'SIMULATED: New position' in log:
+                            # Extract symbol from "🎭 SIMULATED: New position NASDAQ255.NASDAQ"
+                            parts = log.split(' ')
+                            if len(parts) >= 4:
+                                pattern_key = f"NEW_{parts[-1]}"
+                        elif 'CLOSED:' in log:
+                            # Extract symbol from "📈 CLOSED: BSE2563.BSE"
+                            parts = log.split(' ')
+                            if len(parts) >= 2:
+                                pattern_key = f"CLOSE_{parts[1]}"
+                        
+                        # Check if this pattern was recently added
+                        now = time.time()
+                        should_add = True
+                        
+                        if pattern_key:
+                            last_time = recent_patterns.get(pattern_key, 0)
+                            if now - last_time < 5:  # Skip if same pattern within 5 seconds
+                                should_add = False
+                            else:
+                                recent_patterns[pattern_key] = now
+                        
+                        if should_add:
+                            filtered_logs.append(log)
+                    
+                    # Keep only the most recent 8 unique logs
+                    activity_logs = filtered_logs[-8:] if len(filtered_logs) > 8 else filtered_logs
+                else:
+                    activity_logs = []
                 
             except Exception as log_error:
                 print(f"Error reading logs: {log_error}")
@@ -2303,40 +2346,46 @@ def get_detailed_trading_activity():
         
         try:
             with sqlite3.connect(db_path) as conn:
-                # First check what columns exist
+                # Check table schema and create missing columns if needed
                 cursor = conn.execute("PRAGMA table_info(execution_log)")
                 columns = [row[1] for row in cursor.fetchall()]
+                print(f"📊 Database columns available: {columns}")
                 
-                # Build query based on available columns
-                if 'exchange' in columns and 'amount' in columns:
-                    cursor = conn.execute("""
-                        SELECT execution_id, action, symbol, price, quantity, reason, timestamp, pnl, exchange, amount
-                        FROM execution_log 
-                        WHERE user_email = ?
-                        ORDER BY timestamp DESC
-                        LIMIT 100
-                    """, (user_email,))
-                elif 'exchange' in columns:
-                    cursor = conn.execute("""
-                        SELECT execution_id, action, symbol, price, quantity, reason, timestamp, pnl, exchange, NULL
-                        FROM execution_log 
-                        WHERE user_email = ?
-                        ORDER BY timestamp DESC
-                        LIMIT 100
-                    """, (user_email,))
-                else:
-                    cursor = conn.execute("""
-                        SELECT execution_id, action, symbol, price, quantity, reason, timestamp, pnl, NULL, NULL
-                        FROM execution_log 
-                        WHERE user_email = ?
-                        ORDER BY timestamp DESC
-                        LIMIT 100
-                    """, (user_email,))
+                # Add missing columns if needed
+                if 'exchange' not in columns:
+                    try:
+                        conn.execute("ALTER TABLE execution_log ADD COLUMN exchange TEXT DEFAULT 'SIMULATED'")
+                        print("✅ Added 'exchange' column to execution_log")
+                        conn.commit()
+                    except sqlite3.OperationalError:
+                        print("ℹ️ 'exchange' column already exists or cannot be added")
+                        
+                if 'amount' not in columns:
+                    try:
+                        conn.execute("ALTER TABLE execution_log ADD COLUMN amount REAL DEFAULT 0.0")
+                        print("✅ Added 'amount' column to execution_log")
+                        conn.commit()
+                    except sqlite3.OperationalError:
+                        print("ℹ️ 'amount' column already exists or cannot be added")
                 
-                for row in cursor.fetchall():
-                    execution_id, action, symbol, price, quantity, reason, timestamp, pnl, exchange, amount = row
-                    
-                    trades.append({
+                # Now query with safe column access
+                try:
+                    cursor = conn.execute("""
+                        SELECT execution_id, action, symbol, price, quantity, reason, timestamp, pnl
+                        FROM execution_log 
+                        WHERE user_email = ?
+                        ORDER BY timestamp DESC
+                        LIMIT 100
+                    """, (user_email,))
+                except sqlite3.OperationalError as e:
+                    print(f"📊 Database query error: {e}")
+                    cursor = None
+                
+                if cursor:
+                    for row in cursor.fetchall():
+                        execution_id, action, symbol, price, quantity, reason, timestamp, pnl = row
+                        
+                        trades.append({
                         'id': execution_id,
                         'action': action,
                         'symbol': symbol,
