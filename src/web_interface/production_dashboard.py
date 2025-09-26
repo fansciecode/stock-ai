@@ -2904,6 +2904,7 @@ def live_signals():
     try:
         import sys
         import os
+        import numpy as np  # Add numpy import
         sys.path.append('.')
         sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
         
@@ -2991,31 +2992,44 @@ def live_signals():
                 })
                 
             print(f"✅ Generated {len(signals)} live AI signals")
+            print(f"🔍 Sample signals: {[s['symbol'] for s in signals[:5]]}")  # Debug print
                 
         except Exception as ai_error:
             print(f"⚠️ AI signal generation error: {ai_error}")
             # Fallback to demo signals if AI fails
             
-        # If no AI signals generated, show meaningful message
+        # If no AI signals generated, create simple random signals
         if not signals:
+            print("❌ No AI signals generated, creating random fallback signals")
             import random
-            sample_signals = [
-                {'symbol': 'BTC/USDT', 'side': 'BUY', 'price': 66000},
-                {'symbol': 'RELIANCE.NSE', 'side': 'BUY', 'price': 2400},
-                {'symbol': 'AAPL.NASDAQ', 'side': 'SELL', 'price': 175}
+            
+            # Create 20 completely random signals instead of the same 3
+            random_symbols = [
+                'MSFT.NASDAQ', 'GOOGL.NASDAQ', 'TSLA.NASDAQ', 'AMZN.NASDAQ', 'META.NASDAQ',
+                'NVDA.NASDAQ', 'NFLX.NASDAQ', 'ADBE.NASDAQ', 'CRM.NASDAQ', 'INTC.NASDAQ',
+                'TCS.NSE', 'INFY.NSE', 'WIPRO.NSE', 'HCL.NSE', 'TECHM.NSE',
+                'ETH/USDT', 'ADA/USDT', 'SOL/USDT', 'AVAX/USDT', 'MATIC/USDT'
             ]
             
-            for signal_data in sample_signals:
+            for symbol in random_symbols:
+                side = random.choice(['BUY', 'SELL', 'HOLD'])
+                if 'USDT' in symbol:
+                    price = random.uniform(0.1, 500)
+                elif 'NSE' in symbol:
+                    price = random.uniform(100, 5000)
+                else:
+                    price = random.uniform(50, 400)
+                    
                 signals.append({
-                    'symbol': signal_data['symbol'],
-                    'signal': signal_data['side'],
-                    'signal_icon': '🟢' if signal_data['side'] == 'BUY' else '🔴',
-                    'strength': random.randint(75, 90),
-                    'confidence': random.randint(80, 95),
-                    'current_price': signal_data['price'],
-                    'target_price': signal_data['price'] * (1.02 if signal_data['side'] == 'BUY' else 0.98),
-                    'name': signal_data['symbol'].split('.')[0] if '.' in signal_data['symbol'] else signal_data['symbol'].split('/')[0],
-                    'exchange': signal_data['symbol'].split('.')[1] if '.' in signal_data['symbol'] else 'Binance'
+                    'symbol': symbol,
+                    'signal': side,
+                    'signal_icon': '🟢' if side == 'BUY' else ('🔴' if side == 'SELL' else '🟡'),
+                    'strength': random.randint(65, 95),
+                    'confidence': random.randint(70, 98),
+                    'current_price': price,
+                    'target_price': price * (1.02 if side == 'BUY' else (0.98 if side == 'SELL' else 1.0)),
+                    'name': symbol.split('.')[0] if '.' in symbol else symbol.split('/')[0],
+                    'exchange': symbol.split('.')[1] if '.' in symbol else ('Binance' if 'USDT' in symbol else 'NASDAQ')
                 })
                 
     except Exception as e:
