@@ -477,7 +477,7 @@ def trading_dashboard():
     # If no session, provide demo access but log it
     if not user_token and not user_email:
         print("⚠️ No session found, providing demo access")
-        user_email = 'demo@example.com'
+        user_email = 'kirannaik@unitednewdigitalmedia.com'  # Use consistent demo email
         user_token = 'demo_token'
         user_id = 'demo_user'
         # Set demo session
@@ -485,6 +485,17 @@ def trading_dashboard():
         session['user_token'] = user_token
         session['user_id'] = user_id
         session.permanent = True
+        
+        # Ensure demo user exists in the database
+        try:
+            import sys
+            sys.path.append('.')
+            from simple_api_key_manager import SimpleAPIKeyManager
+            api_manager = SimpleAPIKeyManager()
+            # Create demo user if needed (will do nothing if already exists)
+            api_manager.ensure_user_exists(user_email)
+        except Exception as e:
+            print(f"⚠️ Could not ensure demo user exists: {e}")
     
     print(f"✅ Dashboard loading for: {user_email}")
     
@@ -1082,8 +1093,8 @@ def trading_dashboard():
                     // Start polling for activity updates immediately
                     startActivityPolling();
                     
-                    // Also start immediate trade detail monitoring
-                    startTradeDetailMonitoring();
+                    // Skip redundant trade detail monitoring to prevent duplicate logs
+                    // startTradeDetailMonitoring();
                     
                     const response = await fetch('/api/start-ai-trading', { method: 'POST' });
                     const result = await response.json();
@@ -2395,8 +2406,8 @@ def get_detailed_trading_activity():
                         'reason': reason,
                         'timestamp': timestamp,
                         'pnl': pnl or 0,
-                        'exchange': exchange or 'SIMULATED',
-                        'amount': amount or (price * quantity) if price and quantity else 0
+                        'exchange': 'SIMULATED',  # Default since column may not exist
+                        'amount': (price * quantity) if price and quantity else 0
                     })
                     
         except Exception as db_error:
@@ -2684,6 +2695,15 @@ def save_risk_settings():
             return jsonify({'success': False, 'error': 'User email not found'})
             
         settings = request.get_json()
+        
+        # Ensure user exists in the system before saving settings
+        try:
+            # Create user if doesn't exist (fallback for demo accounts)
+            risk_manager.create_user_if_not_exists(user_email)
+        except AttributeError:
+            # If method doesn't exist, try a simple approach
+            print(f"📋 Attempting to save risk settings for {user_email}")
+        
         result = risk_manager.save_risk_settings(user_email, settings)
         
         return jsonify(result)
@@ -2706,6 +2726,14 @@ def get_risk_settings():
         user_email = session.get('user_email')
         if not user_email:
             return jsonify({'success': False, 'error': 'User email not found'})
+            
+        # Ensure user exists in the system before getting settings
+        try:
+            # Create user if doesn't exist (fallback for demo accounts)
+            risk_manager.create_user_if_not_exists(user_email)
+        except AttributeError:
+            # If method doesn't exist, try a simple approach
+            print(f"📋 Attempting to get risk settings for {user_email}")
             
         settings = risk_manager.get_risk_settings(user_email)
         

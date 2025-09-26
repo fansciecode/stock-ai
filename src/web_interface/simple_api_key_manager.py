@@ -83,6 +83,40 @@ class SimpleAPIKeyManager:
                 'error': f'Failed to add API key: {str(e)}'
             }
     
+    def ensure_user_exists(self, user_email: str) -> bool:
+        """Ensure user exists in database (create if not exists)"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                # Check if user exists
+                cursor = conn.execute("""
+                    SELECT user_id FROM users WHERE email = ?
+                """, (user_email,))
+                
+                existing_user = cursor.fetchone()
+                
+                if not existing_user:
+                    # Create user
+                    import hashlib
+                    import time
+                    
+                    user_id = hashlib.sha256(f"{user_email}_{time.time()}".encode()).hexdigest()[:32]
+                    
+                    conn.execute("""
+                        INSERT INTO users (user_id, email, password_hash, created_at)
+                        VALUES (?, ?, ?, datetime('now'))
+                    """, (user_id, user_email, 'demo_hash'))
+                    
+                    conn.commit()
+                    print(f"✅ Created user: {user_email}")
+                    return True
+                else:
+                    print(f"ℹ️ User already exists: {user_email}")
+                    return True
+                    
+        except Exception as e:
+            print(f"❌ Error ensuring user exists: {e}")
+            return False
+    
     def delete_api_key(self, user_email: str, key_id: str) -> Dict:
         """Delete an API key"""
         try:
