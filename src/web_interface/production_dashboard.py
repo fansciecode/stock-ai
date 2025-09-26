@@ -1079,8 +1079,11 @@ def trading_dashboard():
                         addActivityEntry('🧪 Safe testing with virtual funds', 'info');
                     }
                     
-                    // Start polling for activity updates
+                    // Start polling for activity updates immediately
                     startActivityPolling();
+                    
+                    // Also start immediate trade detail monitoring
+                    startTradeDetailMonitoring();
                     
                     const response = await fetch('/api/start-ai-trading', { method: 'POST' });
                     const result = await response.json();
@@ -1543,19 +1546,83 @@ def trading_dashboard():
                 clearInterval(activityPollingInterval);
             }
             
+            console.log('🔄 Starting real-time activity polling...');
+            
             activityPollingInterval = setInterval(async () => {
                 try {
                     const response = await fetch('/api/trading-activity');
                     const data = await response.json();
                     
-                    if (data.success && data.activity.length > 0) {
-                        updateActivityLog(data.activity);
+                    if (data.success && data.activity && data.activity.length > 0) {
+                        console.log(`📊 Found ${data.activity.length} activity updates`);
+                        
+                        // Add new activities to log in real-time
+                        data.activity.forEach(activity => {
+                            addActivityEntry(activity, 'success');
+                        });
+                        
                         updateActivitySummary(data.summary);
+                    } else {
+                        // Also check for new trades from backend logs
+                        const logResponse = await fetch('/api/trading-history');
+                        const logData = await logResponse.json();
+                        
+                        if (logData.success && logData.history.length > 0) {
+                            // Only add new entries (check if we already have them)
+                            const currentEntries = document.querySelectorAll('#activity-log div').length;
+                            if (logData.history.length > currentEntries) {
+                                const newEntries = logData.history.slice(0, logData.history.length - currentEntries);
+                                newEntries.forEach(entry => {
+                                    addActivityEntry(entry.message, entry.type);
+                                });
+                            }
+                        }
                     }
                 } catch (error) {
                     console.error('Error polling activity:', error);
                 }
-            }, 2000); // Poll every 2 seconds
+            }, 3000); // Poll every 3 seconds for real-time updates
+        }
+        
+        let lastTradeCount = 0;
+        
+        function startTradeDetailMonitoring() {
+            console.log('📊 Starting trade detail monitoring...');
+            
+            setInterval(async () => {
+                try {
+                    // Get detailed trading activity with buy/sell details
+                    const response = await fetch('/api/detailed-trading-activity');
+                    const data = await response.json();
+                    
+                    if (data.success && data.trades && data.trades.length > lastTradeCount) {
+                        // New trades detected - show detailed info
+                        const newTrades = data.trades.slice(lastTradeCount);
+                        
+                        newTrades.forEach(trade => {
+                            const tradeTime = new Date(trade.timestamp).toLocaleTimeString();
+                            let tradeMessage = '';
+                            
+                            if (trade.action === 'OPEN') {
+                                const exchange = trade.exchange || 'SIMULATED';
+                                const amount = trade.amount || 0;
+                                tradeMessage = `🔴 ${exchange.toUpperCase()}: ${trade.symbol} ${trade.side} at $${trade.price.toFixed(2)} (Amount: $${amount.toFixed(2)})`;
+                                addActivityEntry(tradeMessage, 'info');
+                            } else if (trade.action === 'CLOSE') {
+                                const pnl = trade.pnl || 0;
+                                const pnlEmoji = pnl > 0 ? '📈' : '📉';
+                                const reason = trade.reason || 'USER_REQUEST';
+                                tradeMessage = `${pnlEmoji} CLOSED: ${trade.symbol} ${reason} at $${trade.price.toFixed(2)} (P&L: $${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)})`;
+                                addActivityEntry(tradeMessage, pnl > 0 ? 'success' : 'warning');
+                            }
+                        });
+                        
+                        lastTradeCount = data.trades.length;
+                    }
+                } catch (error) {
+                    console.error('Error monitoring trade details:', error);
+                }
+            }, 2000); // Check every 2 seconds for new trades
         }
         
         function addActivityEntry(message, type = 'info', customTimestamp = null) {
@@ -2180,6 +2247,64 @@ def get_trading_history():
     except Exception as e:
         return jsonify({'success': False, 'error': f'Failed to get trading history: {e}'})
 
+@app.route('/api/detailed-trading-activity', methods=['GET'])
+def get_detailed_trading_activity():
+    """Get detailed trading activity with buy/sell prices and amounts"""
+    if 'user_token' not in session:
+        return jsonify({'success': False, 'error': 'Not authenticated'})
+        
+    try:
+        user_email = session.get('user_email')
+        if not user_email:
+            return jsonify({'success': False, 'error': 'User email not found'})
+            
+        # Get detailed trades from database
+        import sqlite3
+        db_path = "data/fixed_continuous_trading.db"
+        
+        trades = []
+        
+        try:
+            with sqlite3.connect(db_path) as conn:
+                cursor = conn.execute("""
+                    SELECT execution_id, action, symbol, price, quantity, reason, timestamp, pnl, exchange, amount
+                    FROM execution_log 
+                    WHERE user_email = ?
+                    ORDER BY timestamp DESC
+                    LIMIT 100
+                """, (user_email,))
+                
+                for row in cursor.fetchall():
+                    execution_id, action, symbol, price, quantity, reason, timestamp, pnl, exchange, amount = row
+                    
+                    trades.append({
+                        'id': execution_id,
+                        'action': action,
+                        'symbol': symbol,
+                        'price': price,
+                        'quantity': quantity,
+                        'side': 'BUY' if action == 'OPEN' else 'CLOSE',
+                        'reason': reason,
+                        'timestamp': timestamp,
+                        'pnl': pnl or 0,
+                        'exchange': exchange or 'SIMULATED',
+                        'amount': amount or (price * quantity) if price and quantity else 0
+                    })
+                    
+        except Exception as db_error:
+            print(f"Database error: {db_error}")
+            # Return empty trades if database error
+            pass
+            
+        return jsonify({
+            'success': True,
+            'trades': trades,
+            'count': len(trades)
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Failed to get detailed activity: {e}'})
+
 @app.route('/api/trading-status', methods=['GET'])
 def get_trading_status():
     """Get current trading status"""
@@ -2770,6 +2895,15 @@ def portfolio():
     if 'user_token' not in session:
         return redirect(url_for('login_page'))
         
+    # Get user's trading mode first
+    try:
+        from trading_mode_manager import TradingModeManager
+        mode_manager = TradingModeManager()
+        user_email = session.get('user_email')
+        current_mode = mode_manager.get_trading_mode(user_email)
+    except Exception:
+        current_mode = 'TESTNET'
+    
     # Get live portfolio data from trading sessions
     try:
         import sys
@@ -2777,14 +2911,18 @@ def portfolio():
         sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
         from live_portfolio_service import live_portfolio_service
         
-        user_email = session.get('user_email')
         live_data = live_portfolio_service.get_live_portfolio(user_email)
         
         # Convert to expected format
         account_summary = live_data.get('account_summary', {})
         performance = live_data.get('performance_metrics', {})
         
+        # Set mode display based on current trading mode
+        mode_display = 'Live Trading' if current_mode == 'LIVE' else 'Testnet'
+        
         portfolio_data = {
+            'mode_display': mode_display,
+            'current_mode': current_mode,
             'total_value': account_summary.get('total_balance', 0),
             'available_cash': account_summary.get('available_balance', 0),
             'invested': account_summary.get('invested_balance', 0),
@@ -2868,7 +3006,7 @@ def portfolio():
         <div class="portfolio-grid">
             <div class="portfolio-card">
                 <h3>💰 Portfolio Summary</h3>
-                <p><strong>Total Value:</strong> ${{ portfolio_data['total_value'] }} (Testnet)</p>
+                <p><strong>Total Value:</strong> ${{ portfolio_data['total_value'] }} ({{ portfolio_data.get('mode_display', 'Testnet') }})</p>
                 <p><strong>Available Cash:</strong> ${{ "%.2f"|format(portfolio_data['available_cash']) }}</p>
                 <p><strong>Invested:</strong> ${{ "%.2f"|format(portfolio_data['invested']) }}</p>
                 <p><strong>Today's P&L:</strong> 
