@@ -1,0 +1,58 @@
+{
+  "test_summary": {
+    "start_time": "2025-09-27T00:51:39.613491",
+    "end_time": "2025-09-27T00:51:42.747318",
+    "duration_seconds": 3.133827,
+    "total_tests": 10,
+    "passed_tests": 6,
+    "success_rate_percent": 60.0
+  },
+  "test_results": {
+    "AI Pipeline Test": {
+      "status": "FAILED",
+      "details": false
+    },
+    "Multi-User Security Test": {
+      "status": "FAILED",
+      "details": false
+    },
+    "Trading Strategies Test": {
+      "status": "PASSED",
+      "details": true
+    },
+    "Exchange Integration Test": {
+      "status": "PASSED",
+      "details": true
+    },
+    "Session Management Test": {
+      "status": "PASSED",
+      "details": true
+    },
+    "Data Processing Test": {
+      "status": "FAILED",
+      "details": false
+    },
+    "API Endpoints Test": {
+      "status": "PASSED",
+      "details": true
+    },
+    "Database Integrity Test": {
+      "status": "PASSED",
+      "details": true
+    },
+    "Performance Test": {
+      "status": "PASSED",
+      "details": true
+    },
+    "Security Test": {
+      "status": "FAILED",
+      "details": false
+    }
+  },
+  "system_status": "NEEDS_ATTENTION",
+  "recommendations": [
+    "Check AI model files and feature generation",
+    "Verify user session isolation and database security",
+    "Review security configurations and encryption setup"
+  ]
+}

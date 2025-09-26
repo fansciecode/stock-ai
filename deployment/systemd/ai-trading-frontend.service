@@ -1,0 +1,16 @@
+[Unit]
+Description=AI Trading System - Frontend
+After=network.target
+
+[Service]
+Type=simple
+User=trading
+Group=trading
+WorkingDirectory=/opt/ai-trading
+Environment=PYTHONPATH=/opt/ai-trading
+ExecStart=python src/web_interface/production_dashboard.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

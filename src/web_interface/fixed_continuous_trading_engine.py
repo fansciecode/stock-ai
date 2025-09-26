@@ -48,6 +48,10 @@ class FixedContinuousTradingEngine:
             self.logger.warning("Risk manager not available")
             self.risk_manager = None
             
+        # Initialize AI model
+        self.ai_model = None
+        self._load_ai_model()
+        
         # Load any existing active sessions from database
         self._restore_active_sessions()
         
@@ -1293,7 +1297,7 @@ class FixedContinuousTradingEngine:
                 return self._fallback_signal(instrument)
             
             # Generate features for AI prediction
-            features = self._generate_features(instrument)
+            features = self._generate_ai_features(instrument)
             
             # Get AI prediction
             prediction = self.ai_model['model'].predict([features])[0]
@@ -1375,71 +1379,31 @@ class FixedContinuousTradingEngine:
             self.logger.error(f"Failed to load AI model: {e}")
             self.ai_model = None
     
+    def _generate_ai_features(self, instrument: Dict) -> list:
+        """Generate features for AI prediction based on loaded model type"""
+        # First check what the model expects
+        expected_features = None
+        if self.ai_model and hasattr(self.ai_model.get('model'), 'n_features_in_'):
+            expected_features = self.ai_model['model'].n_features_in_
+        
+        if expected_features == 71:
+            return self._generate_full_feature_set(instrument)
+        elif expected_features == 8:
+            return self._generate_streamlined_production_features(instrument)
+        elif self.ai_model and self.ai_model.get('streamlined_version'):
+            return self._generate_streamlined_production_features(instrument)
+        elif self.ai_model and self.ai_model.get('real_data_based'):
+            return self._generate_real_data_features(instrument)
+        elif self.ai_model and self.ai_model.get('strategy_based'):
+            return self._generate_strategy_features(instrument)
+        else:
+            # Fallback to a default set if no specific model type or feature count is detected
+            self.logger.warning("No specific AI model type or feature count detected. Using default 8 features.")
+            return self._generate_streamlined_production_features(instrument)
+    
     def _generate_features(self, instrument: Dict) -> list:
-        """Generate features for AI prediction"""
-        try:
-            current_price = instrument.get('current_price', 100.0)
-            symbol = instrument.get('symbol', 'UNKNOWN')
-            
-            import random
-            import numpy as np
-            
-            # First check what the model expects
-            expected_features = None
-            if self.ai_model and hasattr(self.ai_model.get('model'), 'n_features_in_'):
-                expected_features = self.ai_model['model'].n_features_in_
-                
-            # If model expects 71 features, use full feature set
-            if expected_features == 71:
-                return self._generate_full_feature_set(instrument)
-            # Check if this is a streamlined production model (5 features)
-            elif self.ai_model and self.ai_model.get('streamlined_version'):
-                return self._generate_streamlined_production_features(instrument)
-            # Check if this is a real data model (8 features)
-            elif self.ai_model and self.ai_model.get('real_data_based'):
-                return self._generate_real_data_features(instrument)
-            # Check if this is a multi-strategy model
-            elif self.ai_model and self.ai_model.get('strategy_based'):
-                return self._generate_strategy_features(instrument)
-            
-            # Fallback to simple features for basic model
-            # Simulate moving averages
-            sma_10 = current_price * (1 + np.random.normal(0, 0.01))
-            sma_20 = current_price * (1 + np.random.normal(0, 0.02))
-            
-            # RSI (30-70 range)
-            rsi = 30 + random.random() * 40
-            
-            # Volatility based on asset type
-            if 'BTC' in symbol or 'ETH' in symbol:
-                volatility = 0.05 + random.random() * 0.03  # Crypto volatility
-            elif '.NSE' in symbol or '.BSE' in symbol:
-                volatility = 0.02 + random.random() * 0.02  # Stock volatility
-            else:
-                volatility = 0.03 + random.random() * 0.02  # Default
-            
-            # Volume ratio
-            volume_ratio = 0.5 + random.random() * 1.5
-            
-            # Price changes
-            price_change_1d = np.random.normal(0, volatility)
-            price_change_5d = np.random.normal(0, volatility * 2)
-            
-            # High/low ratio
-            high_low_ratio = 1.005 + random.random() * 0.02
-            
-            # Features in the same order as training
-            features = [
-                sma_10, sma_20, rsi, volatility, volume_ratio,
-                price_change_1d, price_change_5d, high_low_ratio
-            ]
-            
-            return features
-            
-        except Exception as e:
-            self.logger.error(f"Error generating features: {e}")
-            # Return default features
-            return [100.0, 100.0, 50.0, 0.03, 1.0, 0.0, 0.0, 1.01]
+        """Legacy method - redirects to _generate_ai_features"""
+        return self._generate_ai_features(instrument)
     
     def _generate_strategy_features(self, instrument: Dict) -> list:
         """Generate comprehensive strategy-based features"""

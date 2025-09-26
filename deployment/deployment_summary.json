@@ -1,0 +1,80 @@
+{
+  "deployment_time": "2025-09-27T00:53:12.327002",
+  "system_info": {
+    "platform": "macOS-15.5-arm64-arm-64bit",
+    "system": "Darwin",
+    "machine": "arm64",
+    "processor": "arm",
+    "cpu_cores_physical": 8,
+    "cpu_cores_logical": 8,
+    "cpu_frequency_mhz": 4056,
+    "memory_total_gb": 8.0,
+    "memory_available_gb": 1.43,
+    "disk_total_gb": 228.27,
+    "disk_free_gb": 78.73,
+    "python_version": "3.9.6",
+    "performance_tier": "STANDARD"
+  },
+  "deployment_config": {
+    "services": {
+      "frontend_port": 8000,
+      "backend_port": 8001,
+      "ai_service_port": 8002,
+      "mongodb_port": 27017,
+      "workers": 2,
+      "enable_caching": false,
+      "enable_monitoring": false
+    },
+    "optimization": {
+      "data_collection_parallel": true,
+      "feature_engineering_batch": 400.0,
+      "model_prediction_cache": true,
+      "background_data_update": true,
+      "cleanup_old_data_days": 90
+    },
+    "ai_training": {
+      "batch_size": 256,
+      "max_epochs": 25,
+      "early_stopping": true,
+      "model_complexity": "low",
+      "ensemble_models": false,
+      "parallel_training": false,
+      "auto_retrain_hours": 72
+    },
+    "monitoring": {},
+    "scaling": {},
+    "database": {
+      "sqlite_path": "data/",
+      "mongodb_enabled": true,
+      "redis_enabled": false,
+      "connection_pool_size": 16
+    }
+  },
+  "auto_learning_config": {
+    "enabled": true,
+    "system_optimization": {
+      "performance_tier": "STANDARD",
+      "cpu_cores": 8,
+      "memory_gb": 8.0,
+      "auto_detected": true
+    },
+    "training_schedule": {
+      "interval_hours": 72,
+      "batch_size": 256,
+      "max_epochs": 25,
+      "early_stopping": true
+    },
+    "data_collection": {
+      "parallel_enabled": true,
+      "batch_processing": 400.0,
+      "cleanup_old_data_days": 90
+    },
+    "model_optimization": {
+      "complexity": "low",
+      "ensemble_enabled": false,
+      "parallel_training": false,
+      "prediction_cache": true
+    }
+  },
+  "deployment_status": "READY"
+}

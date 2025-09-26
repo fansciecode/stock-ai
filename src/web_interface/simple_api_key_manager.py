@@ -558,12 +558,28 @@ def get_user_api_keys(user_email: str):
 def test_connection(user_email: str, exchange: str):
     return api_key_manager.test_connection(user_email, exchange)
 
+# Global instance for easy importing
+simple_api_key_manager = SimpleAPIKeyManager()
+
+# Export functions for backward compatibility
+def create_user_if_not_exists(email: str, password: str = "default"):
+    return simple_api_key_manager.create_user_if_not_exists(email, password)
+
+def add_user_api_key(email: str, exchange: str, api_key: str, api_secret: str, is_testnet: bool = True):
+    return simple_api_key_manager.add_user_api_key(email, exchange, api_key, api_secret, is_testnet)
+
+def get_user_api_keys(email: str):
+    return simple_api_key_manager.get_user_api_keys(email)
+
+def delete_user_api_key(email: str, key_id: str):
+    return simple_api_key_manager.delete_user_api_key(email, key_id)
+
 if __name__ == "__main__":
     # Test the API key manager
     print("🔑 Testing API Key Manager...")
     
     # Test adding a key
-    result = add_api_key("test@example.com", "binance", "test_key", "test_secret", True)
+    result = add_user_api_key("test@example.com", "binance", "test_key", "test_secret", True)
     print(f"Add result: {result}")
     
     # Test getting keys
