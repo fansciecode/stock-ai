@@ -1999,18 +1999,39 @@ def get_trading_activity():
         log_file_path = 'logs/fixed_continuous_trading.log'
         if os.path.exists(log_file_path):
             try:
-                # Read last 1000 lines to get recent activity
+                # Get current time and filter for logs from last 5 minutes only
+                from datetime import datetime, timedelta
+                now = datetime.now()
+                cutoff_time = now - timedelta(minutes=5)
+                
+                # Read last 500 lines to get recent activity (smaller for performance)
                 with open(log_file_path, 'r') as f:
                     lines = f.readlines()
-                    recent_lines = lines[-1000:] if len(lines) > 1000 else lines
+                    recent_lines = lines[-500:] if len(lines) > 500 else lines
                 
-                # Extract LIVE trading activity
+                # Extract LIVE trading activity with timestamp filtering
                 for line in recent_lines:
+                    # Skip empty lines
+                    if not line.strip():
+                        continue
+                        
+                    # Extract timestamp from log line (format: 2025-09-26 22:27:16)
+                    timestamp_match = re.search(r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})', line)
+                    if timestamp_match:
+                        try:
+                            log_time = datetime.strptime(timestamp_match.group(1), '%Y-%m-%d %H:%M:%S')
+                            # Skip old logs (older than 5 minutes)
+                            if log_time < cutoff_time:
+                                continue
+                        except:
+                            pass  # If timestamp parsing fails, include the line anyway
+                    
                     # Check if line is relevant (contains user email OR is a trading activity log)
                     is_user_line = user_email in line
                     is_trading_log = any(keyword in line for keyword in [
                         '🔴 LIVE ORDER via', '🇮🇳 ZERODHA ORDER:', '📈 POSITION CLOSED:', 
-                        '🔴 Connected to LIVE Binance', '🔴 Executing LIVE close order:'
+                        '🔴 Connected to LIVE Binance', '🔴 Executing LIVE close order:',
+                        '📊 Created 🎭 SIMULATED position:'
                     ])
                     
                     if is_user_line or is_trading_log:
@@ -2071,8 +2092,16 @@ def get_trading_activity():
                                 symbol = match.group(1)
                                 activity_logs.append(f"⚠️ Order failed: {symbol} below minimum size")
                 
-                # Keep only the most recent 15 logs
-                activity_logs = activity_logs[-15:]
+                # Remove duplicates while preserving order and keep only recent logs
+                seen = set()
+                unique_logs = []
+                for log in reversed(activity_logs):  # Start from newest
+                    if log not in seen:
+                        seen.add(log)
+                        unique_logs.append(log)
+                
+                # Keep only the most recent 10 unique logs
+                activity_logs = list(reversed(unique_logs[:10]))
                 
             except Exception as log_error:
                 print(f"Error reading logs: {log_error}")
@@ -2274,13 +2303,35 @@ def get_detailed_trading_activity():
         
         try:
             with sqlite3.connect(db_path) as conn:
-                cursor = conn.execute("""
-                    SELECT execution_id, action, symbol, price, quantity, reason, timestamp, pnl, exchange, amount
-                    FROM execution_log 
-                    WHERE user_email = ?
-                    ORDER BY timestamp DESC
-                    LIMIT 100
-                """, (user_email,))
+                # First check what columns exist
+                cursor = conn.execute("PRAGMA table_info(execution_log)")
+                columns = [row[1] for row in cursor.fetchall()]
+                
+                # Build query based on available columns
+                if 'exchange' in columns and 'amount' in columns:
+                    cursor = conn.execute("""
+                        SELECT execution_id, action, symbol, price, quantity, reason, timestamp, pnl, exchange, amount
+                        FROM execution_log 
+                        WHERE user_email = ?
+                        ORDER BY timestamp DESC
+                        LIMIT 100
+                    """, (user_email,))
+                elif 'exchange' in columns:
+                    cursor = conn.execute("""
+                        SELECT execution_id, action, symbol, price, quantity, reason, timestamp, pnl, exchange, NULL
+                        FROM execution_log 
+                        WHERE user_email = ?
+                        ORDER BY timestamp DESC
+                        LIMIT 100
+                    """, (user_email,))
+                else:
+                    cursor = conn.execute("""
+                        SELECT execution_id, action, symbol, price, quantity, reason, timestamp, pnl, NULL, NULL
+                        FROM execution_log 
+                        WHERE user_email = ?
+                        ORDER BY timestamp DESC
+                        LIMIT 100
+                    """, (user_email,))
                 
                 for row in cursor.fetchall():
                     execution_id, action, symbol, price, quantity, reason, timestamp, pnl, exchange, amount = row
