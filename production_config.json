@@ -1,0 +1,57 @@
+{
+  "trading": {
+    "mode": "LIVE",
+    "max_position_size_pct": 2.0,
+    "max_daily_loss_pct": 5.0,
+    "min_order_size_usd": 10,
+    "max_order_size_usd": 1000,
+    "max_daily_trades": 50,
+    "stop_loss_pct": 2.0,
+    "take_profit_pct": 4.0
+  },
+  "ai_model": {
+    "min_accuracy_threshold": 0.65,
+    "retrain_frequency_days": 7,
+    "feature_update_interval_hours": 24
+  },
+  "data_sources": {
+    "primary": "yfinance",
+    "backup": [
+      "alpha_vantage",
+      "polygon"
+    ],
+    "cache_duration_seconds": 60
+  },
+  "exchanges": {
+    "binance": {
+      "enabled": true,
+      "testnet": false,
+      "supported_assets": [
+        "BTC/USDT",
+        "ETH/USDT",
+        "BNB/USDT",
+        "ADA/USDT",
+        "SOL/USDT"
+      ]
+    },
+    "alpaca": {
+      "enabled": true,
+      "paper_trading": false,
+      "supported_assets": [
+        "AAPL",
+        "MSFT",
+        "GOOGL",
+        "AMZN",
+        "TSLA"
+      ]
+    }
+  },
+  "monitoring": {
+    "log_level": "INFO",
+    "alert_on_loss_pct": 3.0,
+    "daily_report_time": "18:00",
+    "backup_frequency_hours": 6
+  },
+  "setup_date": "2025-09-28T01:20:21.212851",
+  "version": "1.0.0"
+}

@@ -23,7 +23,7 @@ class TradingModeManager:
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS trading_modes (
                         user_email TEXT PRIMARY KEY,
-                        trading_mode TEXT DEFAULT 'TESTNET',
+                        trading_mode TEXT DEFAULT 'LIVE',
                         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
                     )
                 """)
@@ -73,13 +73,13 @@ class TradingModeManager:
                 if result:
                     return result[0]
                 else:
-                    # Default to TESTNET for new users
-                    self.set_trading_mode(user_email, 'TESTNET')
-                    return 'TESTNET'
+                    # Default to LIVE for new users
+                    self.set_trading_mode(user_email, 'LIVE')
+                    return 'LIVE'
                     
         except Exception as e:
             print(f"Error getting trading mode: {e}")
-            return 'TESTNET'  # Safe default
+            return 'LIVE'  # Default to LIVE trading
     
     def get_trading_modes_info(self, user_email: str) -> Dict:
         """Get comprehensive trading mode information"""

@@ -1,0 +1,28 @@
+{
+  "total_instruments": 10258,
+  "last_updated": "2025-09-25T20:03:07.249742",
+  "coverage": {
+    "nse_stocks": 530,
+    "bse_stocks": 3000,
+    "nyse_stocks": 2800,
+    "nasdaq_stocks": 3300,
+    "crypto_pairs": 500,
+    "forex_pairs": 50,
+    "commodities": 100
+  },
+  "exchanges": {
+    "NASDAQ": 3300,
+    "BSE": 3000,
+    "NYSE": 2800,
+    "NSE": 530,
+    "BINANCE": 500,
+    "COMEX": 100,
+    "FOREX": 28
+  },
+  "asset_classes": {
+    "equity": 9630,
+    "crypto": 500,
+    "commodity": 100,
+    "forex": 28
+  }
+}

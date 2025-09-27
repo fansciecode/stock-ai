@@ -1,0 +1,54 @@
+{
+  "system_mode": "PRODUCTION",
+  "data_source": "LIVE",
+  "trading_mode": "LIVE",
+  "ai_model_path": "models/real_trading_model.joblib",
+  "risk_management": {
+    "max_position_size_pct": 1.0,
+    "max_daily_loss_pct": 3.0,
+    "stop_loss_pct": 1.5,
+    "take_profit_pct": 3.0,
+    "min_order_size_usd": 10,
+    "max_order_size_usd": 500,
+    "max_daily_trades": 20
+  },
+  "supported_symbols": [
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "AMZN",
+    "TSLA",
+    "META",
+    "NVDA",
+    "BTC-USD",
+    "ETH-USD",
+    "BNB-USD",
+    "RELIANCE.NS",
+    "TCS.NS",
+    "INFY.NS"
+  ],
+  "exchanges": {
+    "binance": {
+      "enabled": true,
+      "assets": [
+        "BTC-USD",
+        "ETH-USD",
+        "BNB-USD"
+      ],
+      "testnet_first": true
+    },
+    "alpaca": {
+      "enabled": true,
+      "assets": [
+        "AAPL",
+        "MSFT",
+        "GOOGL",
+        "AMZN",
+        "TSLA"
+      ],
+      "paper_trading_first": true
+    }
+  },
+  "created": "2025-09-28T01:23:50.860629",
+  "version": "1.0.0"
+}

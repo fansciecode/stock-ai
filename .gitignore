@@ -1,104 +1,43 @@
+# Logs
+*.log
+logs/
+
+# Database files
+*.db
+*.sqlite
+
+# API Keys and secrets
+api_keys.json
+config.json
+.env
+
 # Python
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
+*.pyc
+*.pyo
+*.pyd
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# Environment
-.env
-.venv
 env/
 venv/
-ENV/
-env.bak/
-venv.bak/
+.venv/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
 # OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
-# Logs
-*.log
-logs/*.log
-*.log.*
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Models (large files)
-models/*.pkl
-models/*.joblib
-src/web_interface/models/*.pkl
-src/web_interface/models/*.joblib
-*.h5
-*.pb
-
-# Data files
-data/*.csv
-data/*.parquet
-data/*.json
-data/live_*
-data/market_*
+# Test files
+test_*.py
+debug_*.py
+fix_*.py
+*_test.py
 
 # Temporary files
 *.tmp
 *.temp
-states/
-cache/
-
-# API Keys and Secrets
-config/production/
-secrets/
-*.key
-*.pem
-
-# Build artifacts
-build/
-dist/
-*.egg-info/
-
-# Coverage reports
-htmlcov/
-.coverage
-.coverage.*
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# Node.js (if frontend)
-node_modules/
+temp/
