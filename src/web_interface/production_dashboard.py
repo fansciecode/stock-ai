@@ -4056,6 +4056,28 @@ def trading_monitor():
     <script>
         let monitoringActive = false;
         
+        function stopAITrading() {
+            fetch('/api/stop-ai-trading', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    addActivityItem('🛑 Trading session ended', 'warning');
+                    // Change button color back to green
+                    document.querySelector('.start-btn').style.backgroundColor = '#48bb78';
+                    document.querySelector('.start-btn').textContent = '🚀 Start AI Trading';
+                    document.querySelector('.start-btn').onclick = startAITrading;
+                } else {
+                    addActivityItem('❌ Failed to stop trading: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                addActivityItem('❌ Error stopping trading: ' + error, 'error');
+            });
+        }
+        
         function startAITrading() {
             fetch('/api/start-ai-trading', {
                 method: 'POST',
@@ -4064,8 +4086,27 @@ def trading_monitor():
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    addActivityItem('✅ AI Trading started successfully!', 'success');
+                    // Show LIVE mode information
+                    addActivityItem('🔴 Mode: LIVE TRADING (Real Money)', 'warning');
+                    addActivityItem('⚠️ WARNING: Real money will be used!', 'warning');
+                    addActivityItem('💰 Binance live orders will be placed!', 'warning');
+                    addActivityItem('🚀 Starting AI trading session...', 'info');
+                    
+                    // Show success message with session details
+                    addActivityItem('✅ Continuous AI Trading started successfully!', 'success');
+                    addActivityItem('🆔 Session: ' + data.session_id, 'info');
+                    addActivityItem('📊 Initial Positions: ' + data.initial_positions, 'info');
+                    addActivityItem('⏱️ Monitoring Interval: ' + data.monitoring_interval + 's', 'info');
+                    addActivityItem('🔄 AI now monitoring continuously...', 'info');
+                    addActivityItem('🛡️ Stop-loss/take-profit will execute automatically', 'info');
+                    
+                    // Start monitoring
                     startMonitoring();
+                    
+                    // Change button color to red
+                    document.querySelector('.start-btn').style.backgroundColor = '#f56565';
+                    document.querySelector('.start-btn').textContent = '🛑 Stop AI Trading';
+                    document.querySelector('.start-btn').onclick = stopAITrading;
                 } else {
                     addActivityItem('❌ Failed to start AI trading: ' + data.error, 'error');
                 }
