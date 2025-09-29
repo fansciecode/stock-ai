@@ -417,7 +417,7 @@ class FixedContinuousTradingEngine:
             
             # Save session to database
             session_id = self._save_session_to_db(session_data)
-            if session_id < 0:
+            if isinstance(session_id, str) == False:
                 return {'success': False, 'error': 'Failed to save session to database'}
             
             session_data['id'] = session_id
