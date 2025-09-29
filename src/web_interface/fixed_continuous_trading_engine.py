@@ -188,7 +188,6 @@ def _create_db_tables(self):
             self.logger.info("Database tables created or already exist")
         except Exception as e:
             self.logger.error(f"Error creating database tables: {e}")
-    
     def _restore_active_sessions(self):
         """Restore active sessions from database"""
         try:
