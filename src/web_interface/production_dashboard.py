@@ -2040,6 +2040,34 @@ def start_ai_trading():
         print(f"🚀 Starting AI trading session...")
         result = engine.start_continuous_trading(user_email, trading_mode)
         
+        # If it fails because session already active, try force cleanup and retry
+        if not result.get('success') and 'already active' in result.get('error', '').lower():
+            print(f"🔄 Session already active, attempting cleanup and retry...")
+            
+            try:
+                # Force cleanup orphaned sessions
+                if user_email in engine.active_sessions:
+                    del engine.active_sessions[user_email]
+                    print(f"🧹 Cleared orphaned in-memory session for {user_email}")
+                
+                # Clean up database sessions
+                import sqlite3
+                conn = sqlite3.connect('data/fixed_continuous_trading.db')
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE trading_sessions SET is_active=0, end_time=? WHERE user_email=? AND is_active=1",
+                    (datetime.now().isoformat(), user_email)
+                )
+                conn.commit()
+                conn.close()
+                print(f"🧹 Cleaned up database sessions for {user_email}")
+                
+                # Retry starting the session
+                result = engine.start_continuous_trading(user_email, trading_mode)
+                
+            except Exception as cleanup_error:
+                print(f"Error during cleanup: {cleanup_error}")
+        
         if result.get('success'):
             print(f"✅ AI trading started successfully")
             return jsonify({"success": True, "message": "AI trading started successfully", "session_id": result.get('session_id', ''), "monitoring_interval": result.get('monitoring_interval', 10), "initial_positions": result.get('initial_positions', 0)})
@@ -2069,11 +2097,60 @@ def stop_ai_trading():
         user_email = session.get('user_email', 'kirannaik@unitednewdigitalmedia.com')
         if not user_email:
             return jsonify({'success': False, 'error': 'User email not found'})
-            
-        # Stop trading directly
+        
+        # Try to stop trading via engine first    
         from fixed_continuous_trading_engine import fixed_continuous_engine
         result = fixed_continuous_engine.stop_continuous_trading(user_email, 'USER_REQUEST')
         
+        # If engine says no session found, force cleanup any stale sessions
+        if not result['success'] and 'No active trading session found' in result.get('error', ''):
+            # Force cleanup any running background processes and database sessions
+            try:
+                # Clear from in-memory sessions if exists
+                if user_email in fixed_continuous_engine.active_sessions:
+                    del fixed_continuous_engine.active_sessions[user_email]
+                    print(f"🧹 Cleaned up orphaned in-memory session for {user_email}")
+                
+                # Clean up any database sessions
+                import sqlite3
+                conn = sqlite3.connect('data/fixed_continuous_trading.db')
+                cursor = conn.cursor()
+                
+                # Check if there are any database sessions
+                cursor.execute(
+                    "SELECT COUNT(*) FROM trading_sessions WHERE user_email=? AND is_active=1",
+                    (user_email,)
+                )
+                active_db_sessions = cursor.fetchone()[0]
+                
+                if active_db_sessions > 0:
+                    # Force stop all database sessions
+                    cursor.execute(
+                        "UPDATE trading_sessions SET is_active=0, end_time=? WHERE user_email=? AND is_active=1",
+                        (datetime.now().isoformat(), user_email)
+                    )
+                    conn.commit()
+                    print(f"🧹 Cleaned up {active_db_sessions} orphaned database sessions for {user_email}")
+                
+                conn.close()
+                
+                # Return success after cleanup
+                return jsonify({
+                    'success': True,
+                    'message': 'Trading stopped and cleaned up orphaned sessions',
+                    'final_pnl': 0,
+                    'trades_executed': 0,
+                    'session_duration': '0h 0m'
+                })
+                
+            except Exception as cleanup_error:
+                print(f"Error during cleanup: {cleanup_error}")
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to stop trading and cleanup: {str(cleanup_error)}'
+                })
+        
+        # If engine stop was successful, return its result
         if result['success']:
             return jsonify({
                 'success': True,
