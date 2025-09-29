@@ -16,8 +16,6 @@ import sqlite3
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Tuple
 
-# Global instance for easy import will be created at the end of the file
-
 class FixedContinuousTradingEngine:
     """Fixed Continuous Trading Engine"""
     
@@ -36,14 +34,7 @@ class FixedContinuousTradingEngine:
         # Initialize state
         self.active_sessions = {}
         self.monitoring_threads = {}
-        # Strategy-based monitoring intervals (more realistic)
-        self.monitoring_intervals = {
-            'scalping': 30,      # 30 seconds - for quick trades
-            'day_trading': 120,  # 2 minutes - for intraday trades  
-            'swing_trading': 300, # 5 minutes - for longer-term trades
-            'default': 120       # 2 minutes default (balanced)
-        }
-        self.monitoring_interval = self.monitoring_intervals['default']
+        self.monitoring_interval = 10  # seconds
         self.db_path = 'data/fixed_continuous_trading.db'
         self.risk_manager = None
         self.ai_model = None
@@ -269,20 +260,29 @@ class FixedContinuousTradingEngine:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
-            # Insert new session - let database auto-generate the ID
-            cursor.execute(
-                "INSERT INTO trading_sessions (user_email, start_time, is_active, trading_mode, session_token) VALUES (?, ?, ?, ?, ?)",
-                (
-                    session_data["user_email"],
-                    session_data["start_time"],
-                    1,  # is_active = 1 (true)
-                    session_data["trading_mode"],
-                    f"session_{session_data['user_email']}_{int(time.time())}"  # session_token
-                )
-            )
+            # Generate a unique session ID if not present
+            import uuid
+            session_id = session_data.get("id", f"session_{str(uuid.uuid4())}")
             
-            # Get the auto-generated session ID
-            session_id = cursor.lastrowid
+            # Check if session already exists
+            if "id" in session_data:
+                # Update existing session
+                cursor.execute(
+                    "UPDATE trading_sessions SET status=?, end_time=? WHERE session_id=?",
+                    ("active", None, session_id)
+                )
+            else:
+                # Insert new session
+                cursor.execute(
+                    "INSERT INTO trading_sessions (session_id, user_email, start_time, status, risk_settings) VALUES (?, ?, ?, ?, ?)",
+                    (
+                        session_id,
+                        session_data["user_email"],
+                        session_data["start_time"],
+                        "active",
+                        json.dumps({"trading_mode": session_data["trading_mode"]})
+                    )
+                )
             
             # Commit changes and close connection
             conn.commit()
@@ -290,6 +290,9 @@ class FixedContinuousTradingEngine:
             self.logger.info(f"Successfully saved session {session_id} to database")
             return session_id
         except Exception as e:
+            self.logger.error(f"Error saving session to database: {e}")
+            return -1
+
             self.logger.error(f"Error saving session to database: {e}")
             return -1
     
@@ -390,34 +393,12 @@ class FixedContinuousTradingEngine:
         try:
             self.logger.info(f"🚀 Starting continuous trading for {user_email}")
             
-            # Initialize realistic strategy parameters based on timeframes
+            # Initialize strategy parameters
             self.strategy_parameters = {
-                # Crypto pairs - more volatile, wider spreads
-                'BTC/USDT': {
-                    'take_profit': 0.015,    # 1.5% (realistic for 2-min intervals)
-                    'stop_loss': 0.008,      # 0.8% (tight risk control)
-                    'position_size': 0.2,    # 20% of portfolio per trade
-                    'strategy_type': 'day_trading'
-                },
-                'ETH/USDT': {
-                    'take_profit': 0.02,     # 2% (ETH more volatile than BTC)
-                    'stop_loss': 0.01,       # 1% 
-                    'position_size': 0.2,
-                    'strategy_type': 'day_trading'
-                },
-                # Stock pairs - less volatile, tighter spreads
-                'RELIANCE.NSE': {
-                    'take_profit': 0.008,    # 0.8% (realistic for Indian stocks)
-                    'stop_loss': 0.005,      # 0.5%
-                    'position_size': 0.15,   # 15% (more conservative)
-                    'strategy_type': 'swing_trading'
-                },
-                'INFY.NSE': {
-                    'take_profit': 0.01,     # 1% (tech stocks more volatile)
-                    'stop_loss': 0.006,      # 0.6%
-                    'position_size': 0.15,
-                    'strategy_type': 'swing_trading'
-                }
+                'BTC/USDT': {'take_profit': 0.2, 'stop_loss': 0.1, 'position_size': 1.0},
+                'ETH/USDT': {'take_profit': 0.2, 'stop_loss': 0.1, 'position_size': 1.0},
+                'RELIANCE.NSE': {'take_profit': 0.15, 'stop_loss': 0.08, 'position_size': 1.0},
+                'INFY.NSE': {'take_profit': 0.15, 'stop_loss': 0.08, 'position_size': 1.0}
             }
             
             # Check if user already has an active session
@@ -436,7 +417,7 @@ class FixedContinuousTradingEngine:
             
             # Save session to database
             session_id = self._save_session_to_db(session_data)
-            if not isinstance(session_id, int) or session_id <= 0:
+            if session_id < 0:
                 return {'success': False, 'error': 'Failed to save session to database'}
             
             session_data['id'] = session_id
@@ -446,14 +427,6 @@ class FixedContinuousTradingEngine:
             if not initial_result.get('success', False):
                 return initial_result
                 
-            # Set monitoring interval based on strategy mix
-            strategy_types = [params.get('strategy_type', 'day_trading') for params in self.strategy_parameters.values()]
-            dominant_strategy = max(set(strategy_types), key=strategy_types.count)
-            session_monitoring_interval = self.monitoring_intervals.get(dominant_strategy, self.monitoring_intervals['default'])
-            
-            session_data['monitoring_interval'] = session_monitoring_interval
-            self.logger.info(f"📊 Using {dominant_strategy} strategy with {session_monitoring_interval}s monitoring interval")
-            
             # Start monitoring task using threading instead of asyncio
             self.active_sessions[user_email] = session_data
             
@@ -470,11 +443,10 @@ class FixedContinuousTradingEngine:
             
             return {
                 'success': True,
-                'message': f'Continuous trading started successfully using {dominant_strategy} strategy',
+                'message': 'Continuous trading started successfully',
                 'session_id': session_id,
                 'initial_positions': len(session_data['positions']),
-                'monitoring_interval': session_monitoring_interval,
-                'strategy_type': dominant_strategy,
+                'monitoring_interval': self.monitoring_interval,
                 'risk_settings_applied': bool(self.risk_manager)
             }
             
@@ -502,7 +474,7 @@ class FixedContinuousTradingEngine:
                 trading_mode = 'LIVE'
                 
                 # Place the order
-                result = order_manager.place_order('BTC/USDT', 'buy', 10.0, 'binance')
+                result = order_manager.place_order('BTC/USDT', 'buy', 10.0, 'binance', trading_mode)
                 self.logger.info(f"🔄 Placed initial order: {result}")
                 
                 # Save position to session
@@ -536,7 +508,7 @@ class FixedContinuousTradingEngine:
                 )
                 
                 # Place an order on Zerodha as well
-                result = order_manager.place_order('RELIANCE.NSE', 'buy', 500.0, 'zerodha')
+                result = order_manager.place_order('RELIANCE.NSE', 'buy', 500.0, 'zerodha', trading_mode)
                 self.logger.info(f"🔄 Placed initial Zerodha order: {result}")
                 
                 # Save position to session
@@ -678,67 +650,6 @@ class FixedContinuousTradingEngine:
         except Exception as e:
             self.logger.error(f"Error monitoring market volatility: {e}")
             
-    def stop_continuous_trading(self, user_email: str, reason: str = 'USER_REQUEST') -> Dict[str, Any]:
-        """Stop continuous trading for a user"""
-        try:
-            self.logger.info(f"🛑 Stopping continuous trading for {user_email}")
-            
-            if user_email not in self.active_sessions:
-                return {
-                    'success': False,
-                    'error': 'No active trading session found'
-                }
-            
-            # Get session data
-            session_data = self.active_sessions[user_email]
-            session_id = session_data.get('id')
-            
-            # Calculate session duration
-            start_time = datetime.fromisoformat(session_data.get('start_time'))
-            end_time = datetime.now()
-            duration = end_time - start_time
-            hours, remainder = divmod(duration.total_seconds(), 3600)
-            minutes, seconds = divmod(remainder, 60)
-            
-            # Calculate final P&L
-            positions = session_data.get('positions', [])
-            total_pnl = sum(position.get('profit_loss', 0) for position in positions)
-            
-            # Update session in database
-            try:
-                conn = sqlite3.connect(self.db_path)
-                cursor = conn.cursor()
-                
-                cursor.execute(
-                    "UPDATE trading_sessions SET is_active=0, end_time=? WHERE id=?",
-                    (end_time.isoformat(), session_id)
-                )
-                
-                conn.commit()
-                conn.close()
-            except Exception as db_error:
-                self.logger.error(f"Error updating session in database: {db_error}")
-            
-            # Remove session from active sessions
-            del self.active_sessions[user_email]
-            
-            self.logger.info(f"🛑 Trading session ended for {user_email}")
-            
-            return {
-                'success': True,
-                'message': f'Trading stopped: {reason}',
-                'final_pnl': total_pnl,
-                'trades_executed': len(positions),
-                'session_duration': f'{int(hours)}h {int(minutes)}m'
-            }
-            
-        except Exception as e:
-            self.logger.error(f"Error stopping continuous trading: {e}")
-            return {
-                'success': False,
-                'error': f'Failed to stop trading: {str(e)}'
-            }
-    
     def _continuous_monitoring_loop(self, user_email: str):
         """Continuous monitoring loop for a user"""
         try:
@@ -763,197 +674,15 @@ class FixedContinuousTradingEngine:
                     # Check for new entry signals
                     self._check_entry_signals(user_email)
                     
-                    # Apply risk management - CHECK FOR AUTO-STOP CONDITIONS
-                    stop_reason = self._apply_risk_management(user_email)
-                    if stop_reason:
-                        self.logger.warning(f"🛑 Auto-stopping trading for {user_email}: {stop_reason}")
-                        break  # Exit the monitoring loop
+                    # Apply risk management
+                    self._apply_risk_management(user_email)
                     
                 except Exception as e:
                     self.logger.error(f"Error in monitoring loop: {e}")
                 
-                # Sleep for the session-specific monitoring interval
-                session_interval = session_data.get('monitoring_interval', self.monitoring_interval)
-                time.sleep(session_interval)
+                # Sleep for the monitoring interval
+                time.sleep(self.monitoring_interval)
             
             self.logger.info(f"🛑 Stopped continuous monitoring for {user_email}")
         except Exception as e:
             self.logger.error(f"Error in continuous monitoring: {e}")
-
-    def _apply_risk_management(self, user_email: str) -> str:
-        """Apply risk management rules and return stop reason if triggered"""
-        try:
-            if user_email not in self.active_sessions:
-                return None
-                
-            session_data = self.active_sessions[user_email]
-            start_time = datetime.fromisoformat(session_data.get('start_time'))
-            current_time = datetime.now()
-            
-            # Get user's risk settings from database
-            risk_settings = self._get_user_risk_settings(user_email)
-            
-            # Calculate session duration
-            duration_hours = (current_time - start_time).total_seconds() / 3600
-            
-            # Calculate current P&L
-            positions = session_data.get('positions', [])
-            current_pnl = sum(position.get('profit_loss', 0) for position in positions)
-            
-            # 1. CHECK DAILY LOSS LIMIT
-            max_daily_loss_pct = risk_settings.get('max_daily_loss', 0.05)  # Default 5%
-            portfolio_value = 10000  # Assume $10K portfolio for now
-            max_daily_loss = portfolio_value * max_daily_loss_pct
-            
-            if current_pnl < -max_daily_loss:
-                # Auto-stop due to daily loss limit
-                self.logger.warning(f"🚨 AUTO-STOP TRIGGERED: Daily loss limit exceeded: P&L ${current_pnl:.2f} < -${max_daily_loss:.2f}")
-                self.stop_continuous_trading(user_email, f'DAILY_LOSS_LIMIT')
-                return f"Daily loss limit exceeded: ${current_pnl:.2f} < -${max_daily_loss:.2f}"
-            
-            # 2. CHECK SESSION TIME LIMITS (for demo/testing)
-            max_session_hours = risk_settings.get('max_session_hours', 168)  # Default 1 week
-            if duration_hours > max_session_hours:
-                self.logger.warning(f"🚨 AUTO-STOP TRIGGERED: Time limit reached: {duration_hours:.1f} > {max_session_hours} hours")
-                self.stop_continuous_trading(user_email, f'TIME_LIMIT')
-                return f"Maximum session time reached: {duration_hours:.1f} hours"
-            
-            # Log session status every 10 minutes to track health
-            if duration_hours > 0 and (duration_hours * 60) % 10 < 0.1:  # Every 10 minutes
-                self.logger.info(f"📊 SESSION HEALTH: {user_email} - Duration: {duration_hours:.1f}h, P&L: ${current_pnl:.2f}, Positions: {len(positions)}")
-                self.logger.info(f"⚙️ RISK LIMITS: Max Loss: ${max_daily_loss:.0f}, Max Time: {max_session_hours}h, Max Positions: {max_positions}")
-            
-            # 3. CHECK POSITION COUNT LIMITS
-            max_positions = risk_settings.get('max_positions', 10)  # Default 10 positions
-            if len(positions) > max_positions:
-                return f"Too many positions: {len(positions)} > {max_positions}"
-            
-            # 4. LOG RISK STATUS (every 10 monitoring cycles to avoid spam)
-            if hasattr(self, '_risk_log_counter'):
-                self._risk_log_counter += 1
-            else:
-                self._risk_log_counter = 1
-                
-            if self._risk_log_counter % 10 == 0:  # Log every 10 cycles (100 seconds)
-                self.logger.info(f"🛡️ Risk Check - P&L: ${current_pnl:.2f}, Duration: {duration_hours:.2f}h, Positions: {len(positions)}")
-            
-            return None  # No stop condition triggered
-            
-        except Exception as e:
-            self.logger.error(f"Error in risk management: {e}")
-            return None
-    
-    def _get_user_risk_settings(self, user_email: str) -> dict:
-        """Get user's risk settings from database"""
-        try:
-            # Realistic settings for production trading
-            # Later this would query the user's actual settings from risk_settings table
-            return {
-                'max_daily_loss': 0.20,      # 20% daily loss limit (increased - was too strict)
-                'max_position_size': 0.15,   # 15% per position (more conservative)  
-                'stop_loss_pct': 0.008,      # 0.8% stop loss (tighter for safety)
-                'take_profit_pct': 0.015,    # 1.5% take profit (realistic target)
-                'min_signal_strength': 0.65,  # 65% AI confidence (slightly relaxed)
-                'max_session_hours': 168,    # 1 week max session (was stopping too early)
-                'max_positions': 15,         # Max 15 concurrent positions (increased)
-                'order_failure_threshold': 10 # Allow 10 failed orders before panic mode
-            }
-        except Exception as e:
-            self.logger.error(f"Error getting risk settings: {e}")
-            return {
-                'max_daily_loss': 0.20,
-                'max_session_hours': 168,
-                'max_positions': 15
-            }
-    
-    def _update_positions(self, user_email: str):
-        """Update positions with current market prices"""
-        try:
-            if user_email not in self.active_sessions:
-                return
-                
-            session_data = self.active_sessions[user_email]
-            positions = session_data.get('positions', [])
-            
-            # For now, just simulate price updates
-            for position in positions:
-                # Simulate small random price movements
-                import random
-                current_price = position.get('current_price', position.get('entry_price', 100))
-                price_change = random.uniform(-0.02, 0.02)  # ±2% random movement
-                new_price = current_price * (1 + price_change)
-                position['current_price'] = new_price
-                
-                # Update P&L
-                if position.get('side') == 'BUY':
-                    position['profit_loss'] = (new_price - position.get('entry_price', new_price)) * position.get('quantity', 1)
-                else:
-                    position['profit_loss'] = (position.get('entry_price', new_price) - new_price) * position.get('quantity', 1)
-                    
-        except Exception as e:
-            self.logger.error(f"Error updating positions: {e}")
-    
-    def _check_exit_signals(self, user_email: str):
-        """Check if any positions should be closed"""
-        try:
-            if user_email not in self.active_sessions:
-                return
-                
-            session_data = self.active_sessions[user_email]
-            positions = session_data.get('positions', [])
-            risk_settings = self._get_user_risk_settings(user_email)
-            
-            for position in positions:
-                if position.get('status') != 'OPEN':
-                    continue
-                    
-                current_price = position.get('current_price', position.get('entry_price', 100))
-                entry_price = position.get('entry_price', current_price)
-                
-                # Check stop loss
-                stop_loss_pct = risk_settings.get('stop_loss_pct', 0.02)
-                if position.get('side') == 'BUY':
-                    stop_loss_price = entry_price * (1 - stop_loss_pct)
-                    if current_price <= stop_loss_price:
-                        self.logger.info(f"🔴 Stop loss triggered for {position.get('symbol', 'Unknown')}: ${current_price:.2f} <= ${stop_loss_price:.2f}")
-                        position['status'] = 'CLOSED'
-                        position['close_reason'] = 'STOP_LOSS'
-                
-                # Check take profit
-                take_profit_pct = risk_settings.get('take_profit_pct', 0.04)
-                if position.get('side') == 'BUY':
-                    take_profit_price = entry_price * (1 + take_profit_pct)
-                    if current_price >= take_profit_price:
-                        self.logger.info(f"🟢 Take profit triggered for {position.get('symbol', 'Unknown')}: ${current_price:.2f} >= ${take_profit_price:.2f}")
-                        position['status'] = 'CLOSED'
-                        position['close_reason'] = 'TAKE_PROFIT'
-                        
-        except Exception as e:
-            self.logger.error(f"Error checking exit signals: {e}")
-    
-    def _check_entry_signals(self, user_email: str):
-        """Check for new trading opportunities"""
-        try:
-            if user_email not in self.active_sessions:
-                return
-                
-            session_data = self.active_sessions[user_email]
-            positions = session_data.get('positions', [])
-            risk_settings = self._get_user_risk_settings(user_email)
-            
-            # Check if we're under position limit
-            open_positions = [p for p in positions if p.get('status') == 'OPEN']
-            max_positions = risk_settings.get('max_positions', 5)
-            
-            if len(open_positions) >= max_positions:
-                return  # Already at max positions
-                
-            # For demo purposes, don't generate new signals constantly
-            # In real implementation, this would check AI signals
-            pass
-                        
-        except Exception as e:
-            self.logger.error(f"Error checking entry signals: {e}")
-
-# Create global instance at the end of the file
-fixed_continuous_engine = FixedContinuousTradingEngine()
