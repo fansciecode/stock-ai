@@ -4070,7 +4070,16 @@ def trading_monitor():
                     document.querySelector('.start-btn').textContent = '🚀 Start AI Trading';
                     document.querySelector('.start-btn').onclick = startAITrading;
                 } else {
-                    addActivityItem('❌ Failed to stop trading: ' + data.error, 'error');
+                    // Handle "No active trading session" as a non-error
+                    if (data.error && data.error.includes('No active trading session')) {
+                        addActivityItem('ℹ️ No active trading session to stop', 'info');
+                        // Change button color back to green anyway
+                        document.querySelector('.start-btn').style.backgroundColor = '#48bb78';
+                        document.querySelector('.start-btn').textContent = '🚀 Start AI Trading';
+                        document.querySelector('.start-btn').onclick = startAITrading;
+                    } else {
+                        addActivityItem('❌ Failed to stop trading: ' + data.error, 'error');
+                    }
                 }
             })
             .catch(error => {
