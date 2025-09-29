@@ -474,7 +474,7 @@ class FixedContinuousTradingEngine:
                 trading_mode = 'LIVE'
                 
                 # Place the order
-                result = order_manager.place_order('BTC/USDT', 'buy', 10.0, 'binance', trading_mode)
+                result = order_manager.place_order('BTC/USDT', 'buy', 10.0, 'binance')
                 self.logger.info(f"🔄 Placed initial order: {result}")
                 
                 # Save position to session
@@ -508,7 +508,7 @@ class FixedContinuousTradingEngine:
                 )
                 
                 # Place an order on Zerodha as well
-                result = order_manager.place_order('RELIANCE.NSE', 'buy', 500.0, 'zerodha', trading_mode)
+                result = order_manager.place_order('RELIANCE.NSE', 'buy', 500.0, 'zerodha')
                 self.logger.info(f"🔄 Placed initial Zerodha order: {result}")
                 
                 # Save position to session
