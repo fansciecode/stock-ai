@@ -442,8 +442,13 @@ def login_page():
 
 @app.route('/api/login', methods=['POST'])
 def api_login():
-    """Handle user login - simplified for demo"""
-    data = request.get_json()
+    """Handle user login - supports both JSON and form data"""
+    # Handle both JSON and form data
+    if request.content_type == 'application/json':
+        data = request.get_json()
+    else:
+        data = request.form.to_dict()
+    
     email = data.get('email', '')
     password = data.get('password', '')
     
@@ -474,6 +479,10 @@ def api_login():
         print(f"🔐 User logged in: {session['user_email']}, ID: {session['user_id']}, Mode: {session['trading_mode']}")
         print(f"🔧 Session keys set: {list(session.keys())}")
         
+        # For form submissions, redirect to dashboard
+        if request.content_type != 'application/json':
+            return redirect(url_for('trading_dashboard'))
+        
         response = {
             'success': True,
             'message': 'Login successful',
@@ -482,9 +491,14 @@ def api_login():
             'user': {
                 'email': email,
                 'id': user_id
-            }
+            },
+            'redirect_url': '/dashboard'
         }
     else:
+        # For form submissions, show error page or redirect back
+        if request.content_type != 'application/json':
+            return redirect(url_for('login_page') + '?error=Invalid credentials')
+        
         response = {
             'success': False,
             'message': 'Invalid email or password'
@@ -494,25 +508,54 @@ def api_login():
 
 @app.route('/api/signup', methods=['POST'])
 def api_signup():
-    """Handle user signup"""
-    data = request.get_json()
+    """Handle user signup - supports both JSON and form data"""
+    # Handle both JSON and form data
+    if request.content_type == 'application/json':
+        data = request.get_json()
+    else:
+        data = request.form.to_dict()
     
-    # Make API request to Enhanced API
-    response = dashboard.make_api_request(
-        '/api/v2/auth/register', 
-        method='POST', 
-        data=data,
-        auth_required=False
-    )
+    email = data.get('email', '')
+    password = data.get('password', '')
+    name = data.get('name', email.split('@')[0])
     
-    if response.get('success') and response.get('token'):
-        session['user_token'] = response['token']
-        session['user_id'] = response.get('user_id', f"user_{int(time.time())}")  # Fallback ID
-        session['user_email'] = data.get('email')
-        dashboard.current_token = response['token']
+    # Simple signup for demo (in production, use proper user management)
+    if email and password:
+        # Generate session data
+        user_token = f"token_{int(time.time())}"
+        user_id = f"user_{int(time.time())}"
+        
+        # Set session data
+        session['user_token'] = user_token
+        session['user_id'] = user_id
+        session['user_email'] = email
+        session['trading_mode'] = 'TESTNET'  # Default to safe mode
+        session.permanent = True
+        dashboard.current_token = user_token
         
         # Debug log
         print(f"🔐 User signed up: {session['user_email']}, ID: {session['user_id']}")
+        
+        # For form submissions, redirect to dashboard
+        if request.content_type != 'application/json':
+            return redirect(url_for('trading_dashboard'))
+        
+        response = {
+            'success': True,
+            'message': 'Account created successfully!',
+            'token': user_token,
+            'user_id': user_id,
+            'redirect_url': '/dashboard'
+        }
+    else:
+        # For form submissions, redirect back with error
+        if request.content_type != 'application/json':
+            return redirect(url_for('index') + '?error=Invalid signup data')
+            
+        response = {
+            'success': False,
+            'message': 'Email and password required'
+        }
         
     return jsonify(response)
 
