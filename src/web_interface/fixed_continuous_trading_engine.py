@@ -501,22 +501,67 @@ class FixedContinuousTradingEngine:
                 # Always use LIVE mode
                 trading_mode = 'LIVE'
                 
-                # Place the order
-                result = order_manager.place_order('BTC/USDT', 'buy', 10.0, 'binance')
-                self.logger.info(f"🔄 Placed initial order: {result}")
+                # Place multiple initial orders with balance checking
+                orders_to_place = [
+                    {'symbol': 'BTC/USDT', 'side': 'buy', 'amount': 10.0, 'exchange': 'binance'},
+                    {'symbol': 'RELIANCE.NSE', 'side': 'buy', 'amount': 500.0, 'exchange': 'zerodha'}
+                ]
                 
-                # Save position to session
-                position_data = {
-                    'symbol': 'BTC/USDT',
-                    'entry_price': result.get('price', 0),
-                    'quantity': result.get('amount', 0),
-                    'side': 'buy',
-                    'timestamp': datetime.now().isoformat(),
-                    'take_profit': result.get('price', 0) * 1.05,  # 5% take profit
-                    'stop_loss': result.get('price', 0) * 0.95,    # 5% stop loss
-                    'current_price': result.get('price', 0),
-                    'profit_loss': 0.0
-                }
+                simulation_orders = 0
+                real_orders = 0
+                
+                for order in orders_to_place:
+                    result = order_manager.place_order(
+                        order['symbol'], 
+                        order['side'], 
+                        order['amount'], 
+                        order['exchange']
+                    )
+                    
+                    # Check if this was a simulation due to insufficient balance
+                    if result.get('real_order', True) == False:
+                        simulation_orders += 1
+                        self.logger.warning(f"🎭 SIMULATION ORDER: {order['symbol']} on {order['exchange']}")
+                        self.logger.warning(f"📝 Reason: {result.get('simulation_reason', 'Unknown')}")
+                    else:
+                        real_orders += 1
+                        self.logger.info(f"💰 REAL ORDER: {order['symbol']} on {order['exchange']}")
+                    
+                    self.logger.info(f"🔄 Order result: {result}")
+                    
+                    # Save position to session regardless of real/simulated
+                    position_data = {
+                        'symbol': order['symbol'],
+                        'entry_price': result.get('price', 50000 if 'BTC' in order['symbol'] else 2500),
+                        'quantity': result.get('amount', order['amount']),
+                        'side': order['side'],
+                        'timestamp': datetime.now().isoformat(),
+                        'take_profit': (result.get('price', 50000) * 1.015),  # 1.5% take profit
+                        'stop_loss': (result.get('price', 50000) * 0.992),    # 0.8% stop loss  
+                        'current_price': result.get('price', 50000),
+                        'profit_loss': 0.0,
+                        'is_simulated': not result.get('real_order', True),
+                        'simulation_reason': result.get('simulation_reason', None),
+                        'exchange': order['exchange']
+                    }
+                
+                    # Save position to database
+                    position_id = self._save_position_to_db(session_data['id'], position_data)
+                    position_data['id'] = position_id
+                    
+                    # Add position to session
+                    session_data['positions'].append(position_data)
+                
+                # Log overall trading mode status
+                if simulation_orders > 0:
+                    self.logger.warning(f"🚨 MIXED MODE DETECTED: {real_orders} real orders, {simulation_orders} simulated")
+                    self.logger.warning(f"💡 REASON: Insufficient balance in exchange accounts")
+                    self.logger.warning(f"📋 ACTION: Add funds to exchanges for full LIVE trading")
+                else:
+                    self.logger.info(f"✅ FULL LIVE MODE: All {real_orders} orders placed with real money")
+                
+                # Use the last result for legacy compatibility
+                position_data = session_data['positions'][-1] if session_data['positions'] else {}
                 
                 # Save position to database
                 position_id = self._save_position_to_db(session_data['id'], position_data)
