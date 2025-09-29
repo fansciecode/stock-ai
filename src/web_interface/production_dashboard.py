@@ -2187,36 +2187,109 @@ def add_api_key():
     try:
         data = request.get_json()
         
-        # Use simple API key manager (bypasses authentication issues)
-        import sys
-        sys.path.append('.')
-        sys.path.append('../..')
-        from simple_api_key_manager import SimpleAPIKeyManager
-        
-        user_email = session.get('user_email', 'kirannaik@unitednewdigitalmedia.com')
+        user_email = session.get('user_email', 'demo@example.com')
         if not user_email:
             return jsonify({'success': False, 'error': 'User email not found'})
-            
-        manager = SimpleAPIKeyManager()
+        
         # Debug: log what the frontend is sending
         print(f"🔧 DEBUG API Key Form Data:")
+        print(f"   User Email: {user_email}")
         print(f"   Exchange: {data.get('exchange', 'binance')}")
+        print(f"   API Key: {data.get('api_key', '')[:10]}...")
         print(f"   is_testnet from form: {data.get('is_testnet')}")
         print(f"   Raw form data: {data}")
         
-        result = manager.add_api_key(
-            user_email=user_email,
-            exchange=data.get('exchange', 'binance'),
-            api_key=data.get('api_key', ''),
-            secret_key=data.get('secret_key', ''),
-            passphrase=data.get('passphrase', ''),
-            is_testnet=data.get('is_testnet', False)  # Changed default from True to False
-        )
+        # Add API key directly to database
+        db_paths = [
+            'data/users.db',
+            'src/web_interface/data/users.db', 
+            'src/web_interface/users.db',
+            'users.db'
+        ]
         
-        # Add success flag for frontend refresh
-        if result.get('success'):
-            result['refresh_needed'] = True
+        db_conn = None
+        for db_path in db_paths:
+            if os.path.exists(db_path):
+                db_conn = sqlite3.connect(db_path)
+                break
+        
+        if not db_conn:
+            # Create users.db if it doesn't exist
+            db_conn = sqlite3.connect('src/web_interface/users.db')
             
+            # Create tables
+            cursor = db_conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    user_id TEXT PRIMARY KEY,
+                    email TEXT UNIQUE,
+                    password_hash TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    last_login TIMESTAMP,
+                    subscription_tier TEXT DEFAULT 'basic',
+                    is_active BOOLEAN DEFAULT 1
+                )
+            """)
+            
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS api_keys (
+                    key_id TEXT PRIMARY KEY,
+                    user_id TEXT,
+                    exchange TEXT,
+                    api_key TEXT,
+                    secret_key TEXT,
+                    passphrase TEXT,
+                    is_testnet BOOLEAN DEFAULT 1,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    last_used TIMESTAMP,
+                    is_active BOOLEAN DEFAULT 1,
+                    FOREIGN KEY (user_id) REFERENCES users (user_id)
+                )
+            """)
+            
+            db_conn.commit()
+        
+        cursor = db_conn.cursor()
+        
+        # Get user_id from users table
+        cursor.execute("SELECT user_id FROM users WHERE email = ?", (user_email,))
+        user_result = cursor.fetchone()
+        
+        if not user_result:
+            return jsonify({'success': False, 'error': 'User not found in database'})
+        
+        user_id = user_result[0]
+        
+        # Generate unique key_id
+        import uuid
+        key_id = str(uuid.uuid4())
+        
+        # Insert the API key
+        cursor.execute("""
+            INSERT INTO api_keys 
+            (key_id, user_id, exchange, api_key, secret_key, passphrase, is_testnet, is_active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+        """, (
+            key_id,
+            user_id,
+            data.get('exchange', 'binance'),
+            data.get('api_key', ''),
+            data.get('secret_key', ''),
+            data.get('passphrase', ''),
+            data.get('is_testnet', False)
+        ))
+        
+        db_conn.commit()
+        db_conn.close()
+        
+        print(f"✅ Successfully added API key for {user_email} - {data.get('exchange')}")
+        
+        result = {
+            'success': True,
+            'message': f'API key for {data.get("exchange")} added successfully!',
+            'refresh_needed': True
+        }
+        
         return jsonify(result)
         
     except Exception as e:
@@ -2233,23 +2306,59 @@ def delete_api_key():
         if not data or 'key_id' not in data:
             return jsonify({'success': False, 'error': 'key_id is required'})
         
-        user_email = session.get('user_email', 'kirannaik@unitednewdigitalmedia.com')
+        user_email = session.get('user_email', 'demo@example.com')
         key_id = data['key_id']
         
-        # Delete the API key
-        import sys
-        import os
-        sys.path.append('.')
-        sys.path.append('../..')
-        from simple_api_key_manager import SimpleAPIKeyManager
+        # Delete the API key directly from database
+        db_paths = [
+            'data/users.db',
+            'src/web_interface/data/users.db', 
+            'src/web_interface/users.db',
+            'users.db'
+        ]
         
-        api_manager = SimpleAPIKeyManager()
+        db_conn = None
+        for db_path in db_paths:
+            if os.path.exists(db_path):
+                db_conn = sqlite3.connect(db_path)
+                break
         
-        result = api_manager.delete_api_key(user_email, key_id)
+        if not db_conn:
+            return jsonify({'success': False, 'error': 'Database not found'})
         
-        # Add success flag for frontend refresh
-        if result.get('success'):
-            result['refresh_needed'] = True
+        cursor = db_conn.cursor()
+        
+        # Get user_id from users table
+        cursor.execute("SELECT user_id FROM users WHERE email = ?", (user_email,))
+        user_result = cursor.fetchone()
+        
+        if not user_result:
+            return jsonify({'success': False, 'error': 'User not found'})
+        
+        user_id = user_result[0]
+        
+        # Delete the API key (only if it belongs to this user)
+        cursor.execute("""
+            DELETE FROM api_keys 
+            WHERE key_id = ? AND user_id = ?
+        """, (key_id, user_id))
+        
+        deleted_rows = cursor.rowcount
+        db_conn.commit()
+        db_conn.close()
+        
+        if deleted_rows > 0:
+            print(f"✅ Successfully deleted API key {key_id} for {user_email}")
+            result = {
+                'success': True,
+                'message': 'API key deleted successfully!',
+                'refresh_needed': True
+            }
+        else:
+            result = {
+                'success': False,
+                'error': 'API key not found or does not belong to user'
+            }
             
         return jsonify(result)
         
@@ -2263,18 +2372,68 @@ def delete_api_key():
 def get_user_api_keys():
     """Get current user API keys"""
     try:
-        user_email = session.get('user_email', 'kirannaik@unitednewdigitalmedia.com')
+        user_email = session.get('user_email', 'demo@example.com')
         
-        import sys
-        sys.path.append('.')
-        sys.path.append('../..')
-        from simple_api_key_manager import SimpleAPIKeyManager
-        api_manager = SimpleAPIKeyManager()
+        # Get API keys directly from database
+        user_api_keys = []
         
-        keys = api_manager.get_user_api_keys(user_email)
+        # Check multiple possible locations for the users database
+        db_paths = [
+            'data/users.db',
+            'src/web_interface/data/users.db', 
+            'src/web_interface/users.db',
+            'users.db'
+        ]
+        
+        db_conn = None
+        for db_path in db_paths:
+            if os.path.exists(db_path):
+                db_conn = sqlite3.connect(db_path)
+                break
+        
+        if db_conn:
+            cursor = db_conn.cursor()
+            
+            # Get user_id from users table
+            cursor.execute("SELECT user_id FROM users WHERE email = ?", (user_email,))
+            user_result = cursor.fetchone()
+            
+            if user_result:
+                user_id = user_result[0]
+                
+                # Get API keys for this specific user
+                cursor.execute("""
+                    SELECT key_id, exchange, api_key, secret_key, is_testnet, is_active, created_at 
+                    FROM api_keys 
+                    WHERE user_id = ? AND is_active = 1
+                    ORDER BY created_at DESC
+                """, (user_id,))
+                
+                api_results = cursor.fetchall()
+                
+                for row in api_results:
+                    key_id, exchange, api_key, secret_key, is_testnet, is_active, created_at = row
+                    mode = "TESTNET" if is_testnet else "LIVE"
+                    user_api_keys.append({
+                        'id': key_id,
+                        'exchange': exchange.upper(),
+                        'api_key': api_key,
+                        'api_key_preview': f"{api_key[:8]}...{api_key[-4:]}" if len(api_key) > 12 else api_key,
+                        'secret_key': secret_key,
+                        'is_testnet': bool(is_testnet),
+                        'is_active': bool(is_active),
+                        'status': mode,
+                        'trading_enabled': True,
+                        'created_at': created_at
+                    })
+                
+                print(f"✅ Loaded {len(user_api_keys)} API keys for {user_email}")
+            
+            db_conn.close()
+        
         return jsonify({
             'success': True,
-            'api_keys': keys
+            'api_keys': user_api_keys
         })
         
     except Exception as e:
