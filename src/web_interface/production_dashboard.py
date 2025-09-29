@@ -9,6 +9,7 @@ import os
 import requests
 import json
 import time
+import sqlite3
 from datetime import datetime, timedelta
 from flask import Flask, render_template_string, jsonify, request, session, redirect, url_for
 from flask_cors import CORS
@@ -2023,19 +2024,13 @@ def start_ai_trading():
             conn = sqlite3.connect('data/fixed_continuous_trading.db')
             cursor = conn.cursor()
             
-            # Check if the user has any active sessions
-            cursor.execute("SELECT session_id FROM trading_sessions WHERE user_email=? AND status='active';", (user_email,))
-            active_session = cursor.fetchone()
-            
-            if active_session:
-                # Mark the session as inactive
-                session_id = active_session[0]
-                cursor.execute(
-                    "UPDATE trading_sessions SET status='inactive', end_time=? WHERE session_id=?",
-                    (datetime.now().isoformat(), session_id)
-                )
-                conn.commit()
-                print(f"Stopped existing session {session_id} for {user_email}")
+            # Stop any existing active sessions for this user
+            cursor.execute(
+                "UPDATE trading_sessions SET is_active=0, end_time=? WHERE user_email=? AND is_active=1",
+                (datetime.now().isoformat(), user_email)
+            )
+            conn.commit()
+            print(f"Stopped existing sessions for {user_email}")
             
             conn.close()
         except Exception as e:

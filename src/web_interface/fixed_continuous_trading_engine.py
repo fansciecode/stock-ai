@@ -262,29 +262,20 @@ class FixedContinuousTradingEngine:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
-            # Generate a unique session ID if not present
-            import uuid
-            session_id = session_data.get("id", f"session_{str(uuid.uuid4())}")
+            # Insert new session - let database auto-generate the ID
+            cursor.execute(
+                "INSERT INTO trading_sessions (user_email, start_time, is_active, trading_mode, session_token) VALUES (?, ?, ?, ?, ?)",
+                (
+                    session_data["user_email"],
+                    session_data["start_time"],
+                    1,  # is_active = 1 (true)
+                    session_data["trading_mode"],
+                    f"session_{session_data['user_email']}_{int(time.time())}"  # session_token
+                )
+            )
             
-            # Check if session already exists
-            if "id" in session_data:
-                # Update existing session
-                cursor.execute(
-                    "UPDATE trading_sessions SET status=?, end_time=? WHERE session_id=?",
-                    ("active", None, session_id)
-                )
-            else:
-                # Insert new session
-                cursor.execute(
-                    "INSERT INTO trading_sessions (session_id, user_email, start_time, status, risk_settings) VALUES (?, ?, ?, ?, ?)",
-                    (
-                        session_id,
-                        session_data["user_email"],
-                        session_data["start_time"],
-                        "active",
-                        json.dumps({"trading_mode": session_data["trading_mode"]})
-                    )
-                )
+            # Get the auto-generated session ID
+            session_id = cursor.lastrowid
             
             # Commit changes and close connection
             conn.commit()
@@ -292,9 +283,6 @@ class FixedContinuousTradingEngine:
             self.logger.info(f"Successfully saved session {session_id} to database")
             return session_id
         except Exception as e:
-            self.logger.error(f"Error saving session to database: {e}")
-            return -1
-
             self.logger.error(f"Error saving session to database: {e}")
             return -1
     
@@ -419,7 +407,7 @@ class FixedContinuousTradingEngine:
             
             # Save session to database
             session_id = self._save_session_to_db(session_data)
-            if isinstance(session_id, str) == False:
+            if not isinstance(session_id, int) or session_id <= 0:
                 return {'success': False, 'error': 'Failed to save session to database'}
             
             session_data['id'] = session_id
@@ -684,7 +672,7 @@ class FixedContinuousTradingEngine:
                 cursor = conn.cursor()
                 
                 cursor.execute(
-                    "UPDATE trading_sessions SET status='inactive', end_time=? WHERE session_id=?",
+                    "UPDATE trading_sessions SET is_active=0, end_time=? WHERE id=?",
                     (end_time.isoformat(), session_id)
                 )
                 
