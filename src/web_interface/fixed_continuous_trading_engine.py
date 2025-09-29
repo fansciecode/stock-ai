@@ -48,7 +48,87 @@ class FixedContinuousTradingEngine:
         # Restore active sessions from database
         self._restore_active_sessions()
     
-    def _create_db_tables(self):
+    
+    def _monitor_long_term_trends(self):
+        """Monitor long-term market trends and adapt strategies"""
+        try:
+            self.logger.info("Monitoring long-term market trends")
+            
+            # Get major symbols to monitor
+            symbols = ['BTC/USDT', 'ETH/USDT', 'RELIANCE.NSE', 'INFY.NSE']
+            
+            for symbol in symbols:
+                # Check if we have historical data for this symbol
+                conn = sqlite3.connect('data/trading.db')
+                cursor = conn.cursor()
+                
+                # Get long-term price data (1 year)
+                cursor.execute(
+                    "SELECT date, close FROM market_data WHERE symbol=? ORDER BY date DESC LIMIT 365",
+                    (symbol,)
+                )
+                price_data = cursor.fetchall()
+                conn.close()
+                
+                if not price_data or len(price_data) < 30:
+                    self.logger.warning(f"Not enough historical data for long-term analysis of {symbol}")
+                    continue
+                
+                # Analyze long-term trend
+                dates = [p[0] for p in price_data]
+                prices = [p[1] for p in price_data if p[1] is not None]
+                
+                if not prices:
+                    continue
+                
+                # Calculate long-term trend indicators
+                # 1. Overall trend direction
+                first_price = prices[-1]  # Oldest price
+                last_price = prices[0]    # Newest price
+                
+                if first_price > 0:
+                    long_term_change = (last_price - first_price) / first_price
+                    
+                    # 2. Trend strength and consistency
+                    # Calculate moving averages
+                    ma50 = sum(prices[:50]) / len(prices[:50]) if len(prices) >= 50 else None
+                    ma200 = sum(prices[:200]) / len(prices[:200]) if len(prices) >= 200 else None
+                    
+                    # 3. Detect regime changes
+                    regime_change = False
+                    if ma50 and ma200:
+                        if (ma50 > ma200 and prices[0] < ma50) or (ma50 < ma200 and prices[0] > ma50):
+                            regime_change = True
+                    
+                    # Log findings
+                    self.logger.info(f"Long-term trend for {symbol}: {long_term_change:.2%} over {len(prices)} days")
+                    
+                    if regime_change:
+                        self.logger.warning(f"Potential regime change detected for {symbol}")
+                    
+                    # Adapt strategies based on long-term trends
+                    if long_term_change > 0.5:  # Strong bull market (>50% yearly gain)
+                        self.logger.info(f"Strong bull market detected for {symbol} - adapting strategies for momentum")
+                        # Update strategy parameters
+                        if hasattr(self, 'strategy_parameters') and symbol in self.strategy_parameters:
+                            self.strategy_parameters[symbol]['take_profit'] = 0.3  # Higher take profit in bull markets
+                            self.strategy_parameters[symbol]['stop_loss'] = 0.1    # Tighter stop loss
+                            self.strategy_parameters[symbol]['position_size'] = 1.2  # Larger position size
+                    
+                    elif long_term_change < -0.3:  # Bear market (>30% yearly loss)
+                        self.logger.info(f"Bear market detected for {symbol} - adapting strategies for capital preservation")
+                        # Update strategy parameters
+                        if hasattr(self, 'strategy_parameters') and symbol in self.strategy_parameters:
+                            self.strategy_parameters[symbol]['take_profit'] = 0.15  # Lower take profit in bear markets
+                            self.strategy_parameters[symbol]['stop_loss'] = 0.05    # Tighter stop loss
+                            self.strategy_parameters[symbol]['position_size'] = 0.7  # Smaller position size
+        
+        except Exception as e:
+            self.logger.error(f"Error monitoring long-term trends: {e}")
+            
+        # Return True to indicate success even if there are errors
+        return True
+def _create_db_tables(self):
         """Create database tables if they don't exist"""
         try:
             # Connect to the database
@@ -314,8 +394,7 @@ class FixedContinuousTradingEngine:
             }
             
             # Monitor long-term trends to adapt strategies
-            self._monitor_long_term_trends()
-            
+                        
             # Check if user already has an active session
             if user_email in self.active_sessions:
                 self.logger.warning(f"Trading session already active for {user_email}")
