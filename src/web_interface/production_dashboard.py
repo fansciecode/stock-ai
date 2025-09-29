@@ -418,8 +418,17 @@ def api_login():
         session.permanent = True  # Make session persistent
         dashboard.current_token = user_token
         
+        # Load trading mode into session - ALWAYS SET TO LIVE
+        try:
+            # Force LIVE mode for all users
+            session['trading_mode'] = 'LIVE'
+            print(f"🔄 Loaded trading mode: LIVE")
+        except Exception as e:
+            session['trading_mode'] = 'LIVE'  # Default to LIVE
+            print(f"⚠️ Failed to load trading mode, defaulting to LIVE: {e}")
+        
         # Debug log
-        print(f"🔐 User logged in: {session['user_email']}, ID: {session['user_id']}")
+        print(f"🔐 User logged in: {session['user_email']}, ID: {session['user_id']}, Mode: {session['trading_mode']}")
         print(f"🔧 Session keys set: {list(session.keys())}")
         
         response = {
@@ -1939,10 +1948,8 @@ def start_ai_trading():
         if not user_email:
             return jsonify({'success': False, 'error': 'User email not found'})
             
-        # Get user's trading mode preference
-        from trading_mode_manager import trading_mode_manager
-        user_mode = trading_mode_manager.get_trading_mode(user_email)
-        
+        # Force LIVE mode for all trading
+        user_mode = 'LIVE'
         print(f"🎯 Starting AI Trading for {user_email} in {user_mode} mode")
             
         # Start AI trading directly
@@ -2258,12 +2265,12 @@ def get_trading_activity():
         
         # If no logs found, show current mode status
         if not activity_logs:
-            trading_mode = session.get('trading_mode', 'TESTNET')
-            if trading_mode == 'LIVE':
-                activity_logs.append("🔴 LIVE trading mode active - monitoring for signals...")
-                activity_logs.append("💰 Real money will be used for orders")
-            else:
-                activity_logs.append("🎭 Test mode - using simulated trading")
+            # ALWAYS USE LIVE MODE
+            trading_mode = 'LIVE'  # Force LIVE mode for all trading activity
+            print(f"🔍 DEBUG: Forcing LIVE trading mode, Session keys = {list(session.keys())}")
+            activity_logs.append("🔴 LIVE trading mode active - monitoring for signals...")
+            activity_logs.append("💰 Real money will be used for orders")
+            activity_logs.append("⚠️ WARNING: Real money will be used!")
         
         return jsonify({
             'success': True,
@@ -4364,32 +4371,10 @@ def portfolio():
         session['user_email'] = 'kirannaik@unitednewdigitalmedia.com'
         session['user_id'] = 'demo_user'
         
-    # Get user's trading mode first
-    try:
-        from trading_mode_manager import TradingModeManager
-        mode_manager = TradingModeManager()
-        user_email = session.get('user_email', 'kirannaik@unitednewdigitalmedia.com')
-        current_mode = mode_manager.get_trading_mode(user_email)
-        print(f"📊 Portfolio: User {user_email} trading mode: {current_mode}")
-        
-        # Double-check with API call
-        try:
-            import requests
-            mode_response = requests.get('http://localhost:8000/api/trading-modes')
-            if mode_response.status_code == 200:
-                mode_data = mode_response.json()
-                if mode_data.get('success'):
-                    api_mode = mode_data.get('trading_modes', {}).get('current_mode', 'TESTNET')
-                    print(f"📊 Portfolio: API reports mode as: {api_mode}")
-                    if api_mode != current_mode:
-                        print(f"⚠️ Portfolio: Mode mismatch! Manager: {current_mode}, API: {api_mode}")
-                        current_mode = api_mode  # Use API mode as authoritative
-        except Exception as api_error:
-            print(f"⚠️ Portfolio: Could not verify mode via API: {api_error}")
-            
-    except Exception as e:
-        print(f"⚠️ Error getting trading mode: {e}")
-        current_mode = 'TESTNET'
+    # Force LIVE trading mode for all users
+    user_email = session.get('user_email', 'kirannaik@unitednewdigitalmedia.com')
+    current_mode = 'LIVE'  # Always use LIVE mode
+    print(f"📊 Portfolio: User {user_email} trading mode: {current_mode} (FORCED LIVE)")
     
     # Get live portfolio data using the same API endpoint that works
     try:
@@ -5308,10 +5293,8 @@ def get_portfolio_api():
         
         user_email = session.get('user_email')
         
-        # Get trading mode
-        from trading_mode_manager import TradingModeManager
-        mode_manager = TradingModeManager()
-        current_mode = mode_manager.get_active_trading_mode(user_email)
+        # Force LIVE trading mode
+        current_mode = 'LIVE'  # Always use LIVE mode
         
         # Get live balance from Binance if in LIVE mode
         live_balance = 0.0
