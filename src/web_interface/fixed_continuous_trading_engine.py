@@ -16,6 +16,8 @@ import sqlite3
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Tuple
 
+# Global instance for easy import will be created at the end of the file
+
 class FixedContinuousTradingEngine:
     """Fixed Continuous Trading Engine"""
     
@@ -650,6 +652,67 @@ class FixedContinuousTradingEngine:
         except Exception as e:
             self.logger.error(f"Error monitoring market volatility: {e}")
             
+    def stop_continuous_trading(self, user_email: str, reason: str = 'USER_REQUEST') -> Dict[str, Any]:
+        """Stop continuous trading for a user"""
+        try:
+            self.logger.info(f"🛑 Stopping continuous trading for {user_email}")
+            
+            if user_email not in self.active_sessions:
+                return {
+                    'success': False,
+                    'error': 'No active trading session found'
+                }
+            
+            # Get session data
+            session_data = self.active_sessions[user_email]
+            session_id = session_data.get('id')
+            
+            # Calculate session duration
+            start_time = datetime.fromisoformat(session_data.get('start_time'))
+            end_time = datetime.now()
+            duration = end_time - start_time
+            hours, remainder = divmod(duration.total_seconds(), 3600)
+            minutes, seconds = divmod(remainder, 60)
+            
+            # Calculate final P&L
+            positions = session_data.get('positions', [])
+            total_pnl = sum(position.get('profit_loss', 0) for position in positions)
+            
+            # Update session in database
+            try:
+                conn = sqlite3.connect(self.db_path)
+                cursor = conn.cursor()
+                
+                cursor.execute(
+                    "UPDATE trading_sessions SET status='inactive', end_time=? WHERE session_id=?",
+                    (end_time.isoformat(), session_id)
+                )
+                
+                conn.commit()
+                conn.close()
+            except Exception as db_error:
+                self.logger.error(f"Error updating session in database: {db_error}")
+            
+            # Remove session from active sessions
+            del self.active_sessions[user_email]
+            
+            self.logger.info(f"🛑 Trading session ended for {user_email}")
+            
+            return {
+                'success': True,
+                'message': f'Trading stopped: {reason}',
+                'final_pnl': total_pnl,
+                'trades_executed': len(positions),
+                'session_duration': f'{int(hours)}h {int(minutes)}m'
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Error stopping continuous trading: {e}")
+            return {
+                'success': False,
+                'error': f'Failed to stop trading: {str(e)}'
+            }
+    
     def _continuous_monitoring_loop(self, user_email: str):
         """Continuous monitoring loop for a user"""
         try:
@@ -686,3 +749,6 @@ class FixedContinuousTradingEngine:
             self.logger.info(f"🛑 Stopped continuous monitoring for {user_email}")
         except Exception as e:
             self.logger.error(f"Error in continuous monitoring: {e}")
+
+# Create global instance at the end of the file
+fixed_continuous_engine = FixedContinuousTradingEngine()
