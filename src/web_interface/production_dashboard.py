@@ -1516,25 +1516,49 @@ def trading_dashboard():
                     const currentMode = result.trading_modes.current_mode;
                     console.log(`📊 Current trading mode: ${currentMode}`);
                     
-                    // Update radio buttons
-                    document.getElementById('testnet-radio').checked = (currentMode === 'TESTNET');
-                    document.getElementById('live-radio').checked = (currentMode === 'LIVE');
+                    // Update radio buttons with null checks
+                    const testnetRadio = document.getElementById('testnet-radio');
+                    const liveRadio = document.getElementById('live-radio');
+                    const currentModeSpan = document.getElementById('current-mode');
+                    
+                    if (testnetRadio) {
+                        testnetRadio.checked = (currentMode === 'TESTNET');
+                    }
+                    if (liveRadio) {
+                        liveRadio.checked = (currentMode === 'LIVE');
+                    }
                     
                     // Update status display
-                    document.getElementById('current-mode').textContent = currentMode;
+                    if (currentModeSpan) {
+                        currentModeSpan.textContent = currentMode;
+                    }
                     
                     console.log(`✅ Trading mode UI updated: ${currentMode}`);
                 } else {
                     console.error('Failed to load trading mode:', result.error);
-                    // Default to TESTNET
-                    document.getElementById('testnet-radio').checked = true;
-                    document.getElementById('current-mode').textContent = 'TESTNET';
+                    // Default to TESTNET with null checks
+                    const testnetRadio = document.getElementById('testnet-radio');
+                    const currentModeSpan = document.getElementById('current-mode');
+                    
+                    if (testnetRadio) {
+                        testnetRadio.checked = true;
+                    }
+                    if (currentModeSpan) {
+                        currentModeSpan.textContent = 'TESTNET';
+                    }
                 }
             } catch (error) {
                 console.error('Error loading trading mode:', error);
-                // Default to TESTNET
-                document.getElementById('testnet-radio').checked = true;
-                document.getElementById('current-mode').textContent = 'TESTNET';
+                // Default to TESTNET with null checks
+                const testnetRadio = document.getElementById('testnet-radio');
+                const currentModeSpan = document.getElementById('current-mode');
+                
+                if (testnetRadio) {
+                    testnetRadio.checked = true;
+                }
+                if (currentModeSpan) {
+                    currentModeSpan.textContent = 'TESTNET';
+                }
             }
         }
         
@@ -1723,8 +1747,10 @@ def trading_dashboard():
             // Don't redirect on error, just log it
         }
         
-        // Load current trading mode and set radio buttons
-        await loadCurrentTradingMode();
+        // Load current trading mode and set radio buttons (with delay to ensure DOM is ready)
+        setTimeout(() => {
+            loadCurrentTradingMode();
+        }, 500);
         
         // Update Live Trading status based on trading status and mode
         await updateLiveTradingStatus();
