@@ -9,7 +9,7 @@ import os
 import requests
 import json
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, render_template_string, jsonify, request, session, redirect, url_for
 from flask_cors import CORS
 import secrets
@@ -31,8 +31,35 @@ FRONTEND_API = "http://localhost:8000"
 BACKEND_API = "http://localhost:8001" 
 AI_MODEL_API = "http://localhost:8002"
 
+
+def get_user_by_token(token):
+    """Get user by remember token"""
+    try:
+        conn = sqlite3.connect('users.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, email FROM users WHERE remember_token = ?", (token,))
+        user = cursor.fetchone()
+        conn.close()
+        
+        if user:
+            return {'id': user[0], 'email': user[1]}
+        return None
+    except Exception as e:
+        print(f"Error getting user by token: {e}")
+        return None
+
 @app.route('/')
 def index():
+    # Restore session state
+    if 'user_token' not in session and request.cookies.get('remember_token'):
+        token = request.cookies.get('remember_token')
+        user = get_user_by_token(token)
+        if user:
+            session['user_token'] = token
+            session['user_id'] = user['id']
+            session['user_email'] = user['email']
+            session['trading_mode'] = 'LIVE'  # Always force LIVE mode
+    
     """Redirect root to dashboard"""
     return redirect(url_for('trading_dashboard'))
 
@@ -78,6 +105,23 @@ class ProductionDashboard:
             return {'success': False, 'error': 'Request failed', 'details': str(e)}
 
 dashboard = ProductionDashboard()
+
+
+def get_user_by_token(token):
+    """Get user by remember token"""
+    try:
+        conn = sqlite3.connect('users.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, email FROM users WHERE remember_token = ?", (token,))
+        user = cursor.fetchone()
+        conn.close()
+        
+        if user:
+            return {'id': user[0], 'email': user[1]}
+        return None
+    except Exception as e:
+        print(f"Error getting user by token: {e}")
+        return None
 
 @app.route('/')
 def home():
@@ -394,6 +438,15 @@ def login_page():
             }
         });
     </script>
+
+    <script>
+    // Force LIVE mode selection
+    $(document).ready(function() {
+        $('input[name="tradingMode"][value="live"]').prop('checked', true);
+        $('input[name="tradingMode"][value="paper"]').prop('checked', false);
+    });
+    </script>
+    
 </body>
 </html>
     """)
@@ -1819,6 +1872,15 @@ def trading_dashboard():
             }
         }
     </script>
+
+    <script>
+    // Force LIVE mode selection
+    $(document).ready(function() {
+        $('input[name="tradingMode"][value="live"]').prop('checked', true);
+        $('input[name="tradingMode"][value="paper"]').prop('checked', false);
+    });
+    </script>
+    
 </body>
 </html>
     """, 
@@ -1938,65 +2000,122 @@ def get_user_api_keys():
 
 @app.route('/api/start-ai-trading', methods=['POST'])
 def start_ai_trading():
-    """Start AI trading for the user with detailed monitoring"""
-    # Allow both authenticated and demo access
+    """Start AI trading"""
+    # Check if user is logged in
     if 'user_token' not in session:
-        print("⚠️ No user token, proceeding with demo access")
-        
+        return jsonify({"error": "Not authenticated", "success": False}), 401
+    
+    # Force LIVE mode
+    trading_mode = 'LIVE'
+    
+    # Enhanced error handling
     try:
-        user_email = session.get('user_email', 'kirannaik@unitednewdigitalmedia.com')
-        if not user_email:
-            return jsonify({'success': False, 'error': 'User email not found'})
-            
-        # Force LIVE mode for all trading
-        user_mode = 'LIVE'
-        print(f"🎯 Starting AI Trading for {user_email} in {user_mode} mode")
-            
-        # Start AI trading directly
-        from fixed_continuous_trading_engine import fixed_continuous_engine
+        user_email = session.get('user_email')
         
-        # First stop any existing sessions for this user (clean restart)
+        # Check if trading engine is running
+        from fixed_continuous_trading_engine import FixedContinuousTradingEngine
+        engine = FixedContinuousTradingEngine()
+        
+        # First, stop any existing sessions
         try:
-            print(f"🛑 Stopping any existing sessions for {user_email}")
-            fixed_continuous_engine.stop_continuous_trading(user_email)
-        except Exception as stop_error:
-            print(f"ℹ️ No existing sessions to stop: {stop_error}")
-        
-        # Check if already running (after attempting to stop)
-        current_status = fixed_continuous_engine.get_trading_status(user_email)
-        if current_status.get('active', False):
-            # Force stop if still active
-            print(f"🚨 Force stopping persistent session for {user_email}")
-            try:
-                fixed_continuous_engine.force_stop_all_sessions()
-            except:
-                pass
-        
-        # Start trading directly
-        result = fixed_continuous_engine.start_continuous_trading(user_email, user_mode)
-        
-        if not result['success']:
-            return jsonify({'success': False, 'error': result.get('error', 'Unknown error')})
+            # Connect to the database
+            conn = sqlite3.connect('data/fixed_continuous_trading.db')
+            cursor = conn.cursor()
             
-        return jsonify({
-                'success': True,
-                'message': 'Continuous AI Trading started successfully',
-                'session_id': result['session_id'],
-                'initial_positions': result['initial_positions'],
-                'monitoring_interval': result['monitoring_interval'],
-                'risk_management_enabled': result['risk_settings_applied'],
-                'mode': 'CONTINUOUS_MONITORING'
-            })
+            # Check if the user has any active sessions
+            cursor.execute("SELECT id FROM trading_sessions WHERE user_email=? AND is_active=1;", (user_email,))
+            active_session = cursor.fetchone()
+            
+            if active_session:
+                # Mark the session as inactive
+                session_id = active_session[0]
+                cursor.execute(
+                    "UPDATE trading_sessions SET is_active=0, end_time=? WHERE id=?",
+                    (datetime.now().isoformat(), session_id)
+                )
+                conn.commit()
+                print(f"Stopped existing session {session_id} for {user_email}")
+            
+            conn.close()
+        except Exception as e:
+            print(f"Error stopping existing session: {e}")
         
+        # Start AI trading
+        print(f"🚀 Starting AI trading session...")
+        result = engine.start_continuous_trading(user_email, trading_mode)
+        
+        if result.get('success'):
+            print(f"✅ AI trading started successfully")
+            return jsonify({"success": True, "message": "AI trading started successfully"})
+        else:
+            error_msg = result.get('error', 'Unknown error')
+            print(f"❌ Failed to start AI trading: {error_msg}")
+            return jsonify({"success": False, "error": f"Failed to start AI trading: {error_msg}"})
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': 'Failed to start AI trading',
-            'details': str(e)
-        })
-
-@app.route('/api/stop-ai-trading', methods=['POST'])
+        print(f"❌ Error starting AI trading: {e}")
+        return jsonify({"success": False, "error": f"Error starting AI trading: {str(e)}"})
+    """Start AI trading"""
+    # Check if user is logged in
+    if 'user_token' not in session:
+        return jsonify({"error": "Not authenticated", "success": False}), 401
+    
+    # Force LIVE mode
+    trading_mode = 'LIVE'
+    
+    # Enhanced error handling
+    try:
+        user_email = session.get('user_email')
+        
+        # Check if trading engine is running
+        from fixed_continuous_trading_engine import FixedContinuousTradingEngine
+        engine = FixedContinuousTradingEngine()
+        
+        # First, stop any existing sessions
+        try:
+            # Connect to the database
+            conn = sqlite3.connect('data/fixed_continuous_trading.db')
+            cursor = conn.cursor()
+            
+            # Check if the user has any active sessions
+            cursor.execute("SELECT id FROM trading_sessions WHERE user_email=? AND is_active=1;", (user_email,))
+            active_session = cursor.fetchone()
+            
+            if active_session:
+                # Mark the session as inactive
+                session_id = active_session[0]
+                cursor.execute(
+                    "UPDATE trading_sessions SET is_active=0, end_time=? WHERE id=?",
+                    (datetime.now().isoformat(), session_id)
+                )
+                conn.commit()
+                print(f"Stopped existing session {session_id} for {user_email}")
+            
+            conn.close()
+        except Exception as e:
+            print(f"Error stopping existing session: {e}")
+        
+        # Start AI trading
+        print(f"🚀 Starting AI trading session...")
+        result = engine.start_continuous_trading(user_email, trading_mode)
+        
+        if result.get('success'):
+            print(f"✅ AI trading started successfully")
+            return jsonify({"success": True, "message": "AI trading started successfully"})
+        else:
+            error_msg = result.get('error', 'Unknown error')
+            print(f"❌ Failed to start AI trading: {error_msg}")
+            return jsonify({"success": False, "error": f"Failed to start AI trading: {error_msg}"})
+    except Exception as e:
+        print(f"❌ Error starting AI trading: {e}")
+        return jsonify({"success": False, "error": f"Error starting AI trading: {str(e)}"})
 def stop_ai_trading():
+    # Check if user is logged in
+    if 'user_token' not in session:
+        return jsonify({"error": "Not authenticated", "success": False}), 401
+    
+    # Force LIVE mode
+    trading_mode = 'LIVE'
+
     """Stop AI trading for the user"""
     # Allow both authenticated and demo access
     if 'user_token' not in session:
@@ -2091,6 +2210,13 @@ def start_live_trading():
 
 @app.route('/api/trading-activity', methods=['GET'])
 def get_trading_activity():
+    # Check if user is logged in
+    if 'user_token' not in session:
+        return jsonify({"error": "Not authenticated", "success": False}), 401
+    
+    # Force LIVE mode
+    trading_mode = 'LIVE'
+
     """Get real-time trading activity from LIVE trading logs"""
     if 'user_token' not in session:
         return jsonify({'success': False, 'error': 'Not authenticated'})
@@ -2108,7 +2234,7 @@ def get_trading_activity():
         if os.path.exists(log_file_path):
             try:
                 # Get current time and filter for logs from last 5 minutes only
-                from datetime import datetime, timedelta
+                from datetime import datetime, timedelta, timedelta
                 now = datetime.now()
                 cutoff_time = now - timedelta(minutes=5)
                 
@@ -2363,6 +2489,13 @@ def check_session():
 
 @app.route('/api/trading-history', methods=['GET'])
 def get_trading_history():
+    # Check if user is logged in
+    if 'user_token' not in session:
+        return jsonify({"error": "Not authenticated", "success": False}), 401
+    
+    # Force LIVE mode
+    trading_mode = 'LIVE'
+
     """Get user's trading history from database"""
     if 'user_token' not in session:
         return jsonify({'success': False, 'error': 'Not authenticated'})
@@ -2403,7 +2536,7 @@ def get_trading_history():
                         msg_type = 'info'
                     
                     # Format timestamp
-                    from datetime import datetime
+                    from datetime import datetime, timedelta
                     dt = datetime.fromisoformat(timestamp)
                     formatted_time = dt.strftime('%H:%M:%S')
                     
@@ -2946,7 +3079,7 @@ def get_live_signals():
     
     try:
         import os  # Import os at the beginning
-        from datetime import datetime  # Import datetime at the beginning
+        from datetime import datetime, timedelta  # Import datetime at the beginning
         user_email = session.get('user_email', 'demo@example.com')
         
         # Try to get signals from recent trading session
@@ -3076,7 +3209,7 @@ def get_live_signals():
                 traceback.print_exc()
                 # Fallback to diverse demo signals
                 import random
-                from datetime import datetime
+                from datetime import datetime, timedelta
                 
                 demo_instruments = ['BTC/USDT', 'ETH/USDT', 'AAPL', 'MSFT', 'GOOGL']
                 signal_types = ['BUY', 'SELL', 'HOLD']
@@ -3099,7 +3232,7 @@ def get_live_signals():
                         'real_data': False
                     })
         
-        from datetime import datetime
+        from datetime import datetime, timedelta
         return jsonify({
             'success': True,
             'signals': signals,
@@ -3329,6 +3462,15 @@ def real_time_dashboard():
         updateDashboard();
         setInterval(updateDashboard, 2000);
     </script>
+
+    <script>
+    // Force LIVE mode selection
+    $(document).ready(function() {
+        $('input[name="tradingMode"][value="live"]').prop('checked', true);
+        $('input[name="tradingMode"][value="paper"]').prop('checked', false);
+    });
+    </script>
+    
 </body>
 </html>
     """)
@@ -3599,6 +3741,15 @@ def order_execution_test():
             addLogEntry('Ready to test live order execution', 'info');
         }, 1000);
     </script>
+
+    <script>
+    // Force LIVE mode selection
+    $(document).ready(function() {
+        $('input[name="tradingMode"][value="live"]').prop('checked', true);
+        $('input[name="tradingMode"][value="paper"]').prop('checked', false);
+    });
+    </script>
+    
 </body>
 </html>
     """)
@@ -3871,6 +4022,15 @@ def performance_analytics():
         // Refresh every 30 seconds
         setInterval(loadAnalytics, 30000);
     </script>
+
+    <script>
+    // Force LIVE mode selection
+    $(document).ready(function() {
+        $('input[name="tradingMode"][value="live"]').prop('checked', true);
+        $('input[name="tradingMode"][value="paper"]').prop('checked', false);
+    });
+    </script>
+    
 </body>
 </html>
     """)
@@ -4020,6 +4180,15 @@ def trading_monitor():
             document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
         }
     </script>
+
+    <script>
+    // Force LIVE mode selection
+    $(document).ready(function() {
+        $('input[name="tradingMode"][value="live"]').prop('checked', true);
+        $('input[name="tradingMode"][value="paper"]').prop('checked', false);
+    });
+    </script>
+    
 </body>
 </html>
     """)
@@ -4044,7 +4213,7 @@ def live_signals():
         sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
         
         # Import the trading engine from the correct location
-        from src.web_interface.fixed_continuous_trading_engine import fixed_continuous_engine
+        from fixed_continuous_trading_engine import fixed_continuous_engine
         
         user_email = session.get('user_email')
         signals = []
@@ -4356,6 +4525,15 @@ def live_signals():
         // Auto-refresh every 30 seconds
         setTimeout(() => location.reload(), 30000);
     </script>
+
+    <script>
+    // Force LIVE mode selection
+    $(document).ready(function() {
+        $('input[name="tradingMode"][value="live"]').prop('checked', true);
+        $('input[name="tradingMode"][value="paper"]').prop('checked', false);
+    });
+    </script>
+    
 </body>
 </html>
     """, signals=signals)
@@ -4762,6 +4940,15 @@ def portfolio():
             </table>
         </div>
     </div>
+
+    <script>
+    // Force LIVE mode selection
+    $(document).ready(function() {
+        $('input[name="tradingMode"][value="live"]').prop('checked', true);
+        $('input[name="tradingMode"][value="paper"]').prop('checked', false);
+    });
+    </script>
+    
 </body>
 </html>
     """, portfolio_data=portfolio_data, positions=positions)
@@ -4963,6 +5150,15 @@ def performance():
             </div>
         </div>
     </div>
+
+    <script>
+    // Force LIVE mode selection
+    $(document).ready(function() {
+        $('input[name="tradingMode"][value="live"]').prop('checked', true);
+        $('input[name="tradingMode"][value="paper"]').prop('checked', false);
+    });
+    </script>
+    
 </body>
 </html>
     """, perf_data=perf_data)
@@ -5108,6 +5304,15 @@ def risk_settings():
             }
         });
     </script>
+
+    <script>
+    // Force LIVE mode selection
+    $(document).ready(function() {
+        $('input[name="tradingMode"][value="live"]').prop('checked', true);
+        $('input[name="tradingMode"][value="paper"]').prop('checked', false);
+    });
+    </script>
+    
 </body>
 </html>
     """)
@@ -5282,6 +5487,13 @@ def place_multi_exchange_order():
 
 @app.route('/api/portfolio')
 def get_portfolio_api():
+    # Check if user is logged in
+    if 'user_token' not in session:
+        return jsonify({"error": "Not authenticated", "success": False}), 401
+    
+    # Force LIVE mode
+    trading_mode = 'LIVE'
+
     """Get user's live portfolio data (was missing!)"""
     if 'user_token' not in session:
         return jsonify({'success': False, 'error': 'Not authenticated'})
