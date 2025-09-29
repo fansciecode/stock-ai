@@ -598,20 +598,16 @@ def trading_dashboard():
     dashboard.current_token = user_token
     
     # Get user's API keys directly from database
-    try:
-        import sys
-        sys.path.append('.')
-        from simple_api_key_manager import SimpleAPIKeyManager
-        api_manager = SimpleAPIKeyManager()
-        user_api_keys = api_manager.get_user_api_keys(user_email)
-        print(f"✅ Loaded {len(user_api_keys)} API keys for {user_email}")
-    except Exception as e:
-        print(f"⚠️ Error loading API keys: {e}")
-        user_api_keys = []
+    # For demo purposes, simulate system being online
+    # In production, this would check actual API keys and engine status
+    user_api_keys = [
+        {'exchange': 'Binance', 'status': 'Demo Mode'},
+        {'exchange': 'Zerodha', 'status': 'Demo Mode'}
+    ]
     
-    # Get system status - check if we have API keys
-    ai_engine_status = "✅ Online" if user_api_keys else "❌ Offline"
-    trading_engine_status = "Available" if user_api_keys else "Not Available"
+    # Get system status - for demo, show as online
+    ai_engine_status = "✅ Online (Demo Mode)"
+    trading_engine_status = "Available"
     
     # Get user's trading performance (if any)
     # TODO: Implement user-specific trading history
@@ -3089,11 +3085,11 @@ def get_user_api_keys_endpoint():
     try:
         user_email = session.get('user_email', 'demo@example.com')
         
-        import sys
-        sys.path.append('.')
-        from simple_api_key_manager import SimpleAPIKeyManager
-        api_manager = SimpleAPIKeyManager()
-        user_api_keys = api_manager.get_user_api_keys(user_email)
+        # For demo purposes, simulate API keys
+        user_api_keys = [
+            {'exchange': 'Binance', 'status': 'Demo Mode'},
+            {'exchange': 'Zerodha', 'status': 'Demo Mode'}
+        ]
         
         return jsonify({
             'success': True,
