@@ -59,7 +59,7 @@ def index():
             session['user_token'] = token
             session['user_id'] = user['id']
             session['user_email'] = user['email']
-            session['trading_mode'] = 'LIVE'  # Always force LIVE mode
+            session['trading_mode'] = 'TESTNET'  # Default to safe mode
     
     """Redirect root to dashboard"""
     return redirect(url_for('trading_dashboard'))
@@ -474,12 +474,13 @@ def api_login():
         
         # Load trading mode into session - ALWAYS SET TO LIVE
         try:
-            # Force LIVE mode for all users
-            session['trading_mode'] = 'LIVE'
-            print(f"🔄 Loaded trading mode: LIVE")
+            # Load user's actual trading mode from database
+            user_mode = row[6] if len(row) > 6 and row[6] else 'TESTNET'  # Default to safe mode
+            session['trading_mode'] = user_mode
+            print(f"🔄 Loaded trading mode: {user_mode}")
         except Exception as e:
-            session['trading_mode'] = 'LIVE'  # Default to LIVE
-            print(f"⚠️ Failed to load trading mode, defaulting to LIVE: {e}")
+            session['trading_mode'] = 'TESTNET'  # Default to safe mode
+            print(f"⚠️ Failed to load trading mode, defaulting to TESTNET: {e}")
         
         # Debug log
         print(f"🔐 User logged in: {session['user_email']}, ID: {session['user_id']}, Mode: {session['trading_mode']}")
@@ -2006,8 +2007,8 @@ def start_ai_trading():
     if 'user_token' not in session:
         return jsonify({"error": "Not authenticated", "success": False}), 401
     
-    # Force LIVE mode
-    trading_mode = 'LIVE'
+    # Get user's actual trading mode from session or database
+    trading_mode = session.get('trading_mode', 'TESTNET')  # Default to safe mode
     
     # Enhanced error handling
     try:
@@ -2070,7 +2071,14 @@ def start_ai_trading():
         
         if result.get('success'):
             print(f"✅ AI trading started successfully")
-            return jsonify({"success": True, "message": "AI trading started successfully", "session_id": result.get('session_id', ''), "monitoring_interval": result.get('monitoring_interval', 10), "initial_positions": result.get('initial_positions', 0)})
+            return jsonify({
+                "success": True, 
+                "message": "AI trading started successfully", 
+                "session_id": result.get('session_id', ''), 
+                "monitoring_interval": result.get('monitoring_interval', 10), 
+                "initial_positions": result.get('initial_positions', 0),
+                "trading_mode": trading_mode
+            })
         else:
             error_msg = result.get('error', 'Unknown error')
             print(f"❌ Failed to start AI trading: {error_msg}")
@@ -2085,8 +2093,8 @@ def stop_ai_trading():
     if 'user_token' not in session:
         return jsonify({"error": "Not authenticated", "success": False}), 401
     
-    # Force LIVE mode
-    trading_mode = 'LIVE'
+    # Get user's actual trading mode from session or database
+    trading_mode = session.get('trading_mode', 'TESTNET')  # Default to safe mode
 
     """Stop AI trading for the user"""
     # Allow both authenticated and demo access
@@ -2297,8 +2305,8 @@ def get_trading_activity():
     if 'user_token' not in session:
         return jsonify({"error": "Not authenticated", "success": False}), 401
     
-    # Force LIVE mode
-    trading_mode = 'LIVE'
+    # Get user's actual trading mode from session or database
+    trading_mode = session.get('trading_mode', 'TESTNET')  # Default to safe mode
 
     """Get real-time trading activity from LIVE trading logs"""
     if 'user_token' not in session:
@@ -2475,11 +2483,17 @@ def get_trading_activity():
         # If no logs found, show current mode status
         if not activity_logs:
             # ALWAYS USE LIVE MODE
-            trading_mode = 'LIVE'  # Force LIVE mode for all trading activity
-            print(f"🔍 DEBUG: Forcing LIVE trading mode, Session keys = {list(session.keys())}")
-            activity_logs.append("🔴 LIVE trading mode active - monitoring for signals...")
-            activity_logs.append("💰 Real money will be used for orders")
-            activity_logs.append("⚠️ WARNING: Real money will be used!")
+            trading_mode = session.get('trading_mode', 'TESTNET')
+            print(f"🔍 DEBUG: Using trading mode: {trading_mode}, Session keys = {list(session.keys())}")
+            
+            if trading_mode == 'LIVE':
+                activity_logs.append("🔴 LIVE trading mode active - monitoring for signals...")
+                activity_logs.append("💰 Real money will be used for orders")
+                activity_logs.append("⚠️ WARNING: Real money will be used!")
+            else:
+                activity_logs.append("🎭 TESTNET mode active - using virtual funds...")
+                activity_logs.append("🧪 Safe testing with virtual funds")
+                activity_logs.append("✅ No real money at risk!")
         
         return jsonify({
             'success': True,
@@ -2576,8 +2590,8 @@ def get_trading_history():
     if 'user_token' not in session:
         return jsonify({"error": "Not authenticated", "success": False}), 401
     
-    # Force LIVE mode
-    trading_mode = 'LIVE'
+    # Get user's actual trading mode from session or database
+    trading_mode = session.get('trading_mode', 'TESTNET')  # Default to safe mode
 
     """Get user's trading history from database"""
     if 'user_token' not in session:
@@ -4311,10 +4325,16 @@ def trading_monitor():
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Show LIVE mode information
-                    addActivityItem('🔴 Mode: LIVE TRADING (Real Money)', 'warning');
-                    addActivityItem('⚠️ WARNING: Real money will be used!', 'warning');
-                    addActivityItem('💰 Binance live orders will be placed!', 'warning');
+                    // Show appropriate mode information based on actual trading mode
+                    if (data.trading_mode === 'LIVE') {
+                        addActivityItem('🔴 Mode: LIVE TRADING (Real Money)', 'warning');
+                        addActivityItem('⚠️ WARNING: Real money will be used!', 'warning');
+                        addActivityItem('💰 Binance live orders will be placed!', 'warning');
+                    } else {
+                        addActivityItem('🎭 Mode: TESTNET (Virtual Funds)', 'info');
+                        addActivityItem('🧪 Safe testing with virtual funds', 'success');
+                        addActivityItem('✅ No real money at risk!', 'success');
+                    }
                     addActivityItem('🚀 Starting AI trading session...', 'info');
                     
                     // Show success message with session details
@@ -4771,10 +4791,10 @@ def portfolio():
         session['user_email'] = 'kirannaik@unitednewdigitalmedia.com'
         session['user_id'] = 'demo_user'
         
-    # Force LIVE trading mode for all users
+    # Get user's actual trading mode
     user_email = session.get('user_email', 'kirannaik@unitednewdigitalmedia.com')
-    current_mode = 'LIVE'  # Always use LIVE mode
-    print(f"📊 Portfolio: User {user_email} trading mode: {current_mode} (FORCED LIVE)")
+    current_mode = session.get('trading_mode', 'TESTNET')
+    print(f"📊 Portfolio: User {user_email} trading mode: {current_mode}")
     
     # Get live portfolio data using the same API endpoint that works
     try:
@@ -5713,8 +5733,8 @@ def get_portfolio_api():
     if 'user_token' not in session:
         return jsonify({"error": "Not authenticated", "success": False}), 401
     
-    # Force LIVE mode
-    trading_mode = 'LIVE'
+    # Get user's actual trading mode from session or database
+    trading_mode = session.get('trading_mode', 'TESTNET')  # Default to safe mode
 
     """Get user's live portfolio data (was missing!)"""
     if 'user_token' not in session:
@@ -5727,8 +5747,8 @@ def get_portfolio_api():
         
         user_email = session.get('user_email')
         
-        # Force LIVE trading mode
-        current_mode = 'LIVE'  # Always use LIVE mode
+        # Use user's selected trading mode
+        current_mode = session.get('trading_mode', 'TESTNET')
         
         # Get live balance from Binance if in LIVE mode
         live_balance = 0.0
