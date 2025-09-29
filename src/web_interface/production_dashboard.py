@@ -2019,97 +2019,44 @@ def start_ai_trading():
         # First, stop any existing sessions
         try:
             # Connect to the database
+            import sqlite3
             conn = sqlite3.connect('data/fixed_continuous_trading.db')
             cursor = conn.cursor()
             
             # Check if the user has any active sessions
-            cursor.execute("SELECT id FROM trading_sessions WHERE user_email=? AND is_active=1;", (user_email,))
+            cursor.execute("SELECT session_id FROM trading_sessions WHERE user_email=? AND status='active';", (user_email,))
             active_session = cursor.fetchone()
             
             if active_session:
-                import sqlite3
+                # Mark the session as inactive
+                session_id = active_session[0]
+                cursor.execute(
+                    "UPDATE trading_sessions SET status='inactive', end_time=? WHERE session_id=?",
+                    (datetime.now().isoformat(), session_id)
+                )
+                conn.commit()
+                print(f"Stopped existing session {session_id} for {user_email}")
+            
+            conn.close()
+        except Exception as e:
+            print(f"Error stopping existing session: {e}")
+        
+        # Start AI trading
+        print(f"🚀 Starting AI trading session...")
+        result = engine.start_continuous_trading(user_email, trading_mode)
+        
+        if result.get('success'):
+            print(f"✅ AI trading started successfully")
+            return jsonify({"success": True, "message": "AI trading started successfully", "session_id": result.get('session_id', ''), "monitoring_interval": result.get('monitoring_interval', 10), "initial_positions": result.get('initial_positions', 0)})
+        else:
+            error_msg = result.get('error', 'Unknown error')
+            print(f"❌ Failed to start AI trading: {error_msg}")
+            return jsonify({"success": False, "error": f"Failed to start AI trading: {error_msg}"})
+    except Exception as e:
+        print(f"❌ Error starting AI trading: {e}")
+        return jsonify({"success": False, "error": f"Error starting AI trading: {str(e)}"})
 
-                # Mark the session as inactive
-                session_id = active_session[0]
-                cursor.execute(
-                    "UPDATE trading_sessions SET status="inactive", end_time=? WHERE session_id=?",
-                    (datetime.now().isoformat(), session_id)
-                )
-                conn.commit()
-                print(f"Stopped existing session {session_id} for {user_email}")
-            
-            conn.close()
-        except Exception as e:
-            print(f"Error stopping existing session: {e}")
-        
-        # Start AI trading
-        print(f"🚀 Starting AI trading session...")
-        result = engine.start_continuous_trading(user_email, trading_mode)
-        
-        if result.get('success'):
-            print(f"✅ AI trading started successfully")
-            return jsonify({"success": True, "message": "AI trading started successfully"})
-        else:
-            error_msg = result.get('error', 'Unknown error')
-            print(f"❌ Failed to start AI trading: {error_msg}")
-            return jsonify({"success": False, "error": f"Failed to start AI trading: {error_msg}"})
-    except Exception as e:
-        print(f"❌ Error starting AI trading: {e}")
-        return jsonify({"success": False, "error": f"Error starting AI trading: {str(e)}"})
-    """Start AI trading"""
-    # Check if user is logged in
-    if 'user_token' not in session:
-        return jsonify({"error": "Not authenticated", "success": False}), 401
-    
-    # Force LIVE mode
-    trading_mode = 'LIVE'
-    
-    # Enhanced error handling
-    try:
-        user_email = session.get('user_email')
-        
-        # Check if trading engine is running
-        from fixed_continuous_trading_engine import FixedContinuousTradingEngine
-        engine = FixedContinuousTradingEngine()
-        
-        # First, stop any existing sessions
-        try:
-            # Connect to the database
-            conn = sqlite3.connect('data/fixed_continuous_trading.db')
-            cursor = conn.cursor()
-            
-            # Check if the user has any active sessions
-            cursor.execute("SELECT session_id FROM trading_sessions WHERE user_email=? AND status="active";", (user_email,))
-            active_session = cursor.fetchone()
-            
-            if active_session:
-                # Mark the session as inactive
-                session_id = active_session[0]
-                cursor.execute(
-                    "UPDATE trading_sessions SET is_active=0, end_time=? WHERE id=?",
-                    (datetime.now().isoformat(), session_id)
-                )
-                conn.commit()
-                print(f"Stopped existing session {session_id} for {user_email}")
-            
-            conn.close()
-        except Exception as e:
-            print(f"Error stopping existing session: {e}")
-        
-        # Start AI trading
-        print(f"🚀 Starting AI trading session...")
-        result = engine.start_continuous_trading(user_email, trading_mode)
-        
-        if result.get('success'):
-            print(f"✅ AI trading started successfully")
-            return jsonify({"success": True, "message": "AI trading started successfully"})
-        else:
-            error_msg = result.get('error', 'Unknown error')
-            print(f"❌ Failed to start AI trading: {error_msg}")
-            return jsonify({"success": False, "error": f"Failed to start AI trading: {error_msg}"})
-    except Exception as e:
-        print(f"❌ Error starting AI trading: {e}")
-        return jsonify({"success": False, "error": f"Error starting AI trading: {str(e)}"})
+@app.route('/api/stop-ai-trading', methods=['POST'])
 def stop_ai_trading():
     # Check if user is logged in
     if 'user_token' not in session:
