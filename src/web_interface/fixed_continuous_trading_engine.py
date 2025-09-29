@@ -260,24 +260,40 @@ class FixedContinuousTradingEngine:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
+            # Generate a unique session ID if not present
+            import uuid
+            session_id = session_data.get("id", f"session_{str(uuid.uuid4())}")
+            
             # Check if session already exists
-            if 'id' in session_data:
+            if "id" in session_data:
                 # Update existing session
                 cursor.execute(
-                    "UPDATE trading_sessions SET is_active=1, trading_mode=?, session_token=? WHERE id=?",
-                    (session_data['trading_mode'], session_data.get('session_token', ''), session_data['id'])
+                    "UPDATE trading_sessions SET status=?, end_time=? WHERE session_id=?",
+                    ("active", None, session_id)
                 )
-                session_id = session_data['id']
             else:
                 # Insert new session
                 cursor.execute(
-                    "INSERT INTO trading_sessions (user_email, start_time, is_active, trading_mode, session_token) VALUES (?, ?, 1, ?, ?)",
-                    (session_data['user_email'], session_data['start_time'], session_data['trading_mode'], session_data.get('session_token', ''))
+                    "INSERT INTO trading_sessions (session_id, user_email, start_time, status, risk_settings) VALUES (?, ?, ?, ?, ?)",
+                    (
+                        session_id,
+                        session_data["user_email"],
+                        session_data["start_time"],
+                        "active",
+                        json.dumps({"trading_mode": session_data["trading_mode"]})
+                    )
                 )
-                session_id = cursor.lastrowid
             
             # Commit changes and close connection
             conn.commit()
+            conn.close()
+            
+            self.logger.info(f"Successfully saved session {session_id} to database")
+            return session_id
+        except Exception as e:
+            self.logger.error(f"Error saving session to database: {e}")
+            return -1
+
             conn.close()
             
             return session_id
