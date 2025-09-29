@@ -725,8 +725,11 @@ class FixedContinuousTradingEngine:
                     # Check for new entry signals
                     self._check_entry_signals(user_email)
                     
-                    # Apply risk management
-                    self._apply_risk_management(user_email)
+                    # Apply risk management - CHECK FOR AUTO-STOP CONDITIONS
+                    stop_reason = self._apply_risk_management(user_email)
+                    if stop_reason:
+                        self.logger.warning(f"🛑 Auto-stopping trading for {user_email}: {stop_reason}")
+                        break  # Exit the monitoring loop
                     
                 except Exception as e:
                     self.logger.error(f"Error in monitoring loop: {e}")
@@ -737,6 +740,80 @@ class FixedContinuousTradingEngine:
             self.logger.info(f"🛑 Stopped continuous monitoring for {user_email}")
         except Exception as e:
             self.logger.error(f"Error in continuous monitoring: {e}")
+
+    def _apply_risk_management(self, user_email: str) -> str:
+        """Apply risk management rules and return stop reason if triggered"""
+        try:
+            if user_email not in self.active_sessions:
+                return None
+                
+            session_data = self.active_sessions[user_email]
+            start_time = datetime.fromisoformat(session_data.get('start_time'))
+            current_time = datetime.now()
+            
+            # Get user's risk settings from database
+            risk_settings = self._get_user_risk_settings(user_email)
+            
+            # Calculate session duration
+            duration_hours = (current_time - start_time).total_seconds() / 3600
+            
+            # Calculate current P&L
+            positions = session_data.get('positions', [])
+            current_pnl = sum(position.get('profit_loss', 0) for position in positions)
+            
+            # 1. CHECK DAILY LOSS LIMIT
+            max_daily_loss_pct = risk_settings.get('max_daily_loss', 0.05)  # Default 5%
+            portfolio_value = 10000  # Assume $10K portfolio for now
+            max_daily_loss = portfolio_value * max_daily_loss_pct
+            
+            if current_pnl < -max_daily_loss:
+                # Auto-stop due to daily loss limit
+                self.stop_continuous_trading(user_email, f'DAILY_LOSS_LIMIT')
+                return f"Daily loss limit exceeded: ${current_pnl:.2f} < -${max_daily_loss:.2f}"
+            
+            # 2. CHECK SESSION TIME LIMITS (for demo/testing)
+            max_session_hours = risk_settings.get('max_session_hours', 8)  # Default 8 hours for demo
+            if duration_hours > max_session_hours:
+                self.stop_continuous_trading(user_email, f'TIME_LIMIT')
+                return f"Maximum session time reached: {duration_hours:.1f} hours"
+            
+            # 3. CHECK POSITION COUNT LIMITS
+            max_positions = risk_settings.get('max_positions', 10)  # Default 10 positions
+            if len(positions) > max_positions:
+                return f"Too many positions: {len(positions)} > {max_positions}"
+            
+            # 4. LOG RISK STATUS (every 10 monitoring cycles to avoid spam)
+            if hasattr(self, '_risk_log_counter'):
+                self._risk_log_counter += 1
+            else:
+                self._risk_log_counter = 1
+                
+            if self._risk_log_counter % 10 == 0:  # Log every 10 cycles (100 seconds)
+                self.logger.info(f"🛡️ Risk Check - P&L: ${current_pnl:.2f}, Duration: {duration_hours:.2f}h, Positions: {len(positions)}")
+            
+            return None  # No stop condition triggered
+            
+        except Exception as e:
+            self.logger.error(f"Error in risk management: {e}")
+            return None
+    
+    def _get_user_risk_settings(self, user_email: str) -> dict:
+        """Get user's risk settings from database"""
+        try:
+            # For now, return default settings
+            # Later this would query the user's actual settings from risk_settings table
+            return {
+                'max_daily_loss': 0.05,      # 5% daily loss limit
+                'max_position_size': 0.20,   # 20% per position
+                'stop_loss_pct': 0.02,       # 2% stop loss
+                'take_profit_pct': 0.04,     # 4% take profit
+                'min_signal_strength': 0.70,  # 70% AI confidence
+                'max_session_hours': 8,      # 8 hours max session (for demo)
+                'max_positions': 5           # Max 5 concurrent positions
+            }
+        except Exception as e:
+            self.logger.error(f"Error getting risk settings: {e}")
+            return {}
 
 # Create global instance at the end of the file
 fixed_continuous_engine = FixedContinuousTradingEngine()
