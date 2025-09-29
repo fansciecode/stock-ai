@@ -530,19 +530,30 @@ class FixedContinuousTradingEngine:
                     self.logger.info(f"🔄 Order result: {result}")
                     
                     # Save position to session regardless of real/simulated
+                    entry_price = result.get('price', 50000 if 'BTC' in order['symbol'] else 2500)
+                    
+                    # Calculate proper quantity based on amount and price
+                    if 'BTC' in order['symbol']:
+                        # For crypto: quantity = amount_in_usd / price_per_coin
+                        quantity = order['amount'] / entry_price  # e.g., $10 / $50000 = 0.0002 BTC
+                    else:
+                        # For stocks: quantity = amount_in_inr / price_per_share
+                        quantity = order['amount'] / entry_price  # e.g., ₹500 / ₹2500 = 0.2 shares
+                    
                     position_data = {
                         'symbol': order['symbol'],
-                        'entry_price': result.get('price', 50000 if 'BTC' in order['symbol'] else 2500),
-                        'quantity': result.get('amount', order['amount']),
+                        'entry_price': entry_price,
+                        'quantity': quantity,  # Proper quantity calculation
                         'side': order['side'],
                         'timestamp': datetime.now().isoformat(),
-                        'take_profit': (result.get('price', 50000) * 1.015),  # 1.5% take profit
-                        'stop_loss': (result.get('price', 50000) * 0.992),    # 0.8% stop loss  
-                        'current_price': result.get('price', 50000),
+                        'take_profit': (entry_price * 1.015),  # 1.5% take profit
+                        'stop_loss': (entry_price * 0.992),    # 0.8% stop loss  
+                        'current_price': entry_price,
                         'profit_loss': 0.0,
                         'is_simulated': not result.get('real_order', True),
                         'simulation_reason': result.get('simulation_reason', None),
-                        'exchange': order['exchange']
+                        'exchange': order['exchange'],
+                        'amount_invested': order['amount']  # Track original investment amount
                     }
                 
                     # Save position to database
@@ -929,11 +940,21 @@ class FixedContinuousTradingEngine:
                 new_price = current_price * (1 + price_change)
                 position['current_price'] = new_price
                 
-                # Update P&L
-                if position.get('side') == 'BUY':
-                    position['profit_loss'] = (new_price - position.get('entry_price', new_price)) * position.get('quantity', 1)
+                # Update P&L based on percentage change and investment amount
+                entry_price = position.get('entry_price', new_price)
+                amount_invested = position.get('amount_invested', 100)  # Default to $100 if not set
+                
+                if position.get('side') == 'buy':  # Note: lowercase 'buy' from order
+                    price_change_pct = (new_price - entry_price) / entry_price
+                    position['profit_loss'] = amount_invested * price_change_pct
                 else:
-                    position['profit_loss'] = (position.get('entry_price', new_price) - new_price) * position.get('quantity', 1)
+                    price_change_pct = (entry_price - new_price) / entry_price  
+                    position['profit_loss'] = amount_invested * price_change_pct
+                
+                # Ensure P&L is reasonable (between -100% and +1000%)
+                max_loss = -amount_invested  # Can't lose more than invested
+                max_gain = amount_invested * 10  # Maximum 1000% gain
+                position['profit_loss'] = max(max_loss, min(max_gain, position['profit_loss']))
                     
         except Exception as e:
             self.logger.error(f"Error updating positions: {e}")
