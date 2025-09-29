@@ -768,12 +768,14 @@ class FixedContinuousTradingEngine:
             
             if current_pnl < -max_daily_loss:
                 # Auto-stop due to daily loss limit
+                self.logger.warning(f"🚨 AUTO-STOP TRIGGERED: Daily loss limit exceeded: P&L ${current_pnl:.2f} < -${max_daily_loss:.2f}")
                 self.stop_continuous_trading(user_email, f'DAILY_LOSS_LIMIT')
                 return f"Daily loss limit exceeded: ${current_pnl:.2f} < -${max_daily_loss:.2f}"
             
             # 2. CHECK SESSION TIME LIMITS (for demo/testing)
-            max_session_hours = risk_settings.get('max_session_hours', 8)  # Default 8 hours for demo
+            max_session_hours = risk_settings.get('max_session_hours', 24)  # Default 24 hours 
             if duration_hours > max_session_hours:
+                self.logger.warning(f"🚨 AUTO-STOP TRIGGERED: Time limit reached: {duration_hours:.1f} > {max_session_hours} hours")
                 self.stop_continuous_trading(user_email, f'TIME_LIMIT')
                 return f"Maximum session time reached: {duration_hours:.1f} hours"
             
@@ -808,12 +810,101 @@ class FixedContinuousTradingEngine:
                 'stop_loss_pct': 0.02,       # 2% stop loss
                 'take_profit_pct': 0.04,     # 4% take profit
                 'min_signal_strength': 0.70,  # 70% AI confidence
-                'max_session_hours': 8,      # 8 hours max session (for demo)
+                'max_session_hours': 24,     # 24 hours max session
                 'max_positions': 5           # Max 5 concurrent positions
             }
         except Exception as e:
             self.logger.error(f"Error getting risk settings: {e}")
             return {}
+    
+    def _update_positions(self, user_email: str):
+        """Update positions with current market prices"""
+        try:
+            if user_email not in self.active_sessions:
+                return
+                
+            session_data = self.active_sessions[user_email]
+            positions = session_data.get('positions', [])
+            
+            # For now, just simulate price updates
+            for position in positions:
+                # Simulate small random price movements
+                import random
+                current_price = position.get('current_price', position.get('entry_price', 100))
+                price_change = random.uniform(-0.02, 0.02)  # ±2% random movement
+                new_price = current_price * (1 + price_change)
+                position['current_price'] = new_price
+                
+                # Update P&L
+                if position.get('side') == 'BUY':
+                    position['profit_loss'] = (new_price - position.get('entry_price', new_price)) * position.get('quantity', 1)
+                else:
+                    position['profit_loss'] = (position.get('entry_price', new_price) - new_price) * position.get('quantity', 1)
+                    
+        except Exception as e:
+            self.logger.error(f"Error updating positions: {e}")
+    
+    def _check_exit_signals(self, user_email: str):
+        """Check if any positions should be closed"""
+        try:
+            if user_email not in self.active_sessions:
+                return
+                
+            session_data = self.active_sessions[user_email]
+            positions = session_data.get('positions', [])
+            risk_settings = self._get_user_risk_settings(user_email)
+            
+            for position in positions:
+                if position.get('status') != 'OPEN':
+                    continue
+                    
+                current_price = position.get('current_price', position.get('entry_price', 100))
+                entry_price = position.get('entry_price', current_price)
+                
+                # Check stop loss
+                stop_loss_pct = risk_settings.get('stop_loss_pct', 0.02)
+                if position.get('side') == 'BUY':
+                    stop_loss_price = entry_price * (1 - stop_loss_pct)
+                    if current_price <= stop_loss_price:
+                        self.logger.info(f"🔴 Stop loss triggered for {position.get('symbol', 'Unknown')}: ${current_price:.2f} <= ${stop_loss_price:.2f}")
+                        position['status'] = 'CLOSED'
+                        position['close_reason'] = 'STOP_LOSS'
+                
+                # Check take profit
+                take_profit_pct = risk_settings.get('take_profit_pct', 0.04)
+                if position.get('side') == 'BUY':
+                    take_profit_price = entry_price * (1 + take_profit_pct)
+                    if current_price >= take_profit_price:
+                        self.logger.info(f"🟢 Take profit triggered for {position.get('symbol', 'Unknown')}: ${current_price:.2f} >= ${take_profit_price:.2f}")
+                        position['status'] = 'CLOSED'
+                        position['close_reason'] = 'TAKE_PROFIT'
+                        
+        except Exception as e:
+            self.logger.error(f"Error checking exit signals: {e}")
+    
+    def _check_entry_signals(self, user_email: str):
+        """Check for new trading opportunities"""
+        try:
+            if user_email not in self.active_sessions:
+                return
+                
+            session_data = self.active_sessions[user_email]
+            positions = session_data.get('positions', [])
+            risk_settings = self._get_user_risk_settings(user_email)
+            
+            # Check if we're under position limit
+            open_positions = [p for p in positions if p.get('status') == 'OPEN']
+            max_positions = risk_settings.get('max_positions', 5)
+            
+            if len(open_positions) >= max_positions:
+                return  # Already at max positions
+                
+            # For demo purposes, don't generate new signals constantly
+            # In real implementation, this would check AI signals
+            pass
+                        
+        except Exception as e:
+            self.logger.error(f"Error checking entry signals: {e}")
 
 # Create global instance at the end of the file
 fixed_continuous_engine = FixedContinuousTradingEngine()
