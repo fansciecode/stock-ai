@@ -2094,6 +2094,68 @@ def stop_ai_trading():
             'error': f'Failed to stop trading: {str(e)}'
         })
 
+@app.route('/api/check-trading-status')
+def check_trading_status():
+    """Check if user has an active trading session"""
+    if 'user_token' not in session:
+        return jsonify({'success': False, 'error': 'Not authenticated'})
+    
+    try:
+        user_email = session.get('user_email', 'kirannaik@unitednewdigitalmedia.com')
+        
+        # Check both database and in-memory sessions
+        from fixed_continuous_trading_engine import fixed_continuous_engine
+        
+        # Check in-memory active sessions first
+        is_active_in_memory = user_email in fixed_continuous_engine.active_sessions
+        session_id = None
+        
+        if is_active_in_memory:
+            session_data = fixed_continuous_engine.active_sessions[user_email]
+            session_id = session_data.get('id', 'unknown')
+        
+        # Also check database for backup
+        try:
+            import sqlite3
+            conn = sqlite3.connect('data/fixed_continuous_trading.db')
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT id, session_token FROM trading_sessions WHERE user_email=? AND is_active=1 ORDER BY start_time DESC LIMIT 1",
+                (user_email,)
+            )
+            db_session = cursor.fetchone()
+            conn.close()
+            
+            if db_session and not is_active_in_memory:
+                # Session exists in DB but not in memory - might be stale
+                session_id = db_session[0]
+                # Clean up stale database session
+                conn = sqlite3.connect('data/fixed_continuous_trading.db')
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE trading_sessions SET is_active=0, end_time=? WHERE id=?",
+                    (datetime.now().isoformat(), session_id)
+                )
+                conn.commit()
+                conn.close()
+                is_active_in_memory = False  # Force cleanup
+                
+        except Exception as db_error:
+            print(f"Database check error: {db_error}")
+        
+        return jsonify({
+            'success': True,
+            'is_active': is_active_in_memory,
+            'session_id': str(session_id) if session_id else None
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'is_active': False
+        })
+
 @app.route('/api/test-connection/<exchange>', methods=['POST'])
 def test_connection(exchange):
     """Test connection to user's exchange"""
@@ -4051,7 +4113,74 @@ def trading_monitor():
     <script>
         let monitoringActive = false;
         
+        // Check for existing trading session on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            checkExistingTradingSession();
+        });
+        
+        function checkExistingTradingSession() {
+            // First check localStorage for client-side state
+            const isActive = localStorage.getItem('aiTradingActive');
+            const sessionId = localStorage.getItem('aiTradingSessionId');
+            
+            if (isActive === 'true' && sessionId) {
+                // Set button to stop state
+                const button = document.querySelector('.start-btn');
+                if (button) {
+                    button.style.backgroundColor = '#f56565';
+                    button.textContent = '🛑 Stop AI Trading';
+                    button.onclick = stopAITrading;
+                }
+                
+                // Show activity section
+                const activitySection = document.getElementById('activity-section');
+                if (activitySection) {
+                    activitySection.style.display = 'block';
+                }
+                
+                addActivityItem('🔄 Restored active trading session: ' + sessionId, 'success');
+                startMonitoring();
+            }
+            
+            // Also check server-side state via API
+            fetch('/api/check-trading-status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.is_active) {
+                        // Server says trading is active, sync UI
+                        const button = document.querySelector('.start-btn');
+                        if (button && button.textContent.includes('Start')) {
+                            button.style.backgroundColor = '#f56565';
+                            button.textContent = '🛑 Stop AI Trading';
+                            button.onclick = stopAITrading;
+                            
+                            const activitySection = document.getElementById('activity-section');
+                            if (activitySection) {
+                                activitySection.style.display = 'block';
+                            }
+                            
+                            addActivityItem('🔄 Found active trading session in progress', 'success');
+                            startMonitoring();
+                            
+                            // Update localStorage
+                            localStorage.setItem('aiTradingActive', 'true');
+                            localStorage.setItem('aiTradingSessionId', data.session_id || 'unknown');
+                        }
+                    } else if (localStorage.getItem('aiTradingActive') === 'true') {
+                        // Client thinks it's active but server says no - clean up
+                        localStorage.removeItem('aiTradingActive');
+                        localStorage.removeItem('aiTradingSessionId');
+                    }
+                })
+                .catch(error => {
+                    console.log('Trading status check failed:', error);
+                });
+        }
+        
         function stopAITrading() {
+            const button = document.querySelector('.start-btn');
+            button.disabled = true;
+            
             fetch('/api/stop-ai-trading', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'}
@@ -4061,28 +4190,43 @@ def trading_monitor():
                 if (data.success) {
                     addActivityItem('🛑 Trading session ended', 'warning');
                     // Change button color back to green
-                    document.querySelector('.start-btn').style.backgroundColor = '#48bb78';
-                    document.querySelector('.start-btn').textContent = '🚀 Start AI Trading';
-                    document.querySelector('.start-btn').onclick = startAITrading;
+                    button.style.backgroundColor = '#48bb78';
+                    button.textContent = '🚀 Start AI Trading';
+                    button.onclick = startAITrading;
+                    button.disabled = false;
+                    
+                    // Clear session state from localStorage
+                    localStorage.removeItem('aiTradingActive');
+                    localStorage.removeItem('aiTradingSessionId');
                 } else {
                     // Handle "No active trading session" as a non-error
                     if (data.error && data.error.includes('No active trading session')) {
                         addActivityItem('ℹ️ No active trading session to stop', 'info');
                         // Change button color back to green anyway
-                        document.querySelector('.start-btn').style.backgroundColor = '#48bb78';
-                        document.querySelector('.start-btn').textContent = '🚀 Start AI Trading';
-                        document.querySelector('.start-btn').onclick = startAITrading;
+                        button.style.backgroundColor = '#48bb78';
+                        button.textContent = '🚀 Start AI Trading';
+                        button.onclick = startAITrading;
+                        
+                        // Clear session state from localStorage
+                        localStorage.removeItem('aiTradingActive');
+                        localStorage.removeItem('aiTradingSessionId');
                     } else {
                         addActivityItem('❌ Failed to stop trading: ' + data.error, 'error');
                     }
+                    button.disabled = false;
                 }
             })
             .catch(error => {
                 addActivityItem('❌ Error stopping trading: ' + error, 'error');
+                button.disabled = false;
             });
         }
         
         function startAITrading() {
+            // Disable button to prevent multiple clicks
+            const button = document.querySelector('.start-btn');
+            button.disabled = true;
+            
             fetch('/api/start-ai-trading', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'}
@@ -4108,15 +4252,22 @@ def trading_monitor():
                     startMonitoring();
                     
                     // Change button color to red
-                    document.querySelector('.start-btn').style.backgroundColor = '#f56565';
-                    document.querySelector('.start-btn').textContent = '🛑 Stop AI Trading';
-                    document.querySelector('.start-btn').onclick = stopAITrading;
+                    button.style.backgroundColor = '#f56565';
+                    button.textContent = '🛑 Stop AI Trading';
+                    button.onclick = stopAITrading;
+                    button.disabled = false;
+                    
+                    // Store session state in localStorage for persistence
+                    localStorage.setItem('aiTradingActive', 'true');
+                    localStorage.setItem('aiTradingSessionId', data.session_id);
                 } else {
                     addActivityItem('❌ Failed to start AI trading: ' + data.error, 'error');
+                    button.disabled = false;
                 }
             })
             .catch(error => {
                 addActivityItem('❌ Error: ' + error, 'error');
+                button.disabled = false;
             });
         }
         
