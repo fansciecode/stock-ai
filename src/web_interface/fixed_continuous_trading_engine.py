@@ -287,17 +287,12 @@ class FixedContinuousTradingEngine:
             # Commit changes and close connection
             conn.commit()
             conn.close()
-            
             self.logger.info(f"Successfully saved session {session_id} to database")
             return session_id
         except Exception as e:
             self.logger.error(f"Error saving session to database: {e}")
             return -1
 
-            conn.close()
-            
-            return session_id
-        except Exception as e:
             self.logger.error(f"Error saving session to database: {e}")
             return -1
     

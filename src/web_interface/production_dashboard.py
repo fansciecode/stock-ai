@@ -2027,6 +2027,8 @@ def start_ai_trading():
             active_session = cursor.fetchone()
             
             if active_session:
+                import sqlite3
+
                 # Mark the session as inactive
                 session_id = active_session[0]
                 cursor.execute(
