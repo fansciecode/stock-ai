@@ -11,7 +11,7 @@ import json
 import time
 import sqlite3
 from datetime import datetime, timedelta
-from flask import Flask, render_template_string, jsonify, request, session, redirect, url_for
+from flask import Flask, render_template, render_template_string, jsonify, request, session, redirect, url_for
 from flask_cors import CORS
 import secrets
 
@@ -51,18 +51,13 @@ def get_user_by_token(token):
 
 @app.route('/')
 def index():
-    # Restore session state
-    if 'user_token' not in session and request.cookies.get('remember_token'):
-        token = request.cookies.get('remember_token')
-        user = get_user_by_token(token)
-        if user:
-            session['user_token'] = token
-            session['user_id'] = user['id']
-            session['user_email'] = user['email']
-            session['trading_mode'] = 'TESTNET'  # Default to safe mode
+    """Homepage - AI Trading Platform Landing Page"""
+    # Check if user is already logged in
+    if 'user_token' in session:
+        return redirect(url_for('trading_dashboard'))
     
-    """Redirect root to dashboard"""
-    return redirect(url_for('trading_dashboard'))
+    # Show the homepage for new visitors
+    return render_template('index.html')
 
 class ProductionDashboard:
     """Production dashboard with real user journey"""
@@ -124,14 +119,7 @@ def get_user_by_token(token):
         print(f"Error getting user by token: {e}")
         return None
 
-@app.route('/')
-def home():
-    """Home page - redirect based on authentication"""
-    if 'user_token' in session:
-        dashboard.current_token = session['user_token']
-        return redirect(url_for('trading_dashboard'))
-    else:
-        return redirect(url_for('login_page'))
+# Removed duplicate route - using the main index route above
 
 @app.route('/login')
 def login_page():
