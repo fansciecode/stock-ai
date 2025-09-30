@@ -1,0 +1,81 @@
+{
+  "timestamp": "2025-09-25T16:29:20.167943",
+  "system_metrics": {
+    "signals_generated": 2,
+    "orders_placed": 2,
+    "trades_completed": 0,
+    "total_pnl": 0.0,
+    "uptime_hours": 1.138888888888889e-08
+  },
+  "agent_performance": {
+    "agent_1_trading_model": {
+      "message": "No completed trades"
+    }
+  },
+  "execution_stats": {
+    "total_trades": 4,
+    "total_volume": 41521.699951397226,
+    "avg_trade_size": 10380.424987849306,
+    "total_commission": 41.52169995139723,
+    "instruments_traded": 2,
+    "last_trade_time": "2025-09-25 16:29:20.166137"
+  },
+  "current_positions": {
+    "SAMPLE_STOCK": 417.3877951291398,
+    "SAMPLE_CRYPTO": -5.0
+  },
+  "recent_trades": [
+    {
+      "trade_id": "2169db40-8e2b-4ddd-90dc-156a532a60e0",
+      "order_id": "268cc3a7-0273-4973-ac02-8e3f07db9143",
+      "instrument": "SAMPLE_STOCK",
+      "side": 1,
+      "quantity": 203.6938975645699,
+      "price": 98.2847313511381,
+      "commission": 20.019999999999996,
+      "agent_id": "agent_1_trading_model",
+      "strategy": "UNKNOWN",
+      "execution_time": "2025-09-25 16:29:05.114629",
+      "notional": 20019.999999999996
+    },
+    {
+      "trade_id": "09da6c0f-4e2d-4c93-a415-371876a161de",
+      "order_id": "69282cd9-3ee0-49c8-9b87-73011a1d4175",
+      "instrument": "SAMPLE_STOCK",
+      "side": 1,
+      "quantity": 10.0,
+      "price": 98.2847313511381,
+      "commission": 0.9828473135113811,
+      "agent_id": "test_agent",
+      "strategy": "api_test",
+      "execution_time": "2025-09-25 16:29:19.261853",
+      "notional": 982.8473135113811
+    },
+    {
+      "trade_id": "2771d690-4a9e-41f9-b651-d81121d9a48d",
+      "order_id": "3ade726a-5fd7-40df-83f8-fc06b5288501",
+      "instrument": "SAMPLE_CRYPTO",
+      "side": -1,
+      "quantity": 5.0,
+      "price": 99.77052757717125,
+      "commission": 0.49885263788585626,
+      "agent_id": "test_agent",
+      "strategy": "api_test",
+      "execution_time": "2025-09-25 16:29:19.317852",
+      "notional": 498.85263788585627
+    },
+    {
+      "trade_id": "ca2aa570-43b5-4e89-bcb4-70b111ce7ead",
+      "order_id": "2bf45b6a-a825-41a3-af00-a56c82eff8a7",
+      "instrument": "SAMPLE_STOCK",
+      "side": 1,
+      "quantity": 203.6938975645699,
+      "price": 98.2847313511381,
+      "commission": 20.019999999999996,
+      "agent_id": "agent_1_trading_model",
+      "strategy": "UNKNOWN",
+      "execution_time": "2025-09-25 16:29:20.166137",
+      "notional": 20019.999999999996
+    }
+  ]
+}

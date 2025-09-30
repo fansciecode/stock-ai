@@ -1,0 +1,207 @@
+{
+  "test_execution": {
+    "start_time": "2025-09-25T16:26:42.579353",
+    "duration": "0:00:05.792391",
+    "total_tests": 28,
+    "passed_tests": 17,
+    "failed_tests": 11,
+    "success_rate": 60.71428571428571
+  },
+  "phase_results": {
+    "Data Infrastructure": {
+      "synthetic_data": {
+        "passed": true,
+        "data_points": 100,
+        "columns": [
+          "ts",
+          "open",
+          "high",
+          "low",
+          "close",
+          "volume",
+          "instrument"
+        ]
+      },
+      "crypto_data": {
+        "passed": true,
+        "data_points": 5,
+        "latest_price": 111666.18
+      },
+      "data_storage": {
+        "passed": true,
+        "files": {
+          "data/sample_5m.parquet": {
+            "exists": true,
+            "size": 212518
+          },
+          "data/features.parquet": {
+            "exists": true,
+            "size": 2299465
+          },
+          "data/labels.parquet": {
+            "exists": true,
+            "size": 146945
+          }
+        }
+      }
+    },
+    "Feature Engineering": {
+      "feature_generation": {
+        "passed": true,
+        "feature_count": 66,
+        "feature_names": [
+          "hl2",
+          "hlc3",
+          "ohlc4",
+          "returns_1",
+          "returns_5",
+          "log_returns",
+          "volatility_10",
+          "volatility_20",
+          "volatility_50",
+          "sma_5"
+        ]
+      },
+      "feature_quality": {
+        "passed": "True",
+        "nan_percentage": 0.008681506849315068,
+        "total_features": 73
+      }
+    },
+    "ML Models": {
+      "basic_model": {
+        "passed": false,
+        "error": "'TradingModelTrainer' object has no attribute 'prepare_training_data'"
+      },
+      "model_prediction": {
+        "passed": false,
+        "error": "'dict' object has no attribute 'predict'"
+      }
+    },
+    "Advanced Models": {
+      "pytorch_available": {
+        "passed": true,
+        "cuda_available": false,
+        "device": "cpu"
+      },
+      "lstm_model": {
+        "passed": true,
+        "output_shape": [
+          1,
+          1
+        ],
+        "model_parameters": 10529
+      },
+      "transformer_model": {
+        "passed": true,
+        "output_shape": [
+          1,
+          1
+        ],
+        "model_parameters": 102785
+      }
+    },
+    "Trading Strategies": {
+      "ob_tap_strategy": {
+        "passed": false,
+        "error": "'StrategyManager' object has no attribute 'generate_signals'"
+      },
+      "vwap_revert_strategy": {
+        "passed": false,
+        "error": "'StrategyManager' object has no attribute 'generate_signals'"
+      },
+      "ma_crossover_strategy": {
+        "passed": false,
+        "error": "'StrategyManager' object has no attribute 'generate_signals'"
+      }
+    },
+    "Real-time Streaming": {
+      "streaming_db": {
+        "passed": true,
+        "db_path": "data/realtime/realtime_data.db"
+      },
+      "data_processing": {
+        "passed": true,
+        "test_data_stored": 1
+      }
+    },
+    "API Endpoints": {
+      "api_startup": {
+        "passed": false,
+        "error": "[Errno 2] No such file or directory: 'python'"
+      }
+    },
+    "Execution System": {
+      "order_submission": {
+        "passed": false,
+        "order_id": "ca88664c-0758-48b2-b9c3-5d98bff4053c",
+        "status": "REJECTED"
+      },
+      "position_tracking": {
+        "passed": true,
+        "position_count": 0,
+        "test_position": 0
+      },
+      "trade_history": {
+        "passed": true,
+        "trade_count": 0
+      }
+    },
+    "Monitoring System": {
+      "monitoring_db": {
+        "passed": false,
+        "error": "cannot import name 'MimeText' from 'email.mime.text' (/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/email/mime/text.py)"
+      },
+      "health_check": {
+        "passed": false,
+        "error": "cannot import name 'MimeText' from 'email.mime.text' (/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/email/mime/text.py)"
+      },
+      "alert_system": {
+        "passed": false,
+        "error": "cannot import name 'MimeText' from 'email.mime.text' (/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/email/mime/text.py)"
+      }
+    },
+    "Performance & Load": {
+      "data_processing_speed": {
+        "passed": true,
+        "processing_time": 0.6765849590301514,
+        "data_points": 5000,
+        "features_generated": 5000
+      },
+      "model_prediction_speed": {
+        "passed": false,
+        "error": "'dict' object has no attribute 'predict'"
+      }
+    },
+    "Production Readiness": {
+      "docker_setup": {
+        "passed": true,
+        "dockerfile": true,
+        "docker_compose": true
+      },
+      "configuration": {
+        "passed": true,
+        "config_files": {
+          "configs/data_sources.yaml": true,
+          "configs/strategies.yaml": true
+        }
+      },
+      "logging_setup": {
+        "passed": true,
+        "directories": {
+          "logs": true,
+          "reports": true,
+          "data": true
+        }
+      },
+      "error_handling": {
+        "passed": true,
+        "graceful_degradation": true
+      }
+    }
+  },
+  "overall_status": "CRITICAL",
+  "recommendations": [
+    "Ensure API server is properly configured"
+  ]
+}

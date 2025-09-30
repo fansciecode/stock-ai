@@ -1,0 +1,71 @@
+# Google Cloud Run deployment configuration
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: ibcm-ai-service
+  annotations:
+    run.googleapis.com/ingress: all
+    run.googleapis.com/execution-environment: gen2
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: "10"
+        autoscaling.knative.dev/minScale: "1"
+        run.googleapis.com/cpu-throttling: "false"
+        run.googleapis.com/memory: "8Gi"
+        run.googleapis.com/cpu: "4"
+    spec:
+      containerConcurrency: 100
+      timeoutSeconds: 3600
+      containers:
+      - image: gcr.io/PROJECT_ID/ibcm-ai:latest
+        ports:
+        - containerPort: 8001
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: MONGO_URI
+          valueFrom:
+            secretKeyRef:
+              name: ibcm-secrets
+              key: mongo-uri
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: ibcm-secrets
+              key: redis-url
+        - name: INTERNAL_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ibcm-secrets
+              key: api-key
+        - name: GPU_ENABLED
+          value: "false"
+        - name: DEVICE
+          value: "cpu"
+        resources:
+          limits:
+            memory: "8Gi"
+            cpu: "4"
+          requests:
+            memory: "4Gi"
+            cpu: "2"
+        livenessProbe:
+          httpGet:
+            path: /ai/status
+            port: 8001
+            httpHeaders:
+            - name: X-API-Key
+              value: "health-check"
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /ai/status
+            port: 8001
+            httpHeaders:
+            - name: X-API-Key
+              value: "health-check"
+          initialDelaySeconds: 30
+          periodSeconds: 10

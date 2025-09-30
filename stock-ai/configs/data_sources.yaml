@@ -1,0 +1,48 @@
+# Data source configurations
+india:
+  provider: zerodha
+  api_key: ${ZERODHA_API_KEY}
+  api_secret: ${ZERODHA_API_SECRET}
+  access_token: ${ZERODHA_ACCESS_TOKEN}
+  instruments: 
+    - NIFTY 50
+    - RELIANCE
+    - TCS
+    - INFY
+
+crypto:
+  provider: ccxt
+  exchange: binance
+  api_key: ${BINANCE_API_KEY}
+  api_secret: ${BINANCE_API_SECRET}
+  symbols:
+    - BTC/USDT
+    - ETH/USDT
+    - BNB/USDT
+
+global:
+  provider: yahoo
+  symbols:
+    - AAPL
+    - GOOGL
+    - TSLA
+    - SPY
+
+sample:
+  provider: synthetic
+  instruments:
+    - SAMPLE_STOCK
+    - SAMPLE_CRYPTO
+
+# Data settings
+timeframes:
+  - 1m
+  - 5m
+  - 15m
+  - 1h
+  - 1d
+
+storage:
+  format: parquet
+  path: data/
+  compression: gzip

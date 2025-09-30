@@ -1,0 +1,477 @@
+{
+  "info": {
+    "name": "IBCM AI - Production API Collection",
+    "description": "Complete API collection for IBCM Universal AI with Real-Time Discovery",
+    "version": "2.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "X-API-Key",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "ibcm_ai_key_2024",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8001",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "ibcm_ai_key_2024",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "System Health & Info",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          }
+        },
+        {
+          "name": "API Root Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": ["{{base_url}}"],
+              "path": [""]
+            }
+          }
+        },
+        {
+          "name": "API Documentation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/docs",
+              "host": ["{{base_url}}"],
+              "path": ["docs"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Universal AI - All Domains",
+      "item": [
+        {
+          "name": "Financial Advice",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"query\": \"Should I invest $50,000 in stocks or real estate?\",\n    \"risk_tolerance\": \"moderate\",\n    \"goals\": [\"retirement\", \"wealth_building\"],\n    \"budget\": {\"amount\": 50000, \"currency\": \"USD\"}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/universal/financial-advice",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "universal", "financial-advice"]
+            }
+          }
+        },
+        {
+          "name": "Healthcare Advisor",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"query\": \"I have persistent headaches and fatigue. What should I do?\",\n    \"symptoms\": [\"headache\", \"fatigue\"],\n    \"location\": {\"city\": \"New York\", \"state\": \"NY\"},\n    \"insurance\": {\"provider\": \"Blue Cross\", \"type\": \"PPO\"}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/universal/healthcare-advisor",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "universal", "healthcare-advisor"]
+            }
+          }
+        },
+        {
+          "name": "Education Planner",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"query\": \"I want to transition from marketing to data science. What's the best learning path?\",\n    \"current_level\": \"beginner\",\n    \"timeline\": \"6 months\",\n    \"budget\": 5000,\n    \"learning_style\": \"online\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/universal/education-planner",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "universal", "education-planner"]
+            }
+          }
+        },
+        {
+          "name": "Business Optimizer",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"query\": \"How can I scale my consulting business from $200K to $500K revenue?\",\n    \"current_revenue\": 200000,\n    \"target_revenue\": 500000,\n    \"business_type\": \"consulting\",\n    \"team_size\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/universal/business-optimizer",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "universal", "business-optimizer"]
+            }
+          }
+        },
+        {
+          "name": "Lifestyle Advisor",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"query\": \"Should I buy a Tesla Model 3 or Toyota Prius for my daily commute?\",\n    \"budget\": 45000,\n    \"priorities\": [\"fuel_efficiency\", \"technology\", \"reliability\"],\n    \"usage\": \"daily_commute\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/universal/lifestyle-advisor",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "universal", "lifestyle-advisor"]
+            }
+          }
+        },
+        {
+          "name": "Market Intelligence",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"query\": \"What are the current trends in the AI and machine learning industry?\",\n    \"domain\": \"artificial_intelligence\",\n    \"timeframe\": \"2024\",\n    \"focus_areas\": [\"market_size\", \"key_players\", \"emerging_trends\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/universal/market-intelligence",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "universal", "market-intelligence"]
+            }
+          }
+        },
+        {
+          "name": "Price Optimizer",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"query\": \"How should I price my SaaS product for maximum revenue?\",\n    \"product\": \"project_management_software\",\n    \"target_market\": \"small_businesses\",\n    \"competitors\": [\"Asana\", \"Trello\", \"Monday.com\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/universal/price-optimizer",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "universal", "price-optimizer"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Core AI Functionality",
+      "item": [
+        {
+          "name": "General AI Query",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"query\": \"What time is it and what should I do this evening?\",\n    \"user_id\": \"test_user_123\",\n    \"context\": {\n        \"location\": \"San Francisco\",\n        \"preferences\": [\"food\", \"entertainment\"]\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/query",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "query"]
+            }
+          }
+        },
+        {
+          "name": "Agent-Based Query",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"query\": \"Find the best Italian restaurants near me\",\n    \"agent_type\": \"search\",\n    \"location\": {\n        \"lat\": 37.7749,\n        \"lon\": -122.4194\n    },\n    \"preferences\": [\"italian\", \"highly_rated\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/agent-query",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "agent-query"]
+            }
+          }
+        },
+        {
+          "name": "Content Generation",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"prompt\": \"Create an engaging description for a tech meetup event\",\n    \"type\": \"text\",\n    \"style\": \"professional\",\n    \"length\": \"medium\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/generate-content",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "generate-content"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Real-Time Discovery (Your Core Vision)",
+      "item": [
+        {
+          "name": "Discover Live Opportunities",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"location\": {\n        \"lat\": 12.9716,\n        \"lon\": 77.5946,\n        \"city\": \"Bangalore\"\n    },\n    \"preferences\": [\"food\", \"entertainment\", \"shopping\"],\n    \"radius_km\": 3.0,\n    \"user_id\": \"explorer_user\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/discover/live-opportunities",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "discover", "live-opportunities"]
+            }
+          }
+        },
+        {
+          "name": "New Place Guide",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"location\": {\n        \"lat\": 40.7128,\n        \"lon\": -74.0060\n    },\n    \"city_name\": \"New York City\",\n    \"interests\": [\"culture\", \"food\", \"business\"],\n    \"duration_days\": 3,\n    \"budget_range\": {\"min\": 0, \"max\": 1000}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/discover/new-place-guide",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "discover", "new-place-guide"]
+            }
+          }
+        },
+        {
+          "name": "Time-Sensitive Alerts",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"location\": {\n        \"lat\": 51.5074,\n        \"lon\": -0.1278\n    },\n    \"alert_types\": [\"flash_deals\", \"happy_hours\", \"emergency_services\"],\n    \"urgency_threshold\": 0.7\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/discover/time-sensitive-alerts",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "discover", "time-sensitive-alerts"]
+            }
+          }
+        },
+        {
+          "name": "Virtual Events Discovery",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"interests\": [\"technology\", \"education\", \"business\"],\n    \"event_types\": [\"webinars\", \"workshops\", \"coding_bootcamps\"],\n    \"urgency_filter\": 0.5,\n    \"budget_range\": {\"min\": 0, \"max\": 2000}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/discover/virtual-events",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "discover", "virtual-events"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stock Exchange Model",
+      "item": [
+        {
+          "name": "Live Price Offers",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"query\": \"pubs in London with good deals\",\n    \"location\": {\n        \"city\": \"London\",\n        \"lat\": 51.5074,\n        \"lon\": -0.1278\n    },\n    \"service_types\": [\"pubs\", \"restaurants\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/price-exchange/live-offers",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "price-exchange", "live-offers"]
+            }
+          }
+        },
+        {
+          "name": "Flash Deals",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"service_type\": \"restaurants\",\n    \"city\": \"Paris\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/price-exchange/flash-deals",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "price-exchange", "flash-deals"]
+            }
+          }
+        },
+        {
+          "name": "Price Tracker",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"provider_id\": \"pub_001\",\n    \"service_type\": \"pubs\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/price-exchange/price-tracker",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "price-exchange", "price-tracker"]
+            }
+          }
+        },
+        {
+          "name": "City Price Comparison",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"service_type\": \"pubs\",\n    \"cities\": [\"London\", \"Paris\", \"New York\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/price-exchange/city-compare",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "price-exchange", "city-compare"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+

@@ -1,0 +1,425 @@
+{
+	"info": {
+		"_postman_id": "12345678-1234-5678-9012-123456789abc",
+		"name": "IBCM AI Service - Complete API Collection",
+		"description": "Complete API collection for testing IBCM AI service endpoints",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "apikey",
+		"apikey": [
+			{
+				"key": "value",
+				"value": "ibcm_ai_key_2024",
+				"type": "string"
+			},
+			{
+				"key": "key",
+				"value": "X-API-Key",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8001",
+			"type": "string"
+		},
+		{
+			"key": "api_key",
+			"value": "ibcm_ai_key_2024",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "System Endpoints",
+			"item": [
+				{
+					"name": "Root - Service Info",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/",
+							"host": ["{{base_url}}"],
+							"path": [""]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "AI Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-API-Key",
+								"value": "{{api_key}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/ai/status",
+							"host": ["{{base_url}}"],
+							"path": ["ai", "status"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Test All Features",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-API-Key",
+								"value": "{{api_key}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/ai/test",
+							"host": ["{{base_url}}"],
+							"path": ["ai", "test"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Core AI Features",
+			"item": [
+				{
+					"name": "AI Query - General",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-API-Key",
+								"value": "{{api_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"What events are happening near me tonight?\",\n  \"user_id\": \"test_user_123\",\n  \"context\": {\n    \"location\": \"New York City\",\n    \"time_preference\": \"evening\",\n    \"interests\": [\"music\", \"food\", \"art\"]\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/ai/query",
+							"host": ["{{base_url}}"],
+							"path": ["ai", "query"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "AI Query - Real-time Info",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-API-Key",
+								"value": "{{api_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"What time is it now?\",\n  \"user_id\": \"test_user_123\",\n  \"context\": {\n    \"timezone\": \"EST\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/ai/query",
+							"host": ["{{base_url}}"],
+							"path": ["ai", "query"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "AI Query - Weather",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-API-Key",
+								"value": "{{api_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"What's the weather like today?\",\n  \"user_id\": \"test_user_123\",\n  \"context\": {\n    \"location\": \"San Francisco\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/ai/query",
+							"host": ["{{base_url}}"],
+							"path": ["ai", "query"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Event Recommendations",
+			"item": [
+				{
+					"name": "Event Recommendations - NYC",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-API-Key",
+								"value": "{{api_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"test_user_123\",\n  \"location\": {\n    \"lat\": 40.7128,\n    \"lon\": -74.0060\n  },\n  \"preferences\": [\"music\", \"food\", \"art\"],\n  \"budget\": {\n    \"min\": 0,\n    \"max\": 100\n  },\n  \"time_frame\": \"this_weekend\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/ai/events/recommend",
+							"host": ["{{base_url}}"],
+							"path": ["ai", "events", "recommend"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Event Recommendations - LA",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-API-Key",
+								"value": "{{api_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"test_user_456\",\n  \"location\": {\n    \"lat\": 34.0522,\n    \"lon\": -118.2437\n  },\n  \"preferences\": [\"tech\", \"networking\", \"startups\"],\n  \"budget\": {\n    \"min\": 0,\n    \"max\": 50\n  },\n  \"time_frame\": \"today\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/ai/events/recommend",
+							"host": ["{{base_url}}"],
+							"path": ["ai", "events", "recommend"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Content Generation",
+			"item": [
+				{
+					"name": "Generate Text Content",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-API-Key",
+								"value": "{{api_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"text\",\n  \"prompt\": \"Create an engaging description for a jazz concert at a rooftop venue with city views\",\n  \"context\": {\n    \"style\": \"professional\",\n    \"tone\": \"exciting\",\n    \"length\": \"medium\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/ai/generate-content",
+							"host": ["{{base_url}}"],
+							"path": ["ai", "generate-content"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Generate Marketing Content",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-API-Key",
+								"value": "{{api_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"marketing\",\n  \"prompt\": \"Write compelling social media posts for a food festival\",\n  \"context\": {\n    \"platform\": \"instagram\",\n    \"hashtags\": true,\n    \"call_to_action\": true\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/ai/generate-content",
+							"host": ["{{base_url}}"],
+							"path": ["ai", "generate-content"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Generate Event Description",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-API-Key",
+								"value": "{{api_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"event_description\",\n  \"prompt\": \"Tech startup networking event with keynote speakers\",\n  \"context\": {\n    \"duration\": \"3 hours\",\n    \"audience\": \"entrepreneurs\",\n    \"venue\": \"innovation hub\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/ai/generate-content",
+							"host": ["{{base_url}}"],
+							"path": ["ai", "generate-content"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Error Testing",
+			"item": [
+				{
+					"name": "Missing API Key Test",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/ai/status",
+							"host": ["{{base_url}}"],
+							"path": ["ai", "status"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Invalid API Key Test",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-API-Key",
+								"value": "invalid_key",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/ai/status",
+							"host": ["{{base_url}}"],
+							"path": ["ai", "status"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Empty Query Test",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-API-Key",
+								"value": "{{api_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"\",\n  \"user_id\": \"test_user\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/ai/query",
+							"host": ["{{base_url}}"],
+							"path": ["ai", "query"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Missing Prompt Test",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-API-Key",
+								"value": "{{api_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"text\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/ai/generate-content",
+							"host": ["{{base_url}}"],
+							"path": ["ai", "generate-content"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

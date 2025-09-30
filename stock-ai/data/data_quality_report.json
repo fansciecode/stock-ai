@@ -1,0 +1,30 @@
+{
+  "timestamp": "2025-09-26T17:32:21.974938",
+  "instruments": {
+    "BTC_USDT": {
+      "status": "STALE",
+      "last_update": "2025-09-26T12:02:00",
+      "age_minutes": 330.36624896666666,
+      "data_points": 5
+    },
+    "ETH_USDT": {
+      "status": "STALE",
+      "last_update": "2025-09-26T12:02:00",
+      "age_minutes": 330.36624896666666,
+      "data_points": 5
+    },
+    "ADA_USDT": {
+      "status": "STALE",
+      "last_update": "2025-09-26T12:02:00",
+      "age_minutes": 330.36624896666666,
+      "data_points": 5
+    },
+    "SOL_USDT": {
+      "status": "STALE",
+      "last_update": "2025-09-26T12:02:00",
+      "age_minutes": 330.36624896666666,
+      "data_points": 5
+    }
+  },
+  "overall_health": "POOR"
+}

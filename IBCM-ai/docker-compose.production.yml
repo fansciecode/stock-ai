@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  ibcm-ai:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    ports:
+      - "8001:8001"
+    environment:
+      - ENVIRONMENT=production
+      - MONGO_URI=${MONGO_URI}
+      - REDIS_URL=${REDIS_URL}
+      - KAFKA_URL=${KAFKA_URL}
+      - ELASTICSEARCH_URL=${ELASTICSEARCH_URL}
+      - BACKEND_API_URL=${BACKEND_API_URL}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - GPU_ENABLED=false
+      - DEVICE=cpu
+    volumes:
+      - ./models:/app/models
+      - ./logs:/app/logs
+    depends_on:
+      - redis
+      - mongodb
+    restart: unless-stopped
+    networks:
+      - ibcm-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - ibcm-network
+
+  mongodb:
+    image: mongo:6
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+    networks:
+      - ibcm-network
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - ibcm-ai
+    restart: unless-stopped
+    networks:
+      - ibcm-network
+
+volumes:
+  redis_data:
+  mongodb_data:
+
+networks:
+  ibcm-network:
+    driver: bridge

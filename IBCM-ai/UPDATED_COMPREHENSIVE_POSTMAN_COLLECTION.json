@@ -1,0 +1,484 @@
+{
+	"info": {
+		"_postman_id": "ibcm-ai-complete-2024",
+		"name": "IBCM-AI Complete API Collection - Production Ready",
+		"description": "Complete API collection for all 45+ IBCM-AI endpoints with comprehensive test cases",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"version": "2.0.0"
+	},
+	"auth": {
+		"type": "apikey",
+		"apikey": [
+			{
+				"key": "value",
+				"value": "ibcm_ai_key_2024",
+				"type": "string"
+			},
+			{
+				"key": "key",
+				"value": "X-API-Key",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8001",
+			"type": "string"
+		},
+		{
+			"key": "production_url",
+			"value": "https://your-domain.com",
+			"type": "string"
+		},
+		{
+			"key": "api_key",
+			"value": "ibcm_ai_key_2024",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "🏠 Core System Endpoints",
+			"description": "Basic system health and information endpoints",
+			"item": [
+				{
+					"name": "Root - Service Info",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{base_url}}/"
+					}
+				},
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{base_url}}/health"
+					}
+				},
+				{
+					"name": "AI Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{base_url}}/ai/status"
+					}
+				},
+				{
+					"name": "Model Information",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{base_url}}/ai/model-info"
+					}
+				}
+			]
+		},
+		{
+			"name": "🤖 AI Query & Chat Endpoints",
+			"description": "Core AI conversation and query processing",
+			"item": [
+				{
+					"name": "Main AI Query - Travel",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"places to visit in Bangalore tomorrow for a day trip\"\n}"
+						},
+						"url": "{{base_url}}/ai/query"
+					}
+				},
+				{
+					"name": "Main AI Query - Food",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"best street food in Mumbai under 200 rupees\"\n}"
+						},
+						"url": "{{base_url}}/ai/query"
+					}
+				},
+				{
+					"name": "Main AI Query - Business",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"how to start a small business in Delhi\"\n}"
+						},
+						"url": "{{base_url}}/ai/query"
+					}
+				},
+				{
+					"name": "Agent Query",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"restaurants near me with outdoor seating\",\n  \"context\": {\n    \"location\": \"Bangalore\",\n    \"budget\": \"medium\"\n  }\n}"
+						},
+						"url": "{{base_url}}/ai/agent-query"
+					}
+				},
+				{
+					"name": "Chat Response",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"message\": \"Hello! I'm planning a trip to Bangalore. Can you help?\",\n  \"context\": {\n    \"user_id\": \"user123\",\n    \"conversation_id\": \"conv456\"\n  }\n}"
+						},
+						"url": "{{base_url}}/ai/chat/respond"
+					}
+				},
+				{
+					"name": "Debug Query",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"debug test query\"\n}"
+						},
+						"url": "{{base_url}}/ai/query-debug"
+					}
+				}
+			]
+		},
+		{
+			"name": "🔍 Search & Discovery Endpoints",
+			"description": "Advanced search and location-based discovery",
+			"item": [
+				{
+					"name": "Spatial Search - Bangalore",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"restaurants with outdoor seating\",\n  \"location\": {\n    \"lat\": 12.9716,\n    \"lon\": 77.5946\n  },\n  \"radius_km\": 5\n}"
+						},
+						"url": "{{base_url}}/ai/spatial-search"
+					}
+				},
+				{
+					"name": "Spatial Search - Mumbai",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"shopping malls\",\n  \"location\": {\n    \"lat\": 19.0760,\n    \"lon\": 72.8777\n  },\n  \"radius_km\": 3\n}"
+						},
+						"url": "{{base_url}}/ai/spatial-search"
+					}
+				},
+				{
+					"name": "Enhanced Search",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"best biryani in Hyderabad\",\n  \"filters\": {\n    \"price_range\": \"medium\",\n    \"rating_min\": 4.0\n  }\n}"
+						},
+						"url": "{{base_url}}/ai/search/enhance"
+					}
+				}
+			]
+		},
+		{
+			"name": "🌐 Universal AI Services",
+			"description": "Domain-specific AI expertise across 6 verticals",
+			"item": [
+				{
+					"name": "Financial Advice - Investment",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"investment advice for 25 year old in India\",\n  \"user_profile\": {\n    \"age\": 25,\n    \"income\": 800000,\n    \"risk_tolerance\": \"medium\",\n    \"goals\": [\"retirement\", \"house\"]\n  }\n}"
+						},
+						"url": "{{base_url}}/ai/universal/financial-advice"
+					}
+				},
+				{
+					"name": "Healthcare Advisor - Fitness",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"fitness routine for office worker\",\n  \"user_profile\": {\n    \"age\": 30,\n    \"activity_level\": \"sedentary\",\n    \"health_goals\": [\"weight_loss\", \"muscle_gain\"],\n    \"available_time\": \"1 hour\"\n  }\n}"
+						},
+						"url": "{{base_url}}/ai/universal/healthcare-advisor"
+					}
+				},
+				{
+					"name": "Education Planner - Programming",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"learn Python programming from scratch\",\n  \"user_profile\": {\n    \"experience\": \"beginner\",\n    \"time_available\": \"2 hours/day\",\n    \"learning_style\": \"hands-on\",\n    \"goals\": [\"web development\", \"data science\"]\n  }\n}"
+						},
+						"url": "{{base_url}}/ai/universal/education-planner"
+					}
+				},
+				{
+					"name": "Business Optimizer - Restaurant",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"improve restaurant sales and customer retention\",\n  \"business_type\": \"restaurant\",\n  \"business_data\": {\n    \"location\": \"Mumbai\",\n    \"size\": \"medium\",\n    \"current_revenue\": 500000,\n    \"challenges\": [\"low footfall\", \"high competition\"]\n  }\n}"
+						},
+						"url": "{{base_url}}/ai/universal/business-optimizer"
+					}
+				},
+				{
+					"name": "Lifestyle Advisor",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"healthy lifestyle for busy professional\",\n  \"preferences\": {\n    \"diet_type\": \"vegetarian\",\n    \"exercise_preference\": \"home workouts\",\n    \"sleep_schedule\": \"night owl\"\n  }\n}"
+						},
+						"url": "{{base_url}}/ai/universal/lifestyle-advisor"
+					}
+				},
+				{
+					"name": "Market Intelligence - Tech Trends",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"AI market trends in India 2024\",\n  \"domain\": \"technology\",\n  \"scope\": {\n    \"geography\": \"India\",\n    \"timeframe\": \"2024-2025\",\n    \"sectors\": [\"fintech\", \"healthcare\", \"education\"]\n  }\n}"
+						},
+						"url": "{{base_url}}/ai/universal/market-intelligence"
+					}
+				}
+			]
+		},
+		{
+			"name": "👥 Social & Community Endpoints",
+			"description": "Social platform features and community management",
+			"item": [
+				{
+					"name": "Social Feed",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/ai/social/feed?user_id=user123&limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["ai", "social", "feed"],
+							"query": [
+								{"key": "user_id", "value": "user123"},
+								{"key": "limit", "value": "20"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Social Post",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"user123\",\n  \"content\": \"Just discovered an amazing restaurant in Bangalore! Great food and ambiance.\",\n  \"location\": \"Bangalore\",\n  \"tags\": [\"food\", \"restaurant\", \"bangalore\"],\n  \"media\": []\n}"
+						},
+						"url": "{{base_url}}/ai/social/post"
+					}
+				}
+			]
+		},
+		{
+			"name": "💡 Recommendations Endpoints",
+			"description": "Personalized recommendation engines",
+			"item": [
+				{
+					"name": "Event Recommendations",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_preferences\": {\n    \"location\": \"Bangalore\",\n    \"interests\": [\"technology\", \"networking\", \"startup\"],\n    \"age_group\": \"25-35\",\n    \"budget\": \"medium\"\n  },\n  \"event_types\": [\"conference\", \"meetup\", \"workshop\"]\n}"
+						},
+						"url": "{{base_url}}/ai/events/recommend"
+					}
+				},
+				{
+					"name": "Product Recommendations",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_profile\": {\n    \"interests\": [\"technology\", \"fitness\", \"travel\"],\n    \"location\": \"Mumbai\",\n    \"budget_range\": {\n      \"min\": 1000,\n      \"max\": 50000\n    },\n    \"purchase_history\": [\"smartphone\", \"headphones\"]\n  }\n}"
+						},
+						"url": "{{base_url}}/ai/products/recommend"
+					}
+				}
+			]
+		},
+		{
+			"name": "📊 Business & Analytics Endpoints",
+			"description": "Business optimization and analytics tools",
+			"item": [
+				{
+					"name": "Business Optimization",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"business_data\": {\n    \"type\": \"restaurant\",\n    \"location\": \"Mumbai\",\n    \"revenue\": 1000000,\n    \"employees\": 25,\n    \"challenges\": [\"customer retention\", \"inventory management\"]\n  },\n  \"optimization_goals\": [\"increase_revenue\", \"reduce_costs\", \"improve_efficiency\"]\n}"
+						},
+						"url": "{{base_url}}/ai/business/optimize"
+					}
+				},
+				{
+					"name": "Analytics Engine",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"user behavior analysis for food delivery app\",\n  \"data\": {\n    \"metrics\": [\"user_retention\", \"order_frequency\", \"average_order_value\"],\n    \"timeframe\": \"last_30_days\",\n    \"segments\": [\"new_users\", \"returning_users\"]\n  }\n}"
+						},
+						"url": "{{base_url}}/ai/analytics"
+					}
+				}
+			]
+		},
+		{
+			"name": "🎨 Content & Discovery Endpoints",
+			"description": "Content generation and real-time discovery features",
+			"item": [
+				{
+					"name": "Content Generation - Article",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"prompt\": \"Write a comprehensive travel guide for Bangalore covering top attractions, food, and culture\",\n  \"type\": \"article\",\n  \"length\": \"long\",\n  \"tone\": \"informative\",\n  \"target_audience\": \"travelers\"\n}"
+						},
+						"url": "{{base_url}}/ai/generate-content"
+					}
+				},
+				{
+					"name": "Live Opportunities Discovery",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"location\": {\n    \"lat\": 12.9716,\n    \"lon\": 77.5946\n  },\n  \"interests\": [\"food\", \"entertainment\", \"shopping\"],\n  \"radius_km\": 5,\n  \"user_id\": \"user123\"\n}"
+						},
+						"url": "{{base_url}}/ai/discover/live-opportunities"
+					}
+				},
+				{
+					"name": "New Place Guide",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"location\": \"Delhi\",\n  \"user_preferences\": {\n    \"interests\": [\"culture\", \"food\", \"history\"],\n    \"budget\": \"medium\",\n    \"duration_days\": 3\n  }\n}"
+						},
+						"url": "{{base_url}}/ai/discover/new-place-guide"
+					}
+				}
+			]
+		},
+		{
+			"name": "💰 Commerce & Trading Endpoints",
+			"description": "E-commerce integration and affiliate systems",
+			"item": [
+				{
+					"name": "Live Price Offers",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"location\": \"Bangalore\",\n  \"category\": \"electronics\",\n  \"user_preferences\": {\n    \"budget\": \"medium\",\n    \"brands\": [\"Samsung\", \"Apple\", \"OnePlus\"]\n  }\n}"
+						},
+						"url": "{{base_url}}/ai/price-exchange/live-offers"
+					}
+				},
+				{
+					"name": "Affiliate Registration",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_data\": {\n    \"name\": \"John Doe\",\n    \"email\": \"john.doe@example.com\",\n    \"phone\": \"+91-9876543210\",\n    \"location\": \"Mumbai\",\n    \"business_type\": \"content_creator\"\n  },\n  \"referral_code\": \"IBCM2024\"\n}"
+						},
+						"url": "{{base_url}}/ai/affiliate/register"
+					}
+				}
+			]
+		},
+		{
+			"name": "🔧 Advanced & Streaming Endpoints",
+			"description": "Advanced features and real-time streaming",
+			"item": [
+				{
+					"name": "Streaming Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{base_url}}/ai/streaming/status"
+					}
+				},
+				{
+					"name": "Streaming Publish",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"event_type\": \"user_action\",\n  \"data\": {\n    \"user_id\": \"user123\",\n    \"action\": \"restaurant_visit\",\n    \"location\": \"Bangalore\",\n    \"timestamp\": \"2024-09-24T10:30:00Z\"\n  }\n}"
+						},
+						"url": "{{base_url}}/ai/streaming/publish"
+					}
+				},
+				{
+					"name": "Semantic Search Debug",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"restaurants with outdoor seating\",\n  \"limit\": 10,\n  \"debug\": true\n}"
+						},
+						"url": "{{base_url}}/debug/semantic-search"
+					}
+				}
+			]
+		}
+	]
+}
+

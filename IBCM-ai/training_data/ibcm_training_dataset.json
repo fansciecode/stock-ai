@@ -1,0 +1,50 @@
+[
+  {
+    "input": "I'm visiting NYC for the first time. What should I prioritize?",
+    "output": "Welcome to the Big Apple! For first-timers, I recommend this itinerary:\n\nDay 1: Start with the Statue of Liberty (book ferry tickets in advance). Afternoon at the 9/11 Memorial for a moving experience. Evening walk across Brooklyn Bridge for stunning skyline views.\n\nDay 2: Times Square and Broadway show (book ahead!). Central Park for a peaceful break. Top of the Empire State Building at sunset.\n\nFood essentials: Joe's Pizza for authentic NY slice ($3-4), Katz's Delicatessen for pastrami sandwich (expensive but iconic), and any bodega for coffee and bagels.\n\nTransportation: Get a MetroCard ($2.90 per ride). Walking is often faster than driving in Manhattan. Uber/Lyft available but surge pricing during peak times.\n\nBudget tip: Many museums have \"suggested donation\" for NY residents - ask politely if tourist discounts are available.",
+    "category": "travel_guide",
+    "quality_score": 0.95
+  },
+  {
+    "input": "I have $500 to start investing. What should I do?",
+    "output": "Great question! $500 is a perfect start. Here's a smart approach:\n\n1. Emergency fund first: Keep $200 in a high-yield savings account (Marcus, Ally offer 4%+ APY). This is your safety net.\n\n2. With the remaining $300, consider index funds: VTI (total stock market) or VXUS (international) through Fidelity or Vanguard. No minimum investment required.\n\n3. Dollar-cost averaging: Invest $50-100 every month consistently. This reduces risk from market timing.\n\n4. Avoid individual stocks initially - too risky with small amounts. Diversification is key.\n\n5. Age-based allocation: If you're young (20s-30s), consider 80% stocks, 20% bonds.\n\n6. Tax-advantaged accounts: If employed, maximize any 401k match first - that's free money!\n\n7. Robo-advisors: Betterment, Wealthfront automatically diversify for you with low fees.\n\nMost important: Start early and be consistent. Time in market beats timing the market.",
+    "category": "financial_advice",
+    "quality_score": 0.92
+  },
+  {
+    "input": "What are the best ways to learn new skills quickly?",
+    "output": "Effective learning combines science-backed techniques:\n\n1. Active recall: Test yourself instead of just re-reading. Use flashcards or explain concepts out loud.\n\n2. Spaced repetition: Review material at increasing intervals (1 day, 3 days, 1 week, 2 weeks).\n\n3. Feynman Technique: Explain concepts in simple terms as if teaching a child. This reveals knowledge gaps.\n\n4. Practice over theory: For practical skills, spend 80% time doing, 20% studying theory.\n\n5. Focus blocks: 25-minute focused sessions (Pomodoro) with 5-minute breaks. Your brain needs rest to consolidate.\n\n6. Multiple sources: Learn from videos, books, and practice. Different perspectives strengthen understanding.\n\n7. Teach others: Explaining to someone else is the fastest way to identify what you don't know.\n\n8. Sleep and exercise: Your brain consolidates memories during sleep. Exercise improves cognitive function.\n\nMost important: Consistency beats intensity. 30 minutes daily for a month beats 8 hours once a week.",
+    "category": "education",
+    "quality_score": 0.91
+  },
+  {
+    "input": "What are the must-visit places in Hyderabad?",
+    "output": "Hyderabad offers a perfect blend of history and modernity. Start with Charminar, the iconic 400-year-old monument that symbolizes the city. The surrounding Laad Bazaar is perfect for traditional shopping. Golconda Fort provides panoramic city views and fascinating acoustics - whisper at the bottom and it's heard at the top! \n\nFor food lovers, Paradise Restaurant serves authentic Hyderabadi biryani that locals swear by. The Hussain Sagar Lake with its Buddha statue is perfect for evening relaxation. Don't miss the Qutb Shahi Tombs for their beautiful Indo-Islamic architecture.\n\nModern attractions include HITEC City for tech enthusiasts and Ramoji Film City for entertainment. The best time to visit is October to March when the weather is pleasant.",
+    "category": "travel_guide",
+    "quality_score": 0.9
+  },
+  {
+    "input": "How can I eat well on a tight budget?",
+    "output": "Eating well on a budget is absolutely possible with smart strategies:\n\n1. Cook at home: Bulk ingredients like rice, beans, and seasonal vegetables are nutritious and cheap. Meal prep saves time and money.\n\n2. Local markets: Shop at farmers markets near closing time for discounts. Asian grocery stores often have better prices for produce.\n\n3. Student discounts: Many restaurants offer student deals. Apps like UNiDAYS and Student Beans have dining discounts.\n\n4. Happy hours: Many restaurants offer food specials during off-peak hours (usually 3-6 PM).\n\n5. Food trucks: Often restaurant-quality food at half the price. Follow your favorites on social media for location updates.\n\n6. Lunch specials: The same restaurant dinner for $25 might offer lunch for $12.\n\n7. Ethnic neighborhoods: Authentic food at local prices. Chinatown, Little Italy, etc., have amazing affordable options.\n\nBudget per meal: $5-8 for good food is totally achievable with these strategies.",
+    "category": "food_guide",
+    "quality_score": 0.88
+  },
+  {
+    "input": "How do I find authentic local experiences when traveling?",
+    "output": "Great question! Here's how to experience places like a local:\n\n1. Ask locals directly: Hotel staff, taxi drivers, and shop owners know the best spots. Ask \"Where do YOU eat?\" not \"Where should tourists eat?\"\n\n2. Follow local social media: Instagram location tags show what locals are posting. Facebook local groups often share hidden gems.\n\n3. Food trucks and markets: Locals eat where it's convenient and good. If there's a line of locals, join it!\n\n4. Residential neighborhoods: Venture beyond tourist districts. Take public transport to areas where locals live.\n\n5. Local apps: Use region-specific apps (Zomato in India, Dianping in China) instead of tourist-focused ones.\n\n6. Free walking tours: Often led by locals who share insider knowledge and can answer questions.\n\n7. Language basics: Learning \"hello,\" \"thank you,\" and \"where is...\" opens doors and shows respect.\n\n8. Eat when locals eat: Lunch at 2 PM in Spain, dinner at 10 PM in Argentina.\n\n9. Local newspapers/websites: Check what locals are talking about - festivals, new openings, events.\n\nThe best experiences happen when you're open to conversations and willing to step outside your comfort zone!",
+    "category": "local_tips",
+    "quality_score": 0.87
+  },
+  {
+    "input": "I love history and good food. Where should I travel?",
+    "output": "Perfect combination! For history and food lovers, I highly recommend Istanbul, Turkey. The city spans two continents with incredible Byzantine and Ottoman history - Hagia Sophia, Topkapi Palace, and the Blue Mosque are breathtaking. The food scene is phenomenal: try authentic kebabs in Sultanahmet, Turkish breakfast in Karakoy, and don't miss Turkish delight and baklava. Street food like simit (Turkish bagel) and balık ekmek (fish sandwich) near Galata Bridge are local favorites. The Grand Bazaar and Spice Bazaar are historical shopping experiences. Budget around $50-70/day for good food and attractions. What type of historical period interests you most?",
+    "category": "travel",
+    "quality_score": 0.9
+  },
+  {
+    "input": "That sounds expensive. Any cheaper alternatives?",
+    "output": "Absolutely! Budget-friendly alternatives: Vietnam combines incredible history (Cu Chi Tunnels, Imperial City of Hue) with amazing food (pho, banh mi, fresh spring rolls) for $25-35/day. Mexico has rich Mayan/Aztec history and diverse cuisine for $30-40/day. Eastern Europe - Prague or Budapest offer medieval history, hearty food, and great beer for $40-50/day. India provides thousands of years of history and incredible diverse food for $20-30/day. What's your ideal daily budget? I can suggest more specific destinations.",
+    "category": "travel",
+    "quality_score": 0.85
+  }
+]

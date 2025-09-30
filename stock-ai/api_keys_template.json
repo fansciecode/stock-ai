@@ -1,0 +1,30 @@
+{
+  "binance": {
+    "live": {
+      "api_key": "YOUR_BINANCE_LIVE_API_KEY",
+      "api_secret": "YOUR_BINANCE_LIVE_API_SECRET",
+      "testnet": false
+    },
+    "testnet": {
+      "api_key": "YOUR_BINANCE_TESTNET_API_KEY",
+      "api_secret": "YOUR_BINANCE_TESTNET_API_SECRET",
+      "testnet": true
+    }
+  },
+  "alpaca": {
+    "live": {
+      "api_key": "YOUR_ALPACA_LIVE_API_KEY",
+      "api_secret": "YOUR_ALPACA_LIVE_API_SECRET",
+      "paper_trading": false
+    },
+    "paper": {
+      "api_key": "YOUR_ALPACA_PAPER_API_KEY",
+      "api_secret": "YOUR_ALPACA_PAPER_API_SECRET",
+      "paper_trading": true
+    }
+  },
+  "data_providers": {
+    "alpha_vantage": "YOUR_ALPHA_VANTAGE_API_KEY",
+    "polygon": "YOUR_POLYGON_API_KEY"
+  }
+}

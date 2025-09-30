@@ -1,0 +1,62 @@
+# Strategy configurations
+ob_tap:
+  name: "Order Block Tap"
+  enabled: true
+  params:
+    lookback: 20
+    strength: 3
+    thresh_pct: 0.015   # 1.5% threshold for follow-through move
+    buffer_pct: 0.002
+    risk_reward: 2.0
+    confidence_threshold: 0.7
+  
+vwap_revert:
+  name: "VWAP Mean Reversion"
+  enabled: true
+  params:
+    vwap_window: 60
+    rsi_threshold: 35
+    band_pct: 0.01
+    buffer_pct: 0.002
+    risk_reward: 1.5
+    confidence_threshold: 0.6
+
+ma_crossover:
+  name: "Moving Average Crossover"
+  enabled: true
+  params:
+    short_window: 9
+    long_window: 21
+    confirmation_periods: 2
+    risk_reward: 1.8
+    confidence_threshold: 0.65
+
+breaker_block:
+  name: "Breaker Block"
+  enabled: true
+  params:
+    lookback: 50
+    bos_threshold: 0.02   # 2% break of structure
+    retest_buffer: 0.005
+    risk_reward: 2.5
+    confidence_threshold: 0.75
+
+rsi_divergence:
+  name: "RSI Divergence"
+  enabled: true
+  params:
+    rsi_period: 14
+    lookback: 20
+    divergence_threshold: 5
+    price_threshold: 0.01
+    risk_reward: 2.0
+    confidence_threshold: 0.7
+
+# Global strategy settings
+global_settings:
+  max_concurrent_trades: 5
+  max_risk_per_trade: 0.02  # 2% of portfolio
+  max_total_risk: 0.1       # 10% of portfolio
+  stop_loss_multiplier: 1.0
+  take_profit_multiplier: 2.0
+  minimum_trade_amount: 100

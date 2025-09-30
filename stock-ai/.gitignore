@@ -1,0 +1,43 @@
+# Logs
+*.log
+logs/
+
+# Database files
+*.db
+*.sqlite
+
+# API Keys and secrets
+api_keys.json
+config.json
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test files
+test_*.py
+debug_*.py
+fix_*.py
+*_test.py
+
+# Temporary files
+*.tmp
+*.temp
+temp/
