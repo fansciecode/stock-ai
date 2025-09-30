@@ -10,10 +10,32 @@ import requests
 import json
 import time
 import sqlite3
+import hashlib
 from datetime import datetime, timedelta
 from flask import Flask, render_template, render_template_string, jsonify, request, session, redirect, url_for
 from flask_cors import CORS
 import secrets
+
+# Import subscription management and security
+import sys
+sys.path.append('..')
+sys.path.append('.')
+try:
+    from subscription_manager import subscription_manager
+    from payment_gateway import payment_gateway
+    SUBSCRIPTION_ENABLED = True
+    print("✅ Subscription management enabled")
+except ImportError as e:
+    print(f"⚠️ Subscription management disabled: {e}")
+    SUBSCRIPTION_ENABLED = False
+
+try:
+    from admin_security_manager import admin_security
+    SECURITY_ENABLED = True
+    print("✅ Security and fraud detection enabled")
+except ImportError as e:
+    print(f"⚠️ Security system disabled: {e}")
+    SECURITY_ENABLED = False
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
@@ -635,6 +657,35 @@ def api_signup():
     password = data.get('password', '')
     name = data.get('name', email.split('@')[0])
     
+    # Security and fraud detection
+    if SECURITY_ENABLED and email and password:
+        # Get device and IP information
+        device_info = {
+            'ip_address': request.environ.get('REMOTE_ADDR', 'unknown'),
+            'user_agent': request.headers.get('User-Agent', ''),
+            'screen_resolution': request.headers.get('X-Screen-Resolution', ''),
+            'timezone': request.headers.get('X-Timezone', ''),
+            'language': request.headers.get('Accept-Language', ''),
+            'platform': request.headers.get('X-Platform', ''),
+            'browser_fingerprint': request.headers.get('X-Browser-Fingerprint', '')
+        }
+        
+        # Check if registration is allowed
+        device_hash = hashlib.sha256(f"{device_info['user_agent']}|{device_info['screen_resolution']}".encode()).hexdigest()
+        registration_check = admin_security.check_registration_allowed(email, device_hash, device_info['ip_address'])
+        
+        if not registration_check['allowed']:
+            # Account creation blocked
+            if request.content_type != 'application/json':
+                return redirect(url_for('index') + f'?error=Account creation blocked: {registration_check["reason"]}')
+            
+            return jsonify({
+                'success': False,
+                'message': f'Account creation blocked: {registration_check["reason"]}',
+                'ban_type': registration_check.get('ban_type'),
+                'contact_support': True
+            })
+    
     # Create user account in database
     if email and password:
         # Generate session data
@@ -719,6 +770,68 @@ def api_signup():
         
         # Debug log
         print(f"🔐 User signed up: {session['user_email']}, ID: {session['user_id']}")
+        
+        # Create subscription for new user
+        if SUBSCRIPTION_ENABLED:
+            subscription_result = subscription_manager.create_subscription(
+                user_id=user_id,
+                user_email=email,
+                tier='DEMO'  # Start with free demo
+            )
+            if subscription_result['success']:
+                print(f"✅ Created DEMO subscription for {email}")
+                session['subscription_tier'] = 'DEMO'
+            else:
+                print(f"⚠️ Failed to create subscription: {subscription_result.get('error')}")
+        
+        # Fraud detection for new account
+        if SECURITY_ENABLED:
+            # Create device hash for fraud detection
+            device_hash = hashlib.sha256(f"{device_info['user_agent']}|{device_info['screen_resolution']}".encode()).hexdigest()
+            
+            # Run fraud detection BEFORE creating account
+            fraud_check = admin_security.detect_fraud_patterns(
+                user_id=user_id,
+                device_hash=device_hash,
+                ip_address=device_info['ip_address']
+            )
+            
+            print(f"🔍 Fraud check for {email}: Score {fraud_check['fraud_score']}, Action: {fraud_check['action']}")
+            
+            if not fraud_check['allowed']:
+                print(f"🚨 Fraud detected for new user {email}: Score {fraud_check['fraud_score']}")
+                print(f"   Evidence: {fraud_check['evidence']}")
+                
+                # Delete the user account we just created
+                try:
+                    conn = sqlite3.connect(db_path)
+                    cursor = conn.cursor()
+                    cursor.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
+                    conn.commit()
+                    conn.close()
+                    print(f"🗑️ Deleted fraudulent account: {user_id}")
+                except Exception as e:
+                    print(f"⚠️ Could not delete fraudulent account: {e}")
+                
+                # Return fraud detection error
+                if request.content_type != 'application/json':
+                    return redirect(url_for('index') + f'?error=Account creation blocked: {fraud_check["action"]} - Multiple accounts detected from this device')
+                
+                return jsonify({
+                    'success': False,
+                    'message': f'Account creation blocked: {fraud_check["action"]} - Multiple accounts detected from this device',
+                    'fraud_detected': True,
+                    'fraud_score': fraud_check['fraud_score'],
+                    'evidence': fraud_check['evidence']
+                })
+            
+            # Capture device fingerprint for allowed users
+            device_hash = admin_security.capture_device_fingerprint(user_id, device_info)
+            
+            if fraud_check.get('verification_required'):
+                print(f"⚠️ New user {email} requires verification: Score {fraud_check['fraud_score']}")
+                session['verification_required'] = True
+                session['fraud_score'] = fraud_check['fraud_score']
         
         # For form submissions, redirect to dashboard
         if request.content_type != 'application/json':
@@ -2450,6 +2563,20 @@ def start_ai_trading():
     if 'user_token' not in session:
         return jsonify({"error": "Not authenticated", "success": False}), 401
     
+    # Check subscription and trading access
+    if SUBSCRIPTION_ENABLED:
+        user_id = session.get('user_id')
+        if user_id:
+            access_check = subscription_manager.check_trading_access(user_id)
+            if not access_check['allowed']:
+                return jsonify({
+                    'success': False,
+                    'error': f'Trading access denied: {access_check["reason"]}',
+                    'action_required': access_check.get('action_required'),
+                    'payment_details': access_check.get('payment_details'),
+                    'subscription_expired': True
+                })
+    
     # Get user's actual trading mode from session or database
     trading_mode = session.get('trading_mode', 'TESTNET')  # Default to safe mode
     
@@ -2683,6 +2810,186 @@ def check_trading_status():
             'error': str(e),
             'is_active': False
         })
+
+# =====================================================
+# SUBSCRIPTION MANAGEMENT ENDPOINTS
+# =====================================================
+
+@app.route('/api/subscription-status', methods=['GET'])
+def get_subscription_status():
+    """Get current user's subscription status"""
+    if not SUBSCRIPTION_ENABLED:
+        return jsonify({'success': False, 'error': 'Subscription system disabled'})
+    
+    try:
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'success': False, 'error': 'User not authenticated'})
+        
+        subscription = subscription_manager.get_user_subscription(user_id)
+        return jsonify(subscription)
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/trading-access-check', methods=['GET'])
+def check_trading_access():
+    """Check if user has access to trading based on subscription"""
+    if not SUBSCRIPTION_ENABLED:
+        return jsonify({'allowed': True, 'tier': 'UNLIMITED'})  # Fallback if disabled
+    
+    try:
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'allowed': False, 'reason': 'Not authenticated'})
+        
+        access_check = subscription_manager.check_trading_access(user_id)
+        return jsonify(access_check)
+        
+    except Exception as e:
+        return jsonify({'allowed': False, 'error': str(e)})
+
+@app.route('/api/create-payment', methods=['POST'])
+def create_payment():
+    """Create payment order for subscription"""
+    if not SUBSCRIPTION_ENABLED:
+        return jsonify({'success': False, 'error': 'Subscription system disabled'})
+    
+    try:
+        user_id = session.get('user_id')
+        user_email = session.get('user_email')
+        
+        if not user_id or not user_email:
+            return jsonify({'success': False, 'error': 'User not authenticated'})
+        
+        data = request.get_json()
+        amount = data.get('amount', 0)
+        tier = data.get('tier', 'PRO')
+        payment_type = data.get('payment_type', 'SUBSCRIPTION')
+        
+        # Create Razorpay order
+        order_result = payment_gateway.create_razorpay_order(
+            amount=amount,
+            user_email=user_email,
+            description=f"{tier} subscription payment"
+        )
+        
+        if order_result['success']:
+            # Store payment record
+            payment_record = subscription_manager.create_payment_order(
+                user_id=user_id,
+                amount=amount,
+                payment_type=payment_type
+            )
+            
+            return jsonify({
+                'success': True,
+                'order_id': order_result['order']['id'],
+                'amount': amount,
+                'currency': 'INR',
+                'payment_id': payment_record.get('payment_id'),
+                'demo_mode': order_result.get('demo_mode', False),
+                'expected_result': order_result.get('expected_result')
+            })
+        else:
+            return jsonify({'success': False, 'error': order_result.get('error')})
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/payment-webhook', methods=['POST'])
+def payment_webhook():
+    """Handle payment webhook from Razorpay"""
+    if not SUBSCRIPTION_ENABLED:
+        return jsonify({'success': False, 'error': 'Subscription system disabled'})
+    
+    try:
+        webhook_data = request.get_json()
+        
+        # Process the webhook
+        result = subscription_manager.process_payment_webhook(webhook_data)
+        
+        if result['success']:
+            print(f"✅ Payment webhook processed: {webhook_data.get('order_id')}")
+        else:
+            print(f"❌ Payment webhook failed: {result.get('error')}")
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        print(f"❌ Webhook error: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/subscription')
+def subscription_page():
+    """Subscription management page"""
+    if 'user_token' not in session:
+        return redirect(url_for('login_page'))
+    
+    user_id = session.get('user_id')
+    user_email = session.get('user_email', 'Unknown')
+    
+    # Get subscription status
+    if SUBSCRIPTION_ENABLED:
+        subscription = subscription_manager.get_user_subscription(user_id)
+        access_check = subscription_manager.check_trading_access(user_id)
+    else:
+        subscription = {'success': False, 'error': 'Disabled'}
+        access_check = {'allowed': True, 'tier': 'UNLIMITED'}
+    
+    return render_template_string("""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💳 Subscription Management - AI Trading Platform</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .card { background: white; padding: 20px; margin: 20px 0; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .tier-card { border: 2px solid #ddd; margin: 15px; padding: 20px; border-radius: 10px; text-align: center; }
+        .tier-card.active { border-color: #4CAF50; background: #f8fff8; }
+        .tier-card.recommended { border-color: #2196F3; background: #f0f8ff; }
+        .price { font-size: 2em; font-weight: bold; color: #333; }
+        .btn { padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; }
+        .btn-primary { background: #4CAF50; color: white; }
+        .btn-secondary { background: #757575; color: white; }
+        .status-active { color: #4CAF50; font-weight: bold; }
+        .status-expired { color: #f44336; font-weight: bold; }
+        .payment-form { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💳 Subscription Management</h1>
+        
+        <div class="card">
+            <h2>📊 Current Status</h2>
+            <p><strong>User:</strong> {{ user_email }}</p>
+            
+            {% if subscription.success %}
+                <p><strong>Tier:</strong> {{ subscription.tier }}</p>
+                <p><strong>Status:</strong> 
+                    <span class="{% if subscription.is_expired %}status-expired{% else %}status-active{% endif %}">
+                        {% if subscription.is_expired %}EXPIRED{% else %}ACTIVE{% endif %}
+                    </span>
+                </p>
+                <p><strong>Days Remaining:</strong> {{ subscription.days_remaining }}</p>
+            {% else %}
+                <p><strong>Status:</strong> <span class="status-expired">NO SUBSCRIPTION</span></p>
+            {% endif %}
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <button class="btn btn-secondary" onclick="location.href='/dashboard'">
+                ← Back to Dashboard
+            </button>
+        </div>
+    </div>
+</body>
+</html>
+    """, user_email=user_email, subscription=subscription, access_check=access_check)
 
 @app.route('/api/test-connection/<exchange>', methods=['POST'])
 def test_connection(exchange):
