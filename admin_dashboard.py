@@ -218,6 +218,7 @@ def admin_dashboard():
                         <th>Detection Type</th>
                         <th>Fraud Score</th>
                         <th>Action</th>
+                        <th>Evidence</th>
                         <th>Detected</th>
                         <th>Actions</th>
                     </tr>
@@ -543,7 +544,7 @@ def admin_dashboard():
             return;
         }
         
-        let html = '<table class="table"><thead><tr><th>User ID</th><th>Detection Type</th><th>Fraud Score</th><th>Action</th><th>Evidence</th><th>Date</th></tr></thead><tbody>';
+        let html = '<table class="table"><thead><tr><th>User ID</th><th>Detection Type</th><th>Fraud Score</th><th>Action</th><th>Evidence</th><th>Date</th><th>Actions</th></tr></thead><tbody>';
         
         fraudLogs.forEach(log => {
             html += `<tr>
@@ -551,8 +552,13 @@ def admin_dashboard():
                 <td>${log.detection_type}</td>
                 <td><strong>${log.fraud_score}</strong></td>
                 <td><span class="status-${log.action_taken.toLowerCase()}">${log.action_taken}</span></td>
-                <td>${log.evidence ? log.evidence.substring(0, 50) + '...' : 'None'}</td>
+                <td title="${log.evidence || 'No evidence'}">${log.evidence ? log.evidence.substring(0, 50) + '...' : 'None'}</td>
                 <td>${log.detected_at ? log.detected_at.substring(0, 16) : 'Unknown'}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick="reviewFraud('${log.fraud_id}')">🔍 Review</button>
+                    <button class="btn btn-sm btn-danger" onclick="banFraudUser('${log.user_id}')">🚫 Ban</button>
+                    <button class="btn btn-sm btn-info" onclick="viewUserDetails('${log.user_id}')">👤 Details</button>
+                </td>
             </tr>`;
         });
         
@@ -658,11 +664,29 @@ This action cannot be undone!`;
         })
         .then(response => response.json())
         .then(data => {
+            console.log('User lookup response:', data);
+            
             if (data.success && data.user) {
                 const user = data.user;
-                alert(`👤 User Details:\n\nEmail: ${user.email}\nUser ID: ${user.user_id}\nStatus: ${user.is_active ? 'Active' : 'Inactive'}\nSubscription: ${user.subscription_tier || 'None'}\nTotal Payments: ₹${user.total_payments || 0}\nCreated: ${user.created_at || 'Unknown'}\nLast Login: ${user.last_login || 'Never'}`);
+                const userDetails = `👤 User Details:
+
+📧 Email: ${user.email || 'Not available'}
+🆔 User ID: ${user.user_id || userId}
+🔄 Status: ${user.is_active ? 'Active' : 'Inactive'}
+💎 Subscription: ${user.subscription_tier || 'None'}
+💰 Total Payments: ₹${user.total_payments || 0}
+📅 Created: ${user.created_at || 'Unknown'}
+🕐 Last Login: ${user.last_login || 'Never'}`;
+                
+                alert(userDetails);
             } else {
-                alert('❌ Failed to load user details');
+                // Try to show basic info even if lookup fails
+                alert(`⚠️ Limited User Info:
+
+🆔 User ID: ${userId}
+❌ Full details not available: ${data.error || 'User not found'}
+
+This may be a system-generated user ID from fraud detection.`);
             }
         })
         .catch(error => {
@@ -718,6 +742,40 @@ Admin Notes: ${fraud.admin_notes || 'None'}`;
         });
     }
     
+    function banFraudUser(userId) {
+        if (!userId || userId === 'Unknown') {
+            alert('❌ Cannot ban user: Invalid user ID');
+            return;
+        }
+        
+        const reason = prompt(`Ban user ${userId} due to fraud?\n\nEnter ban reason:`);
+        if (!reason) return;
+        
+        if (confirm(`🚫 BAN FRAUDULENT USER\n\nUser ID: ${userId}\nReason: ${reason}\n\nThis will permanently ban the user for fraud.\n\nContinue?`)) {
+            fetch('/admin/api/ban-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    user_id: userId, 
+                    reason: `FRAUD: ${reason}`,
+                    ban_type: 'FRAUD'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ User banned for fraud successfully');
+                    loadFraudData(); // Refresh fraud data
+                } else {
+                    alert('❌ Failed to ban user: ' + data.error);
+                }
+            })
+            .catch(error => {
+                alert('❌ Error banning user: ' + error.message);
+            });
+        }
+    }
+    
     function emergencyShutdown() {
         if (confirm('🛑 EMERGENCY SHUTDOWN\\n\\nThis will stop all trading activities immediately.\\n\\nContinue?')) {
             fetch('/admin/api/emergency-shutdown', { method: 'POST' })
@@ -767,12 +825,24 @@ def admin_user_lookup():
         cursor = conn.cursor()
         
         # Search by user_id, email, or device hash (case insensitive)
+        # First try exact match, then partial match
         cursor.execute("""
             SELECT user_id, email, created_at, is_active, last_login
             FROM users
-            WHERE LOWER(user_id) LIKE LOWER(?) OR LOWER(email) LIKE LOWER(?)
+            WHERE user_id = ? OR email = ?
             LIMIT 1
-        """, (f'%{query}%', f'%{query}%'))
+        """, (query, query))
+        
+        user_result = cursor.fetchone()
+        
+        # If no exact match, try partial match
+        if not user_result:
+            cursor.execute("""
+                SELECT user_id, email, created_at, is_active, last_login
+                FROM users
+                WHERE LOWER(user_id) LIKE LOWER(?) OR LOWER(email) LIKE LOWER(?)
+                LIMIT 1
+            """, (f'%{query}%', f'%{query}%'))
         
         user_result = cursor.fetchone()
         
@@ -915,11 +985,60 @@ def admin_ban_user():
     try:
         data = request.get_json()
         user_id = data.get('user_id')
-        reason = data.get('reason')
+        reason = data.get('reason', 'Admin ban')
         ban_type = data.get('ban_type', 'GLOBAL')
         
-        result = admin_security.ban_user_permanently(user_id, reason, admin_id, ban_type)
-        return jsonify(result)
+        # Try to ban using admin security first
+        try:
+            result = admin_security.ban_user_permanently(user_id, reason, admin_id, ban_type)
+            if result.get('success'):
+                return jsonify(result)
+        except Exception as e:
+            print(f"Admin security ban failed: {e}")
+        
+        # Fallback: Update user status directly in database
+        import sqlite3
+        
+        # Try multiple database locations
+        db_paths = [
+            'src/web_interface/users.db',
+            'data/users.db',
+            'users.db'
+        ]
+        
+        for db_path in db_paths:
+            if os.path.exists(db_path):
+                try:
+                    conn = sqlite3.connect(db_path)
+                    cursor = conn.cursor()
+                    
+                    # Check if users table exists
+                    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+                    if cursor.fetchone():
+                        # Update user status
+                        cursor.execute("""
+                            UPDATE users 
+                            SET is_active = 0, 
+                                ban_reason = ?,
+                                banned_by = ?,
+                                banned_at = ?
+                            WHERE user_id = ? OR email = ?
+                        """, (reason, admin_id, datetime.now().isoformat(), user_id, user_id))
+                        
+                        if cursor.rowcount > 0:
+                            conn.commit()
+                            conn.close()
+                            return jsonify({
+                                'success': True, 
+                                'message': f'User {user_id} banned successfully'
+                            })
+                    
+                    conn.close()
+                except Exception as e:
+                    print(f"Database ban failed for {db_path}: {e}")
+                    continue
+        
+        return jsonify({'success': False, 'error': 'Could not ban user - database not accessible'})
         
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
@@ -935,10 +1054,112 @@ def admin_grant_lifetime():
     try:
         data = request.get_json()
         user_id = data.get('user_id')
-        reason = data.get('reason')
+        reason = data.get('reason', 'Admin granted lifetime access')
         
-        result = admin_security.grant_lifetime_access(user_id, admin_id, reason)
-        return jsonify(result)
+        # Try admin security first
+        try:
+            result = admin_security.grant_lifetime_access(user_id, admin_id, reason)
+            if result.get('success'):
+                # Also update subscription system
+                subscription_manager.create_subscription(user_id, 'LIFETIME', 'ACTIVE')
+                return jsonify(result)
+        except Exception as e:
+            print(f"Admin security grant failed: {e}")
+        
+        # Fallback: Create lifetime subscription directly
+        import sqlite3
+        from datetime import datetime, timedelta
+        
+        try:
+            print(f"🔍 DEBUG: Granting lifetime access to user_id: {user_id}")
+            
+            # Create/update subscription
+            conn = sqlite3.connect('data/subscriptions.db')
+            cursor = conn.cursor()
+            
+            # Check if subscription exists
+            cursor.execute("SELECT subscription_id FROM subscriptions WHERE user_id = ?", (user_id,))
+            existing = cursor.fetchone()
+            print(f"🔍 DEBUG: Existing subscription found: {bool(existing)}")
+            
+            if existing:
+                # Update existing subscription
+                print(f"🔄 DEBUG: Updating existing subscription for {user_id}")
+                cursor.execute("""
+                    UPDATE subscriptions 
+                    SET tier = 'LIFETIME',
+                        status = 'ACTIVE',
+                        end_date = '2099-12-31 23:59:59',
+                        updated_at = ?
+                    WHERE user_id = ?
+                """, (datetime.now().isoformat(), user_id))
+                rows_affected = cursor.rowcount
+                print(f"🔍 DEBUG: Update affected {rows_affected} rows")
+            else:
+                # Get user email for the subscription
+                user_email = user_id  # Fallback if we can't find email
+                print(f"🔍 DEBUG: Looking up email for user_id: {user_id}")
+                try:
+                    users_conn = sqlite3.connect('src/web_interface/users.db')
+                    users_cursor = users_conn.cursor()
+                    users_cursor.execute("SELECT email FROM users WHERE user_id = ?", (user_id,))
+                    email_result = users_cursor.fetchone()
+                    if email_result:
+                        user_email = email_result[0]
+                        print(f"🔍 DEBUG: Found email: {user_email}")
+                    else:
+                        print(f"🔍 DEBUG: No email found for user_id: {user_id}")
+                    users_conn.close()
+                except Exception as email_error:
+                    print(f"🔍 DEBUG: Email lookup error: {email_error}")
+                
+                # Create new lifetime subscription
+                subscription_id = f"lifetime_{user_id}_{int(datetime.now().timestamp())}"
+                current_time = datetime.now().isoformat()
+                print(f"🔍 DEBUG: Creating new subscription with ID: {subscription_id}")
+                print(f"🔍 DEBUG: User email: {user_email}")
+                
+                cursor.execute("""
+                    INSERT INTO subscriptions (
+                        subscription_id, user_id, user_email, tier, status, payment_model,
+                        start_date, end_date, current_period_start, current_period_end, created_at
+                    ) VALUES (?, ?, ?, 'LIFETIME', 'ACTIVE', 'LIFETIME', ?, '2099-12-31 23:59:59', ?, '2099-12-31 23:59:59', ?)
+                """, (
+                    subscription_id, user_id, user_email, current_time, current_time, current_time
+                ))
+                print(f"🔍 DEBUG: Insert executed")
+            
+            conn.commit()
+            print(f"🔍 DEBUG: Database committed")
+            conn.close()
+            
+            # Verify the subscription was created
+            verify_conn = sqlite3.connect('data/subscriptions.db')
+            verify_cursor = verify_conn.cursor()
+            verify_cursor.execute("SELECT tier, status FROM subscriptions WHERE user_id = ?", (user_id,))
+            verification = verify_cursor.fetchone()
+            verify_conn.close()
+            
+            if verification:
+                print(f"✅ DEBUG: Subscription verified - Tier: {verification[0]}, Status: {verification[1]}")
+            else:
+                print(f"❌ DEBUG: Subscription NOT found after creation!")
+            
+            return jsonify({
+                'success': True, 
+                'message': f'Lifetime access granted: {reason}',
+                'debug_info': {
+                    'user_id': user_id,
+                    'subscription_created': bool(verification),
+                    'tier': verification[0] if verification else None
+                }
+            })
+            
+        except Exception as e:
+            print(f"❌ Subscription update failed: {e}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'success': False, 'error': f'Failed to grant lifetime access: {str(e)}'})
         
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})

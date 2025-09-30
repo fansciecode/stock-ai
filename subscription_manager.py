@@ -223,6 +223,15 @@ class SubscriptionManager:
                 'action_required': 'SUBSCRIBE'
             }
         
+        # LIFETIME tier always has access
+        if subscription['tier'] == 'LIFETIME':
+            return {
+                'allowed': True,
+                'tier': 'LIFETIME',
+                'expires_in_days': 999999,
+                'lifetime_access': True
+            }
+        
         # Check if expired
         if subscription['is_expired']:
             if subscription['tier'] == 'DEMO':

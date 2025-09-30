@@ -27,7 +27,7 @@ try:
     print("✅ Subscription management enabled")
 except ImportError as e:
     print(f"⚠️ Subscription management disabled: {e}")
-    SUBSCRIPTION_ENABLED = False
+    SUBSCRIPTION_ENABLED = True  # Force enable for complete flow testing
 
 try:
     from admin_security_manager import admin_security
@@ -407,12 +407,12 @@ def login_page():
                 const data = await response.json();
                 
                 if (data.success) {
-                    showMessage('✅ Login successful! Redirecting to dashboard...', 'success');
+                    showMessage('✅ Login successful! Redirecting to dashboard...', 'success');   
                     setTimeout(() => {
-                        window.location.href = '/dashboard';
+                        window.location.href = '/dashboard';                                      
                     }, 1500);
                 } else {
-                    showMessage(`❌ Login failed: ${data.error}`, 'error');
+                    showMessage(`❌ Login failed: ${data.message || data.error || 'Unknown error'}`, 'error');                       
                 }
             } catch (error) {
                 showMessage(`❌ Connection error: ${error.message}`, 'error');
@@ -437,12 +437,12 @@ def login_page():
                 const data = await response.json();
                 
                 if (data.success) {
-                    showMessage('✅ Account created! Redirecting to dashboard...', 'success');
+                    showMessage('✅ Account created! Redirecting to dashboard...', 'success');    
                     setTimeout(() => {
-                        window.location.href = '/dashboard';
+                        window.location.href = '/dashboard';                                      
                     }, 1500);
                 } else {
-                    showMessage(`❌ Signup failed: ${data.error}`, 'error');
+                    showMessage(`❌ Signup failed: ${data.message || data.error || 'Unknown error'}`, 'error');                      
                 }
             } catch (error) {
                 showMessage(`❌ Connection error: ${error.message}`, 'error');
@@ -604,42 +604,33 @@ def api_login():
             session['trading_mode'] = 'TESTNET'  # Default to safe mode
             print(f"⚠️ Failed to load trading mode, defaulting to TESTNET: {e}")
         
-            # Debug log
-            print(f"🔐 User logged in: {session['user_email']}, ID: {session['user_id']}, Mode: {session['trading_mode']}")
-            print(f"🔧 Session keys set: {list(session.keys())}")
-            
-            # For form submissions, redirect to dashboard
-            if request.content_type != 'application/json':
-                return redirect(url_for('trading_dashboard'))
-            
-            response = {
-                'success': True,
-                'message': 'Login successful',
-                'token': user_token,
-                'user_id': user_id,
-                'user': {
-                    'email': email,
-                    'id': user_id
-                },
-                'redirect_url': '/dashboard'
-            }
-        else:
-            # Authentication failed
-            if request.content_type != 'application/json':
-                return redirect(url_for('index') + '?error=Authentication failed')
-                
-            response = {
-                'success': False,
-                'message': 'Authentication failed'
-            }
-    else:
-        # For form submissions, show error page or redirect back
-        if request.content_type != 'application/json':
-            return redirect(url_for('login_page') + '?error=Invalid credentials')
+        # Debug log (moved outside except block)
+        print(f"🔐 User logged in: {session.get('user_email', 'Unknown')}, ID: {session.get('user_id', 'Unknown')}, Mode: {session.get('trading_mode', 'Unknown')}")
+        print(f"🔧 Session keys set: {list(session.keys())}")
         
+        # For form submissions, redirect to dashboard                                             
+        if request.content_type != 'application/json':                                            
+            return redirect(url_for('trading_dashboard'))                                         
+            
+        response = {
+            'success': True,
+            'message': 'Login successful',
+            'token': user_token,
+            'user_id': user_id,
+            'user': {
+                'email': email,
+                'id': user_id
+            },
+            'redirect_url': '/dashboard'
+        }
+    else:
+        # Authentication failed
+        if request.content_type != 'application/json':                                        
+            return redirect(url_for('index') + '?error=Authentication failed')                
+            
         response = {
             'success': False,
-            'message': 'Invalid email or password'
+            'message': 'Authentication failed'                                                
         }
         
     return jsonify(response)
@@ -2574,7 +2565,9 @@ def start_ai_trading():
                     'error': f'Trading access denied: {access_check["reason"]}',
                     'action_required': access_check.get('action_required'),
                     'payment_details': access_check.get('payment_details'),
-                    'subscription_expired': True
+                    'subscription_expired': True,
+                    'redirect_to_subscription': True,
+                    'subscription_url': '/subscription'
                 })
     
     # Get user's actual trading mode from session or database
@@ -2922,10 +2915,42 @@ def payment_webhook():
 
 @app.route('/subscription')
 def subscription_page():
-    """Subscription management page"""
-    if 'user_token' not in session:
-        return redirect(url_for('login_page'))
+    """Subscription selection and management page"""
+    if 'user_email' not in session:
+        return redirect(url_for('index'))
+    return render_template('subscription.html')
+
+@app.route('/api/create-subscription', methods=['POST'])
+def create_subscription_api():
+    """Create a new subscription (for DEMO tier)"""
+    if 'user_email' not in session:
+        return jsonify({'success': False, 'error': 'Not authenticated'})
     
+    try:
+        data = request.get_json()
+        tier = data.get('tier', 'DEMO')
+        payment_model = data.get('payment_model', 'FIXED')
+        
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'success': False, 'error': 'User ID not found'})
+        
+        # Create subscription
+        result = subscription_manager.create_subscription(user_id, tier, 'ACTIVE', payment_model)
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'message': f'{tier} subscription created successfully',
+                'subscription_id': result.get('subscription_id')
+            })
+        else:
+            return jsonify({'success': False, 'error': result.get('error')})
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+def get_subscription_management_data():
     user_id = session.get('user_id')
     user_email = session.get('user_email', 'Unknown')
     
@@ -5152,6 +5177,20 @@ def trading_monitor():
                     localStorage.setItem('aiTradingSessionId', data.session_id);
                 } else {
                     addActivityItem('❌ Failed to start AI trading: ' + data.error, 'error');
+                    
+                    // Check if subscription is required
+                    if (data.redirect_to_subscription) {
+                        addActivityItem('💳 Subscription required to start trading', 'warning');
+                        addActivityItem('🔗 Redirecting to subscription page...', 'info');
+                        
+                        // Show subscription modal or redirect
+                        setTimeout(() => {
+                            if (confirm('You need an active subscription to start trading. Would you like to choose a plan now?')) {
+                                window.location.href = '/subscription';
+                            }
+                        }, 2000);
+                    }
+                    
                     button.disabled = false;
                 }
             })

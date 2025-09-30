@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Choose Your Trading Plan - AI Trading System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .pricing-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .pricing-card.popular {
+            border: 3px solid #667eea;
+            transform: scale(1.05);
+        }
+
+        .popular-badge {
+            position: absolute;
+            top: 20px;
+            right: -30px;
+            background: #667eea;
+            color: white;
+            padding: 5px 40px;
+            transform: rotate(45deg);
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .plan-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+
+        .plan-description {
+            color: #64748b;
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+        }
+
+        .price {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .price-period {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+        }
+
+        .features-list {
+            list-style: none;
+            margin-bottom: 2rem;
+        }
+
+        .features-list li {
+            padding: 0.5rem 0;
+            display: flex;
+            align-items: center;
+            color: #475569;
+        }
+
+        .features-list li i {
+            color: #10b981;
+            margin-right: 0.75rem;
+            width: 16px;
+        }
+
+        .features-list li.unavailable {
+            color: #94a3b8;
+        }
+
+        .features-list li.unavailable i {
+            color: #ef4444;
+        }
+
+        .select-plan-btn {
+            width: 100%;
+            padding: 1rem 2rem;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .select-plan-btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+
+        .select-plan-btn:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .profit-share-info {
+            background: rgba(102, 126, 234, 0.1);
+            border-left: 4px solid #667eea;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+
+        .profit-share-info h4 {
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .profit-share-info p {
+            color: #475569;
+            font-size: 0.9rem;
+        }
+
+        .tax-info {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .tax-info h3 {
+            color: #1e293b;
+            margin-bottom: 1rem;
+        }
+
+        .tax-breakdown {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .tax-item {
+            background: #f8fafc;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .tax-item h4 {
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 2rem;
+            left: 2rem;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            position: absolute;
+            right: 1rem;
+            top: 1rem;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .payment-form {
+            margin-top: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #374151;
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .payment-btn {
+            width: 100%;
+            padding: 1rem;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+
+        .payment-btn:hover {
+            background: #059669;
+        }
+
+        @media (max-width: 768px) {
+            .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .pricing-card.popular {
+                transform: none;
+            }
+            
+            .back-btn {
+                position: static;
+                margin-bottom: 2rem;
+                display: inline-block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="back-btn" onclick="goBack()">
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
+    </button>
+
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-rocket"></i> Choose Your Trading Plan</h1>
+            <p>Select the perfect plan to maximize your trading potential</p>
+        </div>
+
+        <div class="pricing-grid">
+            <!-- DEMO Plan -->
+            <div class="pricing-card">
+                <div class="plan-name">DEMO</div>
+                <div class="plan-description">Perfect for beginners to test our AI trading system</div>
+                <div class="price">$0</div>
+                <div class="price-period">7 days free trial</div>
+                
+                <ul class="features-list">
+                    <li><i class="fas fa-check"></i> Virtual trading with $10,000 demo funds</li>
+                    <li><i class="fas fa-check"></i> Access to 500+ instruments</li>
+                    <li><i class="fas fa-check"></i> Basic AI signals</li>
+                    <li><i class="fas fa-check"></i> Email support</li>
+                    <li class="unavailable"><i class="fas fa-times"></i> Real money trading</li>
+                    <li class="unavailable"><i class="fas fa-times"></i> Advanced strategies</li>
+                    <li class="unavailable"><i class="fas fa-times"></i> Priority support</li>
+                </ul>
+                
+                <button class="select-plan-btn" onclick="selectPlan('DEMO', 0, 'FIXED')">
+                    Start Free Trial
+                </button>
+            </div>
+
+            <!-- PRO Plan -->
+            <div class="pricing-card popular">
+                <div class="popular-badge">POPULAR</div>
+                <div class="plan-name">PRO</div>
+                <div class="plan-description">For serious traders ready to profit with AI</div>
+                <div class="price">$99</div>
+                <div class="price-period">per month + 15% profit share</div>
+                
+                <div class="profit-share-info">
+                    <h4>Profit Share Model</h4>
+                    <p>Pay only when you profit! We charge 15% of your monthly gains, ensuring our success is tied to yours.</p>
+                </div>
+                
+                <ul class="features-list">
+                    <li><i class="fas fa-check"></i> Real money trading</li>
+                    <li><i class="fas fa-check"></i> Access to 22,000+ instruments</li>
+                    <li><i class="fas fa-check"></i> Advanced AI signals (89.3% accuracy)</li>
+                    <li><i class="fas fa-check"></i> All trading strategies</li>
+                    <li><i class="fas fa-check"></i> Risk management tools</li>
+                    <li><i class="fas fa-check"></i> Priority support</li>
+                    <li><i class="fas fa-check"></i> Portfolio analytics</li>
+                </ul>
+                
+                <button class="select-plan-btn" onclick="selectPlan('PRO', 99, 'PROFIT_SHARE')">
+                    Choose PRO Plan
+                </button>
+            </div>
+
+            <!-- ENTERPRISE Plan -->
+            <div class="pricing-card">
+                <div class="plan-name">ENTERPRISE</div>
+                <div class="plan-description">For institutional traders and high-volume accounts</div>
+                <div class="price">$299</div>
+                <div class="price-period">per month + 12% profit share</div>
+                
+                <div class="profit-share-info">
+                    <h4>Reduced Profit Share</h4>
+                    <p>Lower 12% profit share rate for enterprise clients with dedicated account management.</p>
+                </div>
+                
+                <ul class="features-list">
+                    <li><i class="fas fa-check"></i> Everything in PRO</li>
+                    <li><i class="fas fa-check"></i> Dedicated account manager</li>
+                    <li><i class="fas fa-check"></i> Custom strategies</li>
+                    <li><i class="fas fa-check"></i> API access</li>
+                    <li><i class="fas fa-check"></i> White-label solutions</li>
+                    <li><i class="fas fa-check"></i> 24/7 phone support</li>
+                    <li><i class="fas fa-check"></i> Advanced analytics</li>
+                </ul>
+                
+                <button class="select-plan-btn" onclick="selectPlan('ENTERPRISE', 299, 'PROFIT_SHARE')">
+                    Choose Enterprise
+                </button>
+            </div>
+        </div>
+
+        <!-- Tax Information -->
+        <div class="tax-info">
+            <h3><i class="fas fa-calculator"></i> Tax & Fee Structure</h3>
+            <div class="tax-breakdown">
+                <div class="tax-item">
+                    <h4>Platform Fee</h4>
+                    <p>Monthly subscription as per selected plan</p>
+                </div>
+                <div class="tax-item">
+                    <h4>Profit Share</h4>
+                    <p>15% (PRO) or 12% (Enterprise) of monthly gains only</p>
+                </div>
+                <div class="tax-item">
+                    <h4>GST (India)</h4>
+                    <p>18% GST applicable on platform fees for Indian users</p>
+                </div>
+                <div class="tax-item">
+                    <h4>Capital Gains Tax</h4>
+                    <p>As per your country's tax laws (user responsibility)</p>
+                </div>
+                <div class="tax-item">
+                    <h4>Exchange Fees</h4>
+                    <p>Direct charges by exchanges (Binance, Zerodha, etc.)</p>
+                </div>
+                <div class="tax-item">
+                    <h4>No Hidden Fees</h4>
+                    <p>Complete transparency in all charges and calculations</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div id="paymentModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closePaymentModal()">&times;</span>
+            <h2 id="modalTitle">Complete Your Subscription</h2>
+            
+            <div class="payment-form">
+                <div class="form-group">
+                    <label>Selected Plan:</label>
+                    <input type="text" id="selectedPlan" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label>Amount (USD):</label>
+                    <input type="text" id="planAmount" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label>Payment Method:</label>
+                    <select id="paymentMethod">
+                        <option value="razorpay">Razorpay (Cards, UPI, Wallets)</option>
+                        <option value="stripe">Stripe (International Cards)</option>
+                        <option value="crypto">Cryptocurrency</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Billing Country:</label>
+                    <select id="billingCountry">
+                        <option value="IN">India</option>
+                        <option value="US">United States</option>
+                        <option value="UK">United Kingdom</option>
+                        <option value="OTHER">Other</option>
+                    </select>
+                </div>
+                
+                <button class="payment-btn" onclick="processPayment()">
+                    <i class="fas fa-credit-card"></i> Proceed to Payment
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedPlanData = {};
+
+        function goBack() {
+            window.location.href = '/dashboard';
+        }
+
+        function selectPlan(tier, amount, paymentModel) {
+            if (tier === 'DEMO') {
+                // Direct signup for demo
+                createSubscription(tier, amount, paymentModel);
+                return;
+            }
+
+            selectedPlanData = {
+                tier: tier,
+                amount: amount,
+                paymentModel: paymentModel
+            };
+
+            document.getElementById('selectedPlan').value = `${tier} Plan`;
+            document.getElementById('planAmount').value = `$${amount}/month`;
+            document.getElementById('modalTitle').textContent = `Subscribe to ${tier} Plan`;
+            document.getElementById('paymentModal').style.display = 'block';
+        }
+
+        function closePaymentModal() {
+            document.getElementById('paymentModal').style.display = 'none';
+        }
+
+        function processPayment() {
+            const paymentMethod = document.getElementById('paymentMethod').value;
+            const billingCountry = document.getElementById('billingCountry').value;
+            
+            // Add GST for Indian users
+            let finalAmount = selectedPlanData.amount;
+            if (billingCountry === 'IN') {
+                finalAmount = Math.round(selectedPlanData.amount * 1.18); // 18% GST
+            }
+
+            // Create payment order
+            fetch('/api/create-payment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    tier: selectedPlanData.tier,
+                    amount: finalAmount,
+                    payment_method: paymentMethod,
+                    billing_country: billingCountry,
+                    payment_model: selectedPlanData.paymentModel
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Simulate payment processing
+                    simulatePayment(data.order_id, finalAmount);
+                } else {
+                    alert('Error creating payment order: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Payment processing error');
+            });
+        }
+
+        function simulatePayment(orderId, amount) {
+            // Simulate payment success/failure based on amount
+            const isSuccess = amount % 2 === 0; // Even amounts succeed, odd fail
+            
+            setTimeout(() => {
+                if (isSuccess) {
+                    // Payment successful
+                    fetch('/api/payment-webhook', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            order_id: orderId,
+                            status: 'SUCCESS',
+                            amount: amount,
+                            payment_method: document.getElementById('paymentMethod').value
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('🎉 Payment Successful! Your subscription is now active.');
+                            closePaymentModal();
+                            window.location.href = '/dashboard';
+                        } else {
+                            alert('Payment webhook error: ' + data.error);
+                        }
+                    });
+                } else {
+                    alert('❌ Payment Failed! Please try again with a different amount or payment method.');
+                }
+            }, 2000);
+        }
+
+        function createSubscription(tier, amount, paymentModel) {
+            fetch('/api/create-subscription', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    tier: tier,
+                    payment_model: paymentModel
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('🎉 Demo subscription activated! You can now start trading with virtual funds.');
+                    window.location.href = '/dashboard';
+                } else {
+                    alert('Error creating subscription: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Subscription creation error');
+            });
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('paymentModal');
+            if (event.target == modal) {
+                closePaymentModal();
+            }
+        }
+    </script>
+</body>
+</html>
