@@ -3223,6 +3223,14 @@ def start_ai_trading():
 @app.route('/api/stop-ai-trading', methods=['POST'])
 def stop_ai_trading():
     """Stop AI trading for the user"""
+    # DEBUG: Log who is calling stop
+    import traceback
+    print("🚨 STOP AI TRADING CALLED!")
+    print("🔍 Call stack:")
+    traceback.print_stack()
+    print("🔍 Session data:", dict(session))
+    print("🔍 Request headers:", dict(request.headers))
+    
     # Allow both authenticated and demo access
     if 'user_token' not in session:
         return jsonify({'success': False, 'error': 'User not logged in', 'redirect': '/login'})
