@@ -997,7 +997,13 @@ class FixedContinuousTradingEngine:
                 
                 # Sleep for the session-specific monitoring interval
                 session_interval = session_data.get('monitoring_interval', self.monitoring_interval)
+                self.logger.info(f"💤 Sleeping for {session_interval}s before next monitoring cycle...")
                 time.sleep(session_interval)
+                
+                # Check if session still exists after sleep
+                if user_email not in self.active_sessions:
+                    self.logger.warning(f"🚨 Session {user_email} was removed during sleep! Monitoring loop will exit.")
+                    break
             
             self.logger.info(f"🛑 Stopped continuous monitoring for {user_email}")
         except Exception as e:

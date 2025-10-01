@@ -3174,6 +3174,7 @@ def start_ai_trading():
         # First, stop any existing sessions
         try:
             # Connect to the database
+            import sqlite3
             conn = sqlite3.connect('data/fixed_continuous_trading.db')
             cursor = conn.cursor()
             
