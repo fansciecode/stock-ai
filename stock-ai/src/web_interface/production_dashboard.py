@@ -910,15 +910,25 @@ def login_page():
 def api_login():
     """Handle user login - authenticate against database"""
     try:
+        print("🔍 FIXED LOGIN FUNCTION v2.0 - Starting login process...")
+        
         data = request.get_json()
         email = data.get('email', '')
         password = data.get('password', '')
         
-        if email and password:
-            user_id = None
-            user_found = False
-            
-            try:
+        print(f"📧 Login attempt for: {email}")
+        
+        if not email or not password:
+            return jsonify({
+                'success': False,
+                'error': 'Email and password are required'
+            })
+        
+        # First check if user exists in the main database
+        user_id = None
+        user_found = False
+        
+        try:
             # Check multiple possible locations for the users database
             db_paths = [
                 "users.db",  # Current directory (src/web_interface/)
@@ -951,13 +961,13 @@ def api_login():
                         # Update last login
                         cursor.execute("UPDATE users SET last_login = datetime('now') WHERE user_id = ?", (user_id,))
                         db_conn.commit()
+                        
+                        print(f"✅ User authenticated: {email}")
                 
                 db_conn.close()
-            
+                
         except Exception as e:
-            print(f"⚠️ Error during authentication: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"⚠️ Database error during authentication: {e}")
         
         if user_found:
             # Generate session data
@@ -968,62 +978,44 @@ def api_login():
             session['user_id'] = user_id  # Use the REAL user ID from database
             session['user_email'] = email
             session.permanent = True  # Make session persistent
-            dashboard.current_token = user_token
+            session['trading_mode'] = 'LIVE'  # Force LIVE mode
             
-            # Load trading mode into session - ALWAYS SET TO LIVE
-            try:
-                # Force LIVE mode for all users
-                session['trading_mode'] = 'LIVE'
-                print(f"🔄 Loaded trading mode: LIVE")
-            except Exception as e:
-                session['trading_mode'] = 'LIVE'  # Default to LIVE
-                print(f"⚠️ Failed to load trading mode, defaulting to LIVE: {e}")
+            print(f"🔐 User logged in: {email}, ID: {user_id}")
             
-            # Debug log
-            print(f"🔐 User logged in: {session['user_email']}, REAL ID: {session['user_id']}, Mode: {session['trading_mode']}")
-            print(f"🔧 Session keys set: {list(session.keys())}")
-            
-            response = {
+            return jsonify({
                 'success': True,
                 'message': 'Login successful',
                 'token': user_token,
-                'user_id': user_id,  # Return the REAL user ID
+                'user_id': user_id,
                 'user': {
                     'email': email,
                     'id': user_id
                 }
-            }
+            })
         else:
             # Check if this email is pending verification
             try:
                 from email_service import email_service
                 if email_service.is_email_pending_verification(email):
-                    response = {
+                    print(f"📋 Email pending verification: {email}")
+                    return jsonify({
                         'success': False,
                         'error': 'Email not verified. Please check your inbox and click the verification link to complete registration.',
                         'verification_required': True
-                    }
+                    })
                 else:
-                    response = {
+                    print(f"❌ Invalid credentials for: {email}")
+                    return jsonify({
                         'success': False,
                         'error': 'Invalid email or password. Please check your credentials or sign up if you don\'t have an account.'
-                    }
+                    })
             except Exception as e:
-                print(f"❌ LOGIN ERROR - Error checking verification status: {e}")
-                import traceback
-                traceback.print_exc()
-                response = {
+                print(f"❌ Email service error: {e}")
+                return jsonify({
                     'success': False,
                     'error': 'Invalid email or password. Please check your credentials or sign up if you don\'t have an account.'
-                }
-    else:
-        response = {
-            'success': False,
-            'error': 'Email and password are required'
-        }
-        
-        return jsonify(response)
-        
+                })
+                
     except Exception as e:
         print(f"❌ CRITICAL LOGIN ERROR: {e}")
         import traceback
