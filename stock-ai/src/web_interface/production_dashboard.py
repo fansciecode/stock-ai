@@ -2077,21 +2077,35 @@ def trading_dashboard():
         function updateButtonsToStopState() {
             console.log('🔴 Updating buttons to STOP state');
             
-            // Find all trading buttons and update them
-            document.querySelectorAll('button, .btn, input[type="button"]').forEach(element => {
+            // Find ALL elements with startAITrading onclick (including divs, buttons, etc.)
+            document.querySelectorAll('*[onclick*="startAITrading"], button, .btn, input[type="button"], .action-card').forEach(element => {
                 const onclick = element.getAttribute('onclick');
                 const text = element.textContent || element.innerText || '';
                 
                 if ((onclick && onclick.includes('startAITrading')) || 
                     (text.includes('Start AI Trading') && element.tagName !== 'HTML' && element.tagName !== 'BODY' && element.tagName !== 'SCRIPT')) {
                     
-                    console.log('🎯 Converting start button to stop:', element.tagName, element.className);
-                    element.textContent = '🛑 Stop AI Trading';
-                    element.style.background = '#e53e3e';
-                    element.style.color = 'white';
-                    element.className = element.className.replace('btn-success', 'btn-danger');
-                    element.setAttribute('onclick', 'stopAITrading()');
-                    element.disabled = false;
+                    console.log('🎯 Converting start element to stop:', element.tagName, element.className, element);
+                    
+                    // Handle different element types
+                    if (element.classList.contains('action-card')) {
+                        // Special handling for action cards
+                        const h4 = element.querySelector('h4');
+                        const p = element.querySelector('p');
+                        if (h4) h4.textContent = 'Stop AI Trading';
+                        if (p) p.textContent = 'Stop the current AI trading session';
+                        element.style.background = '#e53e3e';
+                        element.style.color = 'white';
+                        element.setAttribute('onclick', 'stopAITrading()');
+                    } else {
+                        // Handle buttons and other elements
+                        element.textContent = '🛑 Stop AI Trading';
+                        element.style.background = '#e53e3e';
+                        element.style.color = 'white';
+                        element.className = element.className.replace('btn-success', 'btn-danger');
+                        element.setAttribute('onclick', 'stopAITrading()');
+                        element.disabled = false;
+                    }
                 }
             });
         }
@@ -2099,8 +2113,8 @@ def trading_dashboard():
         function updateButtonsToStartState() {
             console.log('🟢 Updating buttons to START state');
             
-            // Find all trading buttons and update them
-            document.querySelectorAll('button, .btn, input[type="button"]').forEach(element => {
+            // Find ALL elements with stopAITrading onclick (including divs, buttons, etc.)
+            document.querySelectorAll('*[onclick*="stopAITrading"], button, .btn, input[type="button"], .action-card').forEach(element => {
                 const onclick = element.getAttribute('onclick');
                 const text = element.textContent || element.innerText || '';
                 
@@ -2108,13 +2122,27 @@ def trading_dashboard():
                     (text.includes('Stop AI Trading') && element.tagName !== 'HTML' && element.tagName !== 'BODY' && element.tagName !== 'SCRIPT') ||
                     (text.includes('🛑') && element.tagName !== 'HTML' && element.tagName !== 'BODY' && element.tagName !== 'SCRIPT')) {
                     
-                    console.log('🎯 Converting stop button to start:', element.tagName, element.className);
-                    element.textContent = '🚀 Start AI Trading';
-                    element.style.background = '#48bb78';
-                    element.style.color = 'white';
-                    element.className = element.className.replace('btn-danger', 'btn-success');
-                    element.setAttribute('onclick', 'startAITrading()');
-                    element.disabled = false;
+                    console.log('🎯 Converting stop element to start:', element.tagName, element.className, element);
+                    
+                    // Handle different element types
+                    if (element.classList.contains('action-card')) {
+                        // Special handling for action cards
+                        const h4 = element.querySelector('h4');
+                        const p = element.querySelector('p');
+                        if (h4) h4.textContent = 'Start AI Trading';
+                        if (p) p.textContent = 'Begin automated trading with AI signals';
+                        element.style.background = '#48bb78';
+                        element.style.color = 'white';
+                        element.setAttribute('onclick', 'startAITrading()');
+                    } else {
+                        // Handle buttons and other elements
+                        element.textContent = '🚀 Start AI Trading';
+                        element.style.background = '#48bb78';
+                        element.style.color = 'white';
+                        element.className = element.className.replace('btn-danger', 'btn-success');
+                        element.setAttribute('onclick', 'startAITrading()');
+                        element.disabled = false;
+                    }
                 }
             });
         }
@@ -2127,6 +2155,13 @@ def trading_dashboard():
                 .then(response => response.json())
                 .then(data => {
                     console.log('📊 Trading status check result:', data);
+                    
+                    // Check if user is authenticated
+                    if (data.redirect === '/login') {
+                        console.log('❌ User not authenticated - redirecting to login');
+                        window.location.href = '/login';
+                        return;
+                    }
                     
                     if (data.success && data.is_active) {
                         console.log('✅ Found active trading session - syncing UI');
@@ -2168,22 +2203,41 @@ def trading_dashboard():
                 });
         }
         
+        // Prevent multiple rapid clicks
+        let tradingActionInProgress = false;
+        
         async function startAITrading() {
+        // Prevent multiple rapid clicks
+        if (tradingActionInProgress) {
+            console.log('🚫 Trading action already in progress - ignoring click');
+            return;
+        }
+        
+        tradingActionInProgress = true;
+        
         // Check if continuous trading is already running
         try {
-            const statusResponse = await fetch('/api/trading-status');
+            const statusResponse = await fetch('/api/check-trading-status');
             const statusResult = await statusResponse.json();
             
-            if (statusResult.success && statusResult.status.active) {
+            // Check authentication
+            if (statusResult.redirect === '/login') {
+                console.log('❌ User not authenticated - redirecting to login');
+                window.location.href = '/login';
+                return;
+            }
+            
+            if (statusResult.success && statusResult.is_active) {
                 alert('🔄 Continuous AI Trading Already Active!\\n\\n' +
-                      `Session: ${statusResult.status.session_id}\\n` +
-                      `Active Positions: ${statusResult.status.active_positions}\\n` +
-                      `Total P&L: $${statusResult.status.total_pnl.toFixed(2)}\\n\\n` +
+                      `Session: ${statusResult.session_id}\\n\\n` +
                       'Use "Stop AI Trading" to end the current session.');
+                tradingActionInProgress = false;
                 return;
             }
         } catch (error) {
             console.error('Error checking status:', error);
+            tradingActionInProgress = false;
+            return;
         }
         
         // Get current trading mode for confirmation dialog
@@ -2220,12 +2274,19 @@ def trading_dashboard():
                     // Set trading in progress
                     tradingInProgress = true;
                     
-                    // Update button to show progress
-                    const tradingButtons = document.querySelectorAll('[onclick="startAITrading()"]');
-                    tradingButtons.forEach(btn => {
-                        btn.disabled = true;
-                        btn.textContent = '🔄 Trading in Progress...';
-                        btn.style.background = '#ffa500';
+                    // Update ALL trading elements to show progress
+                    const tradingElements = document.querySelectorAll('*[onclick*="startAITrading"]');
+                    tradingElements.forEach(element => {
+                        element.disabled = true;
+                        element.style.background = '#ffa500';
+                        element.style.pointerEvents = 'none';  // Disable clicks on divs too
+                        
+                        if (element.classList.contains('action-card')) {
+                            const h4 = element.querySelector('h4');
+                            if (h4) h4.textContent = '🔄 Trading in Progress...';
+                        } else {
+                            element.textContent = '🔄 Trading in Progress...';
+                        }
                     });
                     
                     // Show the activity log section
@@ -2289,13 +2350,25 @@ def trading_dashboard():
                 } finally {
                     // Reset trading state
                     tradingInProgress = false;
+                    tradingActionInProgress = false;  // Reset the new flag too
                     
-                    // Reset button
-                    const tradingButtons = document.querySelectorAll('[onclick="startAITrading()"]');
-                    tradingButtons.forEach(btn => {
-                        btn.disabled = false;
-                        btn.textContent = '🚀 Start AI Trading';
-                        btn.style.background = '#48bb78';
+                    // Reset ALL trading elements
+                    const tradingElements = document.querySelectorAll('*[onclick*="startAITrading"], *[onclick*="stopAITrading"]');
+                    tradingElements.forEach(element => {
+                        element.disabled = false;
+                        element.style.pointerEvents = 'auto';  // Re-enable clicks
+                        element.style.background = '#48bb78';
+                        
+                        if (element.classList.contains('action-card')) {
+                            const h4 = element.querySelector('h4');
+                            const p = element.querySelector('p');
+                            if (h4) h4.textContent = 'Start AI Trading';
+                            if (p) p.textContent = 'Begin automated trading with AI signals';
+                            element.setAttribute('onclick', 'startAITrading()');
+                        } else {
+                            element.textContent = '🚀 Start AI Trading';
+                            element.setAttribute('onclick', 'startAITrading()');
+                        }
                     });
                 }
             }
@@ -3371,10 +3444,14 @@ def stop_ai_trading():
 @app.route('/api/check-trading-status', methods=['GET'])
 def check_trading_status():
     """Check if user has active trading session"""
+    # Check authentication first
+    if 'user_token' not in session:
+        return jsonify({'success': False, 'is_active': False, 'error': 'Not authenticated', 'redirect': '/login'})
+    
     try:
         user_email = session.get('user_email')
         if not user_email:
-            return jsonify({'success': False, 'is_active': False, 'error': 'No user email'})
+            return jsonify({'success': False, 'is_active': False, 'error': 'No user email', 'redirect': '/login'})
         
         from fixed_continuous_trading_engine import fixed_continuous_engine
         engine = fixed_continuous_engine
