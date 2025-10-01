@@ -980,6 +980,7 @@ class FixedContinuousTradingEngine:
                     
                     # Apply risk management - CHECK FOR AUTO-STOP CONDITIONS
                     try:
+                        self.logger.info(f"🛡️ Applying risk management for {user_email}")
                         stop_reason = self._apply_risk_management(user_email)
                         if stop_reason:
                             self.logger.warning(f"🛑 Auto-stopping trading for {user_email}: {stop_reason}")
@@ -987,7 +988,7 @@ class FixedContinuousTradingEngine:
                             self.stop_continuous_trading(user_email, stop_reason)
                             break  # Exit the monitoring loop
                         else:
-                            self.logger.debug(f"✅ Risk management passed for {user_email}")
+                            self.logger.info(f"✅ Risk management passed for {user_email}")
                     except Exception as e:
                         self.logger.error(f"❌ Error in risk management: {e}")
                         # Continue despite error
@@ -1016,6 +1017,7 @@ class FixedContinuousTradingEngine:
         """Apply risk management rules and return stop reason if triggered"""
         try:
             if user_email not in self.active_sessions:
+                self.logger.warning(f"🚨 Risk management: No active session for {user_email}")
                 return None
                 
             session_data = self.active_sessions[user_email]
@@ -1027,10 +1029,14 @@ class FixedContinuousTradingEngine:
             
             # Calculate session duration
             duration_hours = (current_time - start_time).total_seconds() / 3600
+            duration_minutes = duration_hours * 60
             
             # Calculate current P&L
             positions = session_data.get('positions', [])
             current_pnl = sum(position.get('profit_loss', 0) for position in positions)
+            
+            # DEBUG: Log risk management check details
+            self.logger.info(f"🔍 Risk check for {user_email}: Duration={duration_minutes:.1f}min, P&L=${current_pnl:.2f}, Positions={len(positions)}")
             
             # 1. CHECK DAILY LOSS LIMIT
             max_daily_loss_pct = risk_settings.get('max_daily_loss', 0.20)  # Increased to 20% to prevent immediate stops
