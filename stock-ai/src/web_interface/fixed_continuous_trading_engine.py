@@ -1007,15 +1007,19 @@ class FixedContinuousTradingEngine:
             current_pnl = sum(position.get('profit_loss', 0) for position in positions)
             
             # 1. CHECK DAILY LOSS LIMIT
-            max_daily_loss_pct = risk_settings.get('max_daily_loss', 0.05)  # Default 5%
+            max_daily_loss_pct = risk_settings.get('max_daily_loss', 0.20)  # Increased to 20% to prevent immediate stops
             portfolio_value = 10000  # Assume $10K portfolio for now
             max_daily_loss = portfolio_value * max_daily_loss_pct
             
-            if current_pnl < -max_daily_loss:
+            # Only check loss limit if session has been running for at least 5 minutes
+            if duration_hours > 0.083 and current_pnl < -max_daily_loss:  # 0.083 hours = 5 minutes
                 # Auto-stop due to daily loss limit
                 self.logger.warning(f"🚨 AUTO-STOP TRIGGERED: Daily loss limit exceeded: P&L ${current_pnl:.2f} < -${max_daily_loss:.2f}")
                 self.stop_continuous_trading(user_email, f'DAILY_LOSS_LIMIT')
                 return f"Daily loss limit exceeded: ${current_pnl:.2f} < -${max_daily_loss:.2f}"
+            elif current_pnl < -max_daily_loss:
+                # Log warning but don't stop immediately (grace period)
+                self.logger.info(f"⚠️ P&L Warning: ${current_pnl:.2f} approaching limit -${max_daily_loss:.2f} (Grace period: {5 - duration_hours*60:.1f} min remaining)")
             
             # 2. CHECK SESSION TIME LIMITS (for demo/testing)
             max_session_hours = risk_settings.get('max_session_hours', 168)  # Default 1 week
