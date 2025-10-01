@@ -1094,7 +1094,6 @@ def api_signup():
         }
         
         print(f"📧 Verification email sent to: {email}")
-        print("🔍 DEBUG: Returning verification_required response")
         
         return jsonify({
             'success': True,

@@ -183,8 +183,10 @@ class EmailService:
         """Send email verification email"""
         try:
             if not self.sender_password:
-                print("⚠️ SMTP password not configured - using demo mode")
-                return True, "Demo mode: Email verification sent"
+                print("⚠️ SMTP password not configured - using console mode")
+                # Use console mode for immediate testing
+                from simple_email_service import send_console_verification_email
+                return send_console_verification_email(email, token, user_name)
             
             # Create verification link
             verification_link = f"{self.platform_url}/verify-email?token={token}"
