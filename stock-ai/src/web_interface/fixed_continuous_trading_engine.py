@@ -1094,11 +1094,15 @@ class FixedContinuousTradingEngine:
                 entry_price = position.get('entry_price', new_price)
                 amount_invested = position.get('amount_invested', 100)  # Default to $100 if not set
                 
+                # Prevent division by zero
+                if entry_price == 0 or entry_price is None:
+                    entry_price = new_price if new_price > 0 else 100  # Default fallback
+                
                 if position.get('side') == 'buy':  # Note: lowercase 'buy' from order
-                    price_change_pct = (new_price - entry_price) / entry_price
+                    price_change_pct = (new_price - entry_price) / entry_price if entry_price != 0 else 0
                     position['profit_loss'] = amount_invested * price_change_pct
                 else:
-                    price_change_pct = (entry_price - new_price) / entry_price  
+                    price_change_pct = (entry_price - new_price) / entry_price if entry_price != 0 else 0
                     position['profit_loss'] = amount_invested * price_change_pct
                 
                 # Ensure P&L is reasonable (between -100% and +1000%)

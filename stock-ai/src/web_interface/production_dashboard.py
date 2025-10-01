@@ -3122,7 +3122,7 @@ def start_ai_trading():
                 # Mark the session as inactive
                 session_id = active_session[0]
                 cursor.execute(
-                    "UPDATE trading_sessions SET status='inactive', end_time=? WHERE session_id=?",
+                    "UPDATE trading_sessions SET is_active=0, end_time=? WHERE id=?",
                     (datetime.now().isoformat(), session_id)
                 )
                 conn.commit()
@@ -3178,7 +3178,7 @@ def start_ai_trading():
             cursor = conn.cursor()
             
             # Check if the user has any active sessions
-            cursor.execute("SELECT session_id FROM trading_sessions WHERE user_email=? AND status='active';", (user_email,))
+            cursor.execute("SELECT id FROM trading_sessions WHERE user_email=? AND is_active=1;", (user_email,))
             active_session = cursor.fetchone()
             
             if active_session:
