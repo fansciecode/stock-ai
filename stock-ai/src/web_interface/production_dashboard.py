@@ -87,11 +87,64 @@ def get_user_api_keys_from_db(user_email):
         return []
 
 def check_user_subscription(user_id):
-    """Check if user has active subscription using enhanced subscription manager"""
+    """Check if user has active subscription including lifetime access"""
     try:
-        # Temporarily disable enhanced subscription manager to reduce errors
-        # from enhanced_subscription_manager import enhanced_subscription_manager
-        # subscription_state = enhanced_subscription_manager.get_user_subscription_state(user_id)
+        # First check for lifetime access in database
+        try:
+            db_paths = [
+                "users.db",
+                "../../data/users.db", 
+                "../users.db",
+                "data/users.db"
+            ]
+            
+            db_conn = None
+            for db_path in db_paths:
+                if os.path.exists(db_path):
+                    db_conn = sqlite3.connect(db_path)
+                    break
+            
+            if db_conn:
+                cursor = db_conn.cursor()
+                
+                # Check for lifetime access
+                cursor.execute("SELECT lifetime_access FROM users WHERE user_id = ?", (user_id,))
+                result = cursor.fetchone()
+                
+                if result and result[0] == 1:  # lifetime_access = 1
+                    db_conn.close()
+                    return {
+                        'has_active_subscription': True,
+                        'subscription_tier': 'lifetime',
+                        'status': 'active',
+                        'message': 'Lifetime Access',
+                        'action_required': False,
+                        'days_remaining': 999999,
+                        'show_warning': False,
+                        'is_lifetime': True
+                    }
+                
+                db_conn.close()
+        except Exception as e:
+            print(f"Error checking lifetime access: {e}")
+        
+        # Try enhanced subscription manager
+        try:
+            from enhanced_subscription_manager import enhanced_subscription_manager
+            subscription_state = enhanced_subscription_manager.get_user_subscription_state(user_id)
+            
+            return {
+                'has_active_subscription': subscription_state.get('can_trade', False),
+                'subscription_tier': subscription_state.get('tier', 'none'),
+                'status': subscription_state.get('status', 'inactive'),
+                'message': subscription_state.get('message', ''),
+                'action_required': subscription_state.get('action_required', ''),
+                'days_remaining': subscription_state.get('days_remaining'),
+                'show_warning': subscription_state.get('show_expiry_warning', False) or subscription_state.get('show_upgrade_warning', False),
+                'is_lifetime': subscription_state.get('is_lifetime', False)
+            }
+        except ImportError:
+            print("⚠️ Enhanced subscription manager not available")
         
         # Simple fallback - no subscription for new users
         subscription_state = {
@@ -797,6 +850,43 @@ def login_page():
             }, 5000);
         }
         
+        function showVerificationError(errorText, email) {
+            const message = document.getElementById('message');
+            message.innerHTML = `
+                <div style="margin-bottom: 15px;">${errorText}</div>
+                <button onclick="resendVerificationEmail('${email}')" class="btn" style="background: #48bb78; margin-right: 10px;">
+                    📧 Resend Verification Email
+                </button>
+                <button onclick="location.reload()" class="btn" style="background: #718096;">
+                    🔄 Try Different Email
+                </button>
+            `;
+            message.className = 'message error';
+            message.style.display = 'block';
+        }
+        
+        async function resendVerificationEmail(email) {
+            try {
+                showMessage('📧 Sending verification email...', 'info');
+                
+                const response = await fetch('/api/resend-verification', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage('📧 Verification email sent! Please check your inbox.', 'success');
+                } else {
+                    showMessage(`❌ Failed to resend: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`❌ Connection error: ${error.message}`, 'error');
+            }
+        }
+        
         // Handle Login
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -819,7 +909,12 @@ def login_page():
                         window.location.href = '/dashboard';
                     }, 1500);
                 } else {
-                    showMessage(`❌ Login failed: ${data.error}`, 'error');
+                    if (data.verification_required) {
+                        // Show verification error with resend button
+                        showVerificationError(data.error, email);
+                    } else {
+                        showMessage(`❌ Login failed: ${data.error}`, 'error');
+                    }
                 }
             } catch (error) {
                 showMessage(`❌ Connection error: ${error.message}`, 'error');
@@ -910,13 +1005,9 @@ def login_page():
 def api_login():
     """Handle user login - authenticate against database"""
     try:
-        print("🔍 FIXED LOGIN FUNCTION v2.0 - Starting login process...")
-        
         data = request.get_json()
         email = data.get('email', '')
         password = data.get('password', '')
-        
-        print(f"📧 Login attempt for: {email}")
         
         if not email or not password:
             return jsonify({
@@ -961,8 +1052,6 @@ def api_login():
                         # Update last login
                         cursor.execute("UPDATE users SET last_login = datetime('now') WHERE user_id = ?", (user_id,))
                         db_conn.commit()
-                        
-                        print(f"✅ User authenticated: {email}")
                 
                 db_conn.close()
                 
@@ -980,8 +1069,6 @@ def api_login():
             session.permanent = True  # Make session persistent
             session['trading_mode'] = 'LIVE'  # Force LIVE mode
             
-            print(f"🔐 User logged in: {email}, ID: {user_id}")
-            
             return jsonify({
                 'success': True,
                 'message': 'Login successful',
@@ -997,14 +1084,12 @@ def api_login():
             try:
                 from email_service import email_service
                 if email_service.is_email_pending_verification(email):
-                    print(f"📋 Email pending verification: {email}")
                     return jsonify({
                         'success': False,
                         'error': 'Email not verified. Please check your inbox and click the verification link to complete registration.',
                         'verification_required': True
                     })
                 else:
-                    print(f"❌ Invalid credentials for: {email}")
                     return jsonify({
                         'success': False,
                         'error': 'Invalid email or password. Please check your credentials or sign up if you don\'t have an account.'
@@ -1039,7 +1124,6 @@ def api_resend_verification():
     
     try:
         # Import email service
-        print(f"🔍 DEBUG: Resend verification requested for: {email}")
         from email_service import email_service
         
         # Check if email is already verified
