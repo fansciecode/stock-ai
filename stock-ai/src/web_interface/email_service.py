@@ -26,13 +26,164 @@ class EmailService:
     def __init__(self):
         self.smtp_server = "smtp.gmail.com"
         self.smtp_port = 587
-        self.sender_email = os.getenv('SMTP_EMAIL', 'your-platform@gmail.com')
+        self.sender_email = os.getenv('SMTP_EMAIL', 'ai.trader.pro.platform@gmail.com')
         self.sender_password = os.getenv('SMTP_PASSWORD', '')  # App password
         self.platform_name = "AI Trader Pro"
         self.platform_url = "http://localhost:8000"
         
+        # Try to set up real email credentials
+        self._setup_email_credentials()
+        
         # Initialize verification database
         self.setup_verification_db()
+    
+    def _setup_email_credentials(self):
+        """Try to set up real email credentials from environment or use defaults"""
+        # Try different environment variable names
+        possible_passwords = [
+            os.getenv('SMTP_PASSWORD'),
+            os.getenv('GMAIL_APP_PASSWORD'),
+            os.getenv('EMAIL_PASSWORD'),
+            os.getenv('GMAIL_PASSWORD')
+        ]
+        
+        for password in possible_passwords:
+            if password:
+                self.sender_password = password
+                print(f"✅ Found email credentials for: {self.sender_email}")
+                return
+        
+        print(f"⚠️ No email credentials found - will use console mode")
+        print(f"💡 To enable real emails, set SMTP_PASSWORD environment variable")
+        self.sender_password = None
+    
+    def _send_real_email(self, recipient_email, token, user_name=None, email_type='verification'):
+        """Send actual email using SMTP"""
+        try:
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+            
+            # Create message
+            msg = MIMEMultipart('alternative')
+            msg['From'] = self.sender_email
+            msg['To'] = recipient_email
+            
+            if email_type == 'verification':
+                msg['Subject'] = f"Verify Your {self.platform_name} Account"
+                
+                # Create verification link
+                verification_link = f"{self.platform_url}/verify-email?token={token}"
+                
+                # HTML email content
+                html_content = f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                        .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+                        .content {{ background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }}
+                        .button {{ display: inline-block; background: #4299e1; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
+                        .footer {{ text-align: center; margin-top: 30px; color: #666; font-size: 12px; }}
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>🤖 {self.platform_name}</h1>
+                            <h2>Email Verification Required</h2>
+                        </div>
+                        <div class="content">
+                            <p>Hello {user_name or 'Trader'},</p>
+                            
+                            <p>Welcome to {self.platform_name}! 🎉</p>
+                            
+                            <p>To complete your registration and start AI-powered trading, please verify your email by clicking the button below:</p>
+                            
+                            <div style="text-align: center;">
+                                <a href="{verification_link}" class="button">✅ Verify My Email</a>
+                            </div>
+                            
+                            <p>Or copy and paste this link into your browser:</p>
+                            <p style="word-break: break-all; background: #eee; padding: 10px; border-radius: 5px;">{verification_link}</p>
+                            
+                            <p><strong>⏰ This link expires in 24 hours.</strong></p>
+                            
+                            <p>🛡️ If you didn't create this account, please ignore this email.</p>
+                            
+                            <h3>What's next after verification?</h3>
+                            <ul>
+                                <li>✅ Complete your onboarding process</li>
+                                <li>🔑 Add your exchange API keys securely</li>
+                                <li>📊 Choose your subscription plan</li>
+                                <li>🚀 Start AI-powered trading</li>
+                            </ul>
+                            
+                            <p>Best regards,<br>The {self.platform_name} Team</p>
+                        </div>
+                        <div class="footer">
+                            <p>This email was sent to {recipient_email}</p>
+                            <p>{self.platform_name} - AI-Powered Trading Platform</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """
+                
+                # Plain text version
+                text_content = f"""
+                Welcome to {self.platform_name}!
+                
+                To complete your registration, please verify your email by clicking this link:
+                {verification_link}
+                
+                This link expires in 24 hours.
+                
+                If you didn't create this account, please ignore this email.
+                
+                Best regards,
+                The {self.platform_name} Team
+                """
+                
+            elif email_type == 'welcome':
+                msg['Subject'] = f"Welcome to {self.platform_name}!"
+                html_content = f"""
+                <h1>Welcome to {self.platform_name}!</h1>
+                <p>Your email has been verified successfully.</p>
+                <p>You can now login and start trading: <a href="{self.platform_url}/login">Login Here</a></p>
+                """
+                text_content = f"Welcome to {self.platform_name}! Your email has been verified. Login at: {self.platform_url}/login"
+            
+            # Attach parts
+            msg.attach(MIMEText(text_content, 'plain'))
+            msg.attach(MIMEText(html_content, 'html'))
+            
+            # Send email
+            print(f"🔗 Connecting to SMTP server: {self.smtp_server}:{self.smtp_port}")
+            server = smtplib.SMTP(self.smtp_server, self.smtp_port)
+            server.starttls()
+            server.login(self.sender_email, self.sender_password)
+            
+            text = msg.as_string()
+            server.sendmail(self.sender_email, recipient_email, text)
+            server.quit()
+            
+            print(f"✅ Real email sent successfully to: {recipient_email}")
+            return True, f"Email sent to {recipient_email}"
+            
+        except Exception as e:
+            print(f"❌ Failed to send real email: {e}")
+            print(f"🔄 Falling back to console mode...")
+            
+            # Fallback to console mode
+            if email_type == 'verification':
+                from simple_email_service import send_console_verification_email
+                return send_console_verification_email(recipient_email, token, user_name)
+            else:
+                from simple_email_service import send_console_welcome_email
+                return send_console_welcome_email(recipient_email, user_name)
     
     def setup_verification_db(self):
         """Setup email verification database"""
@@ -190,6 +341,10 @@ class EmailService:
                 result = send_console_verification_email(email, token, user_name)
                 print(f"🔍 DEBUG: Console email result: {result}")
                 return result
+            
+            # Try to send real email
+            print(f"📧 Attempting to send real email to: {email}")
+            return self._send_real_email(email, token, user_name, email_type='verification')
             
             # Create verification link
             verification_link = f"{self.platform_url}/verify-email?token={token}"
@@ -386,7 +541,13 @@ class EmailService:
         """Send welcome email after successful verification"""
         try:
             if not self.sender_password:
-                return True, "Demo mode: Welcome email sent"
+                print("⚠️ SMTP password not configured - using console mode for welcome email")
+                from simple_email_service import send_console_welcome_email
+                return send_console_welcome_email(email, user_name)
+            
+            # Send real welcome email
+            print(f"📧 Sending real welcome email to: {email}")
+            return self._send_real_email(email, None, user_name, email_type='welcome')
             
             subject = f"Welcome to {self.platform_name}! 🚀"
             

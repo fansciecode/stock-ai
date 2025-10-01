@@ -853,8 +853,9 @@ def login_page():
                                 <p>We've sent a verification email to:</p>
                                 <strong>${data.email}</strong>
                                 <p>Please check your inbox and click the verification link to complete your registration.</p>
-                                <p><small>Didn't receive the email? Check your spam folder or try again in a few minutes.</small></p>
-                                <button onclick="location.reload()" class="btn" style="margin-top: 20px;">Try Again</button>
+                                <p><small>Didn't receive the email? Check your spam folder.</small></p>
+                                <button onclick="resendVerificationEmail('${data.email}')" class="btn" style="margin-top: 20px; background: #48bb78;">📧 Resend Email</button>
+                                <button onclick="location.reload()" class="btn" style="margin-top: 20px; background: #718096;">🔄 Try Different Email</button>
                             </div>
                         `;
                     } else {
@@ -870,6 +871,27 @@ def login_page():
                 showMessage(`❌ Connection error: ${error.message}`, 'error');
             }
         });
+        
+        // Resend verification email function
+        async function resendVerificationEmail(email) {
+            try {
+                const response = await fetch('/api/resend-verification', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage('📧 Verification email resent! Please check your inbox.', 'success');
+                } else {
+                    showMessage(`❌ Failed to resend: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`❌ Connection error: ${error.message}`, 'error');
+            }
+        }
     </script>
 
     <script>
@@ -995,7 +1017,71 @@ def api_login():
             'error': 'Email and password are required'
         }
         
-    return jsonify(response)
+        return jsonify(response)
+
+@app.route('/api/resend-verification', methods=['POST'])
+def api_resend_verification():
+    """Resend verification email to user"""
+    data = request.get_json()
+    email = data.get('email', '')
+    
+    if not email:
+        return jsonify({
+            'success': False,
+            'error': 'Email is required'
+        })
+    
+    try:
+        # Import email service
+        print(f"🔍 DEBUG: Resend verification requested for: {email}")
+        from email_service import email_service
+        
+        # Check if email is already verified
+        if email_service.is_email_verified(email):
+            return jsonify({
+                'success': False,
+                'error': 'Email is already verified. Please login instead.'
+            })
+        
+        # Check if there's a pending verification
+        if not email_service.is_email_pending_verification(email):
+            return jsonify({
+                'success': False,
+                'error': 'No pending verification found for this email. Please sign up first.'
+            })
+        
+        # Check rate limiting (max 3 resends per hour)
+        if not email_service.check_rate_limit(email, request.remote_addr, 'resend'):
+            return jsonify({
+                'success': False,
+                'error': 'Too many resend attempts. Please wait before trying again.'
+            })
+        
+        # Generate new token and resend email
+        token = email_service.generate_verification_token(email)
+        success, message = email_service.send_verification_email(email, token)
+        
+        if success:
+            # Log the resend action
+            email_service.log_action(email, request.remote_addr, 'resend_verification')
+            
+            return jsonify({
+                'success': True,
+                'message': 'Verification email resent successfully! Please check your inbox.',
+                'email': email
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'Failed to send email: {message}'
+            })
+            
+    except Exception as e:
+        print(f"Error resending verification email: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to resend verification email. Please try again later.'
+        })
 
 @app.route('/api/signup', methods=['POST'])
 def api_signup():
