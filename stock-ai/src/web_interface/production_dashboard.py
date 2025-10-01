@@ -2069,6 +2069,60 @@ def trading_dashboard():
             }
         });
         
+        // Check for existing trading session on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            checkExistingTradingSession();
+        });
+        
+        function checkExistingTradingSession() {
+            console.log('🔄 Checking for existing trading session...');
+            
+            // Check server-side state via API
+            fetch('/api/check-trading-status')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('📊 Trading status check result:', data);
+                    
+                    if (data.success && data.is_active) {
+                        console.log('✅ Found active trading session - syncing UI');
+                        
+                        // Server says trading is active, sync UI to stop state
+                        updateButtonsToStopState();
+                        
+                        // Show activity section
+                        const activitySection = document.getElementById('activity-section');
+                        if (activitySection) {
+                            activitySection.style.display = 'block';
+                        }
+                        
+                        // Add status message
+                        addActivityEntry('🔄 Found active trading session in progress', 'success');
+                        addActivityEntry('🔴 LIVE trading mode active - monitoring for signals...', 'info');
+                        addActivityEntry('💰 Real money will be used for orders', 'warning');
+                        
+                        // Start activity polling to show live updates
+                        startActivityPolling();
+                        
+                        // Update localStorage
+                        localStorage.setItem('aiTradingActive', 'true');
+                        localStorage.setItem('aiTradingSessionId', data.session_id || 'unknown');
+                        
+                    } else {
+                        console.log('❌ No active trading session found');
+                        
+                        // Clean up localStorage if server says no active session
+                        localStorage.removeItem('aiTradingActive');
+                        localStorage.removeItem('aiTradingSessionId');
+                        
+                        // Ensure buttons are in start state
+                        updateButtonsToStartState();
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Trading status check failed:', error);
+                });
+        }
+        
         async function startAITrading() {
         // Check if continuous trading is already running
         try {
@@ -3107,32 +3161,33 @@ def start_ai_trading():
     try:
         
         # Check if trading engine is running
-        from fixed_continuous_trading_engine import FixedContinuousTradingEngine
-        engine = FixedContinuousTradingEngine()
+        from fixed_continuous_trading_engine import fixed_continuous_engine
+        engine = fixed_continuous_engine
         
-        # First, stop any existing sessions
+        # First, stop any existing sessions (both in-memory and database)
         try:
-            # Connect to the database
+            # Stop in-memory session first
+            if user_email in engine.active_sessions:
+                print(f"🛑 Stopping existing in-memory session for {user_email}")
+                stop_result = engine.stop_continuous_trading(user_email, 'NEW_SESSION_STARTING')
+                print(f"Stop result: {stop_result}")
+            
+            # Also clean up database
             conn = sqlite3.connect('data/fixed_continuous_trading.db')
             cursor = conn.cursor()
             
-            # Check if the user has any active sessions
-            cursor.execute("SELECT id FROM trading_sessions WHERE user_email=? AND is_active=1;", (user_email,))
-            active_session = cursor.fetchone()
-            
-            if active_session:
-                import sqlite3
-
-                # Mark the session as inactive
-                session_id = active_session[0]
-                cursor.execute(
-                    "UPDATE trading_sessions SET is_active=0, end_time=? WHERE id=?",
-                    (datetime.now().isoformat(), session_id)
-                )
-                conn.commit()
-                print(f"Stopped existing session {session_id} for {user_email}")
-            
+            # Mark any active sessions as inactive
+            cursor.execute(
+                "UPDATE trading_sessions SET is_active=0, end_time=? WHERE user_email=? AND is_active=1",
+                (datetime.now().isoformat(), user_email)
+            )
+            rows_updated = cursor.rowcount
+            conn.commit()
             conn.close()
+            
+            if rows_updated > 0:
+                print(f"✅ Cleaned up {rows_updated} database sessions for {user_email}")
+            
         except Exception as e:
             print(f"Error stopping existing session: {e}")
         
