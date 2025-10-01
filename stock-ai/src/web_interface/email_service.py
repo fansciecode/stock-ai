@@ -184,9 +184,12 @@ class EmailService:
         try:
             if not self.sender_password:
                 print("⚠️ SMTP password not configured - using console mode")
+                print(f"🔍 DEBUG: About to call console email for {email}")
                 # Use console mode for immediate testing
                 from simple_email_service import send_console_verification_email
-                return send_console_verification_email(email, token, user_name)
+                result = send_console_verification_email(email, token, user_name)
+                print(f"🔍 DEBUG: Console email result: {result}")
+                return result
             
             # Create verification link
             verification_link = f"{self.platform_url}/verify-email?token={token}"
@@ -356,6 +359,27 @@ class EmailService:
             
         except Exception as e:
             print(f"Error checking email verification: {e}")
+            return False
+    
+    def is_email_pending_verification(self, email):
+        """Check if email has a pending verification (not yet verified)"""
+        try:
+            conn = sqlite3.connect('data/email_verification.db')
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT email FROM email_verifications 
+                WHERE email = ? AND verified = FALSE AND expires_at > ?
+                ORDER BY created_at DESC LIMIT 1
+            """, (email, datetime.now().isoformat()))
+            
+            result = cursor.fetchone()
+            conn.close()
+            
+            return result is not None
+            
+        except Exception as e:
+            print(f"Error checking pending verification: {e}")
             return False
     
     def send_welcome_email(self, email, user_name=None):

@@ -969,14 +969,30 @@ def api_login():
                 }
             }
         else:
-            response = {
-                'success': False,
-                'message': 'Invalid email or password - user not found'
-            }
+            # Check if this email is pending verification
+            try:
+                from email_service import email_service
+                if email_service.is_email_pending_verification(email):
+                    response = {
+                        'success': False,
+                        'error': 'Email not verified. Please check your inbox and click the verification link to complete registration.',
+                        'verification_required': True
+                    }
+                else:
+                    response = {
+                        'success': False,
+                        'error': 'Invalid email or password. Please check your credentials or sign up if you don\'t have an account.'
+                    }
+            except Exception as e:
+                print(f"Error checking verification status: {e}")
+                response = {
+                    'success': False,
+                    'error': 'Invalid email or password. Please check your credentials or sign up if you don\'t have an account.'
+                }
     else:
         response = {
             'success': False,
-            'message': 'Email and password required'
+            'error': 'Email and password are required'
         }
         
     return jsonify(response)
@@ -1061,8 +1077,39 @@ def api_signup():
             db_conn.close()
             return jsonify({
                 'success': False,
-                'error': 'User with this email already exists'
+                'error': 'User with this email already exists. Please login or use a different email.'
             })
+        
+        # Check if email is already pending verification
+        if email_service.is_email_verified(email):
+            db_conn.close()
+            return jsonify({
+                'success': False,
+                'error': 'This email is already verified. Please login instead.'
+            })
+        
+        # Check if there's already a pending verification for this email
+        try:
+            import sqlite3 as verification_db
+            verification_conn = verification_db.connect('data/email_verification.db')
+            verification_cursor = verification_conn.cursor()
+            
+            verification_cursor.execute("""
+                SELECT email FROM email_verifications 
+                WHERE email = ? AND verified = FALSE AND expires_at > ?
+            """, (email, datetime.now().isoformat()))
+            
+            pending_verification = verification_cursor.fetchone()
+            verification_conn.close()
+            
+            if pending_verification:
+                return jsonify({
+                    'success': False,
+                    'error': 'Verification email already sent to this address. Please check your inbox or wait before requesting another.'
+                })
+                
+        except Exception as e:
+            print(f"Warning: Could not check pending verifications: {e}")
         
         db_conn.close()
         
