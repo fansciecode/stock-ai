@@ -273,6 +273,7 @@ def home():
     """Home page - redirect based on authentication"""
     if 'user_token' in session:
         dashboard.current_token = session['user_token']
+        # Dashboard will handle onboarding check
         return redirect(url_for('trading_dashboard'))
     else:
         return redirect(url_for('login_page'))
@@ -541,7 +542,7 @@ def login_page():
                 const data = await response.json();
                 
                 if (data.success) {
-                    showMessage('✅ Login successful! Redirecting to dashboard...', 'success');
+                    showMessage('✅ Login successful! Redirecting...', 'success');
                     setTimeout(() => {
                         window.location.href = '/dashboard';
                     }, 1500);
@@ -805,28 +806,33 @@ def trading_dashboard():
     
     print(f"🔍 Dashboard access - Token: {bool(user_token)}, Email: {user_email}, ID: {user_id}")
     
-    # If no session, provide demo access but log it
+    # If no session, redirect to login
     if not user_token and not user_email:
-        print("⚠️ No session found, providing demo access")
-        user_email = 'kirannaik@unitednewdigitalmedia.com'  # Use consistent demo email
-        user_token = 'demo_token'
-        user_id = 'demo_user'
-        # Set demo session
-        session['user_email'] = user_email
-        session['user_token'] = user_token
-        session['user_id'] = user_id
-        session.permanent = True
-        
-        # Ensure demo user exists in the database
+        print("⚠️ No session found, redirecting to login")
+        return redirect(url_for('login_page'))
+    
+    # CHECK IF NEW USER NEEDS ONBOARDING
+    # Skip onboarding check for demo user or if skip_onboarding parameter is present
+    skip_onboarding = request.args.get('skip_onboarding') == '1'
+    
+    if user_email != 'kirannaik@unitednewdigitalmedia.com' and not skip_onboarding:
         try:
-            import sys
-            sys.path.append('.')
-            from simple_api_key_manager import SimpleAPIKeyManager
-            api_manager = SimpleAPIKeyManager()
-            # Create demo user if needed (will do nothing if already exists)
-            api_manager.ensure_user_exists(user_email)
+            # Check if user has completed onboarding (has API keys OR subscription)
+            user_api_keys = get_user_api_keys_from_db(user_email)
+            subscription_check = check_user_subscription(user_id)
+            
+            has_api_keys = user_api_keys and len(user_api_keys) > 0
+            has_subscription = subscription_check.get('has_active_subscription', False)
+            
+            # If user has neither API keys nor subscription, redirect to onboarding
+            if not has_api_keys and not has_subscription:
+                print(f"🚀 New user detected: {user_email} - redirecting to onboarding")
+                return redirect(url_for('new_user_guide'))
+                
         except Exception as e:
-            print(f"⚠️ Could not ensure demo user exists: {e}")
+            print(f"⚠️ Error checking onboarding status: {e}")
+            # On error, redirect to onboarding to be safe
+            return redirect(url_for('new_user_guide'))
     
     print(f"✅ Dashboard loading for: {user_email}")
     
@@ -3922,7 +3928,8 @@ def new_user_guide():
             <a href="/subscription-guide" class="btn">📋 Subscription Guide</a>
             <a href="/logs-guide" class="btn">📊 How to Check Logs</a>
             <a href="/security-guide" class="btn">🔐 Security Features</a>
-            <a href="/dashboard" class="btn btn-success">🏠 Go to Dashboard</a>
+            <a href="/dashboard?skip_onboarding=1" class="btn btn-success">🏠 Go to Dashboard</a>
+            <a href="/dashboard?skip_onboarding=1" class="btn" style="background: #718096;">⏭️ Skip Setup (Advanced Users)</a>
         </div>
     </div>
     
