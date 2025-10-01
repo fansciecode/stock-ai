@@ -93,14 +93,14 @@ def check_user_subscription(user_id):
         # from enhanced_subscription_manager import enhanced_subscription_manager
         # subscription_state = enhanced_subscription_manager.get_user_subscription_state(user_id)
         
-        # Simple fallback for now
+        # Simple fallback - no subscription for new users
         subscription_state = {
-            'can_trade': True,
-            'tier': 'demo',
-            'status': 'active',
-            'message': 'Demo access',
-            'action_required': False,
-            'days_remaining': 999,
+            'can_trade': False,
+            'tier': 'none',
+            'status': 'inactive',
+            'message': 'No subscription',
+            'action_required': True,
+            'days_remaining': 0,
             'show_warning': False
         }
         
@@ -447,7 +447,7 @@ def home():
                 <div class="logo">🤖 AI Trader Pro</div>
                 <div class="nav-buttons">
                     <a href="/login" class="btn btn-outline">Login</a>
-                    <a href="/signup" class="btn btn-primary">Get Started</a>
+                    <a href="/login" class="btn btn-primary">Get Started</a>
                 </div>
             </nav>
         </div>
@@ -459,7 +459,7 @@ def home():
             <h1>AI-Powered Trading Revolution</h1>
             <p>Generate consistent profits with our advanced AI trading algorithms. Connect multiple exchanges, automate your trades, and watch your portfolio grow 24/7.</p>
             <div class="cta-buttons">
-                <a href="/signup" class="btn btn-primary btn-large">🚀 Start Trading Now</a>
+                <a href="/login" class="btn btn-primary btn-large">🚀 Start Trading Now</a>
                 <a href="#features" class="btn btn-outline btn-large">📊 Learn More</a>
             </div>
         </div>
