@@ -3172,8 +3172,8 @@ def start_ai_trading():
         user_email = session.get('user_email')
         
         # Check if trading engine is running
-        from fixed_continuous_trading_engine import FixedContinuousTradingEngine
-        engine = FixedContinuousTradingEngine()
+        from fixed_continuous_trading_engine import fixed_continuous_engine
+        engine = fixed_continuous_engine
         
         # First, stop any existing sessions
         try:
@@ -3276,8 +3276,8 @@ def check_trading_status():
         if not user_email:
             return jsonify({'success': False, 'is_active': False, 'error': 'No user email'})
         
-        from fixed_continuous_trading_engine import FixedContinuousTradingEngine
-        engine = FixedContinuousTradingEngine()
+        from fixed_continuous_trading_engine import fixed_continuous_engine
+        engine = fixed_continuous_engine
         
         is_active = user_email in engine.active_sessions
         session_data = engine.active_sessions.get(user_email, {}) if is_active else {}
@@ -3536,8 +3536,8 @@ def get_trading_activity():
         if not activity_logs:
             # Check if user has an active trading session
             try:
-                from fixed_continuous_trading_engine import FixedContinuousTradingEngine
-                engine = FixedContinuousTradingEngine()
+                from fixed_continuous_trading_engine import fixed_continuous_engine
+                engine = fixed_continuous_engine
                 user_email = session.get('user_email')
                 
                 if user_email and user_email in engine.active_sessions:
