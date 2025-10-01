@@ -909,15 +909,16 @@ def login_page():
 @app.route('/api/login', methods=['POST'])
 def api_login():
     """Handle user login - authenticate against database"""
-    data = request.get_json()
-    email = data.get('email', '')
-    password = data.get('password', '')
-    
-    if email and password:
-        user_id = None
-        user_found = False
+    try:
+        data = request.get_json()
+        email = data.get('email', '')
+        password = data.get('password', '')
         
-        try:
+        if email and password:
+            user_id = None
+            user_found = False
+            
+            try:
             # Check multiple possible locations for the users database
             db_paths = [
                 "users.db",  # Current directory (src/web_interface/)
@@ -955,6 +956,8 @@ def api_login():
             
         except Exception as e:
             print(f"⚠️ Error during authentication: {e}")
+            import traceback
+            traceback.print_exc()
         
         if user_found:
             # Generate session data
@@ -1006,7 +1009,9 @@ def api_login():
                         'error': 'Invalid email or password. Please check your credentials or sign up if you don\'t have an account.'
                     }
             except Exception as e:
-                print(f"Error checking verification status: {e}")
+                print(f"❌ LOGIN ERROR - Error checking verification status: {e}")
+                import traceback
+                traceback.print_exc()
                 response = {
                     'success': False,
                     'error': 'Invalid email or password. Please check your credentials or sign up if you don\'t have an account.'
@@ -1018,6 +1023,15 @@ def api_login():
         }
         
         return jsonify(response)
+        
+    except Exception as e:
+        print(f"❌ CRITICAL LOGIN ERROR: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': 'Login system error. Please try again later.'
+        })
 
 @app.route('/api/resend-verification', methods=['POST'])
 def api_resend_verification():
@@ -1051,7 +1065,8 @@ def api_resend_verification():
             })
         
         # Check rate limiting (max 3 resends per hour)
-        if not email_service.check_rate_limit(email, request.remote_addr, 'resend'):
+        can_resend, rate_message = email_service.check_rate_limit(email, 'resend', request.remote_addr)
+        if not can_resend:
             return jsonify({
                 'success': False,
                 'error': 'Too many resend attempts. Please wait before trying again.'
@@ -1063,7 +1078,7 @@ def api_resend_verification():
         
         if success:
             # Log the resend action
-            email_service.log_action(email, request.remote_addr, 'resend_verification')
+            email_service.log_action(email, 'resend', request.remote_addr)
             
             return jsonify({
                 'success': True,
@@ -1077,10 +1092,12 @@ def api_resend_verification():
             })
             
     except Exception as e:
-        print(f"Error resending verification email: {e}")
+        print(f"❌ RESEND ERROR: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
-            'error': 'Failed to resend verification email. Please try again later.'
+            'error': f'Failed to resend verification email: {str(e)}'
         })
 
 @app.route('/api/signup', methods=['POST'])

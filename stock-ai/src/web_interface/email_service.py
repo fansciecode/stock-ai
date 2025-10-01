@@ -264,6 +264,7 @@ class EmailService:
             limits = {
                 'signup': 3,        # 3 signup attempts per day
                 'verification': 5,  # 5 verification emails per day
+                'resend': 3,        # 3 resend attempts per day
                 'login': 10         # 10 login attempts per day
             }
             
