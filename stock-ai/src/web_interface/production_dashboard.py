@@ -2352,6 +2352,10 @@ def trading_dashboard():
         }
 
         async function stopAITrading() {
+            // DEBUG: Log when stop is called
+            console.log('🚨 stopAITrading() called at:', new Date().toLocaleTimeString());
+            console.trace('🔍 Call stack for stopAITrading');
+            
             if (confirm('🛑 Stop Continuous AI Trading?\\n\\nThis will close all active positions and end the trading session.\\n\\nContinue?')) {
                 try {
                     const response = await fetch('/api/stop-ai-trading', { method: 'POST' });
