@@ -193,20 +193,6 @@ def get_user_by_token(token):
         print(f"Error getting user by token: {e}")
         return None
 
-@app.route('/')
-def index():
-    # Restore session state
-    if 'user_token' not in session and request.cookies.get('remember_token'):
-        token = request.cookies.get('remember_token')
-        user = get_user_by_token(token)
-        if user:
-            session['user_token'] = token
-            session['user_id'] = user['id']
-            session['user_email'] = user['email']
-            session['trading_mode'] = 'LIVE'  # Always force LIVE mode
-    
-    """Redirect root to dashboard"""
-    return redirect(url_for('trading_dashboard'))
 
 class ProductionDashboard:
     """Production dashboard with real user journey"""
@@ -270,13 +256,288 @@ def get_user_by_token(token):
 
 @app.route('/')
 def home():
-    """Home page - redirect based on authentication"""
+    """Home page with proper landing page"""
+    # If user is logged in, redirect to dashboard
     if 'user_token' in session:
         dashboard.current_token = session['user_token']
         # Dashboard will handle onboarding check
         return redirect(url_for('trading_dashboard'))
-    else:
-        return redirect(url_for('login_page'))
+    
+    # Show landing page for non-authenticated users
+    return render_template_string("""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Trading Platform - Automated Profit Generation</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        
+        /* Header */
+        .header { 
+            padding: 20px 0; 
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+        }
+        .nav { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        .logo { 
+            font-size: 28px; 
+            font-weight: bold; 
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .nav-buttons { display: flex; gap: 15px; }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid white;
+            color: white;
+        }
+        .btn-outline:hover {
+            background: white;
+            color: #667eea;
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            color: #333;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(255,215,0,0.3);
+        }
+        
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 80px 0;
+        }
+        .hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 40px;
+            opacity: 0.9;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .cta-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn-large {
+            padding: 18px 36px;
+            font-size: 1.1rem;
+        }
+        
+        /* Stats Section */
+        .stats {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 60px 0;
+            margin: 60px 0;
+            border-radius: 20px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            text-align: center;
+        }
+        .stat-item h3 {
+            font-size: 2.5rem;
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+        .stat-item p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        /* Features */
+        .features {
+            padding: 60px 0;
+        }
+        .features h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 50px;
+        }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+        .feature-card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: #ffd700;
+        }
+        
+        /* Footer */
+        .footer {
+            background: rgba(0,0,0,0.3);
+            padding: 40px 0;
+            text-align: center;
+            margin-top: 80px;
+        }
+        
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2.5rem; }
+            .cta-buttons { flex-direction: column; align-items: center; }
+            .nav { flex-direction: column; gap: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <nav class="nav">
+                <div class="logo">🤖 AI Trader Pro</div>
+                <div class="nav-buttons">
+                    <a href="/login" class="btn btn-outline">Login</a>
+                    <a href="/signup" class="btn btn-primary">Get Started</a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>AI-Powered Trading Revolution</h1>
+            <p>Generate consistent profits with our advanced AI trading algorithms. Connect multiple exchanges, automate your trades, and watch your portfolio grow 24/7.</p>
+            <div class="cta-buttons">
+                <a href="/signup" class="btn btn-primary btn-large">🚀 Start Trading Now</a>
+                <a href="#features" class="btn btn-outline btn-large">📊 Learn More</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <h3>142+</h3>
+                    <p>Trading Instruments</p>
+                </div>
+                <div class="stat-item">
+                    <h3>9</h3>
+                    <p>Major Exchanges</p>
+                </div>
+                <div class="stat-item">
+                    <h3>24/7</h3>
+                    <p>AI Monitoring</p>
+                </div>
+                <div class="stat-item">
+                    <h3>85%+</h3>
+                    <p>Success Rate</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <h2>Why Choose AI Trader Pro?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🧠</div>
+                    <h3>Advanced AI Algorithms</h3>
+                    <p>Machine learning models trained on years of market data to identify profitable opportunities across multiple timeframes.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Bank-Level Security</h3>
+                    <p>Your API keys are encrypted with military-grade security. We never store your passwords or private keys.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🌐</div>
+                    <h3>Multi-Exchange Support</h3>
+                    <p>Trade on Binance, Zerodha, and other major exchanges simultaneously for maximum diversification.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📈</div>
+                    <h3>Real-Time Analytics</h3>
+                    <p>Monitor your portfolio performance, trading signals, and profit/loss in real-time with our advanced dashboard.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Lightning Fast Execution</h3>
+                    <p>Millisecond-level order execution ensures you never miss profitable opportunities in volatile markets.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🛡️</div>
+                    <h3>Risk Management</h3>
+                    <p>Built-in stop-loss, take-profit, and position sizing to protect your capital and maximize returns.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 AI Trader Pro. All rights reserved. | <a href="/terms" style="color: #ffd700;">Terms</a> | <a href="/privacy" style="color: #ffd700;">Privacy</a></p>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+    """)
 
 @app.route('/login')
 def login_page():
@@ -3893,7 +4154,7 @@ def new_user_guide():
                 </ul>
                 
                 <a href="/api-key-guide" class="btn">🔑 API Key Setup Guide</a>
-                <a href="/dashboard#add-api-keys" class="btn btn-success">➕ Add API Keys</a>
+                <a href="/manage-api-keys" class="btn btn-success">➕ Add API Keys</a>
             </div>
             
             <!-- Step 3: System Check -->
@@ -4839,6 +5100,298 @@ Key never stored in plain text anywhere
 </html>
     """)
 
+@app.route('/manage-api-keys')
+def manage_api_keys():
+    """API Key Management Page"""
+    # Check if user is logged in
+    if 'user_token' not in session:
+        return redirect(url_for('login_page'))
+    
+    user_email = session.get('user_email')
+    if not user_email:
+        return redirect(url_for('login_page'))
+    
+    return render_template_string("""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage API Keys - AI Trader Pro</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+            padding: 20px;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+        }
+        h1 { 
+            text-align: center; 
+            margin-bottom: 30px;
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .api-key-form {
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #ffd700;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+            font-size: 16px;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            color: #333;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255,215,0,0.3);
+        }
+        .btn-danger {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            color: white;
+        }
+        .existing-keys {
+            margin-top: 30px;
+        }
+        .key-item {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .key-info {
+            flex: 1;
+        }
+        .key-exchange {
+            font-weight: bold;
+            color: #ffd700;
+            margin-bottom: 5px;
+        }
+        .key-masked {
+            font-family: monospace;
+            opacity: 0.7;
+        }
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .success { background: rgba(76, 175, 80, 0.3); }
+        .error { background: rgba(244, 67, 54, 0.3); }
+        .security-info {
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 30px;
+        }
+        .security-info h3 {
+            color: #ffd700;
+            margin-bottom: 15px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #ffd700;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/dashboard" class="back-link">← Back to Dashboard</a>
+        
+        <h1>🔑 Manage API Keys</h1>
+        
+        <div id="message-container"></div>
+        
+        <!-- Add New API Key Form -->
+        <div class="api-key-form">
+            <h2>Add New Exchange API Key</h2>
+            <form id="addApiKeyForm">
+                <div class="form-group">
+                    <label for="exchange">Exchange</label>
+                    <select id="exchange" name="exchange" required>
+                        <option value="">Select Exchange</option>
+                        <option value="binance">Binance</option>
+                        <option value="zerodha">Zerodha</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="api_key">API Key</label>
+                    <input type="text" id="api_key" name="api_key" placeholder="Enter your API key" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="api_secret">API Secret</label>
+                    <input type="password" id="api_secret" name="api_secret" placeholder="Enter your API secret" required>
+                </div>
+                
+                <button type="submit" class="btn">🔐 Add API Key</button>
+            </form>
+        </div>
+        
+        <!-- Existing API Keys -->
+        <div class="existing-keys">
+            <h2>Your API Keys</h2>
+            <div id="api-keys-list">
+                <p>Loading...</p>
+            </div>
+        </div>
+        
+        <!-- Security Information -->
+        <div class="security-info">
+            <h3>🛡️ Security Information</h3>
+            <ul>
+                <li>All API keys are encrypted with AES-256 encryption</li>
+                <li>Keys are stored securely and never transmitted in plain text</li>
+                <li>Only trading permissions are required - never enable withdrawal permissions</li>
+                <li>You can delete keys at any time</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Load existing API keys
+        function loadApiKeys() {
+            fetch('/api/user-api-keys')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('api-keys-list');
+                    if (data.success && data.api_keys && data.api_keys.length > 0) {
+                        container.innerHTML = data.api_keys.map(key => `
+                            <div class="key-item">
+                                <div class="key-info">
+                                    <div class="key-exchange">${key.exchange.toUpperCase()}</div>
+                                    <div class="key-masked">Key: ${key.api_key.substring(0, 8)}...${key.api_key.substring(key.api_key.length - 4)}</div>
+                                </div>
+                                <button class="btn btn-danger" onclick="deleteApiKey('${key.exchange}')">Delete</button>
+                            </div>
+                        `).join('');
+                    } else {
+                        container.innerHTML = '<p>No API keys added yet. Add your first exchange API key above.</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading API keys:', error);
+                    document.getElementById('api-keys-list').innerHTML = '<p>Error loading API keys.</p>';
+                });
+        }
+        
+        // Add new API key
+        document.getElementById('addApiKeyForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                exchange: document.getElementById('exchange').value,
+                api_key: document.getElementById('api_key').value,
+                api_secret: document.getElementById('api_secret').value
+            };
+            
+            fetch('/api/add-api-key', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                showMessage(data.message, data.success ? 'success' : 'error');
+                if (data.success) {
+                    document.getElementById('addApiKeyForm').reset();
+                    loadApiKeys();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showMessage('Error adding API key', 'error');
+            });
+        });
+        
+        // Delete API key
+        function deleteApiKey(exchange) {
+            if (confirm(`Are you sure you want to delete the ${exchange.toUpperCase()} API key?`)) {
+                fetch('/api/delete-api-key', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({exchange: exchange})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    showMessage(data.message, data.success ? 'success' : 'error');
+                    if (data.success) {
+                        loadApiKeys();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showMessage('Error deleting API key', 'error');
+                });
+            }
+        }
+        
+        // Show message
+        function showMessage(message, type) {
+            const container = document.getElementById('message-container');
+            container.innerHTML = `<div class="message ${type}">${message}</div>`;
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+        
+        // Load API keys on page load
+        loadApiKeys();
+    </script>
+</body>
+</html>
+    """)
+
 @app.route('/api-key-guide')
 def api_key_guide():
     """API Key Setup Guide"""
@@ -5023,7 +5576,7 @@ def api_key_guide():
         
         <div style="text-align: center; margin-top: 40px;">
             <a href="/dashboard" class="btn">🏠 Back to Dashboard</a>
-            <a href="/dashboard#add-api-keys" class="btn">🔑 Add API Keys Now</a>
+            <a href="/manage-api-keys" class="btn">🔑 Add API Keys Now</a>
         </div>
     </div>
 </body>
