@@ -951,26 +951,46 @@ class FixedContinuousTradingEngine:
                     positions_count = len(session_data['positions'])
                     total_pnl = sum(position.get('profit_loss', 0) for position in session_data['positions'])
                     
-                    # Only log every 5th loop (every 10 minutes with 2min intervals) to reduce spam
-                    if loop_count % 5 == 0:
-                        self.logger.info(f"🔄 {datetime.now().strftime('%H:%M:%S')}: Active Positions: {positions_count}, P&L: ${total_pnl:.2f}")
+                    # Log every loop for debugging (temporarily)
+                    self.logger.info(f"🔄 Loop {loop_count}: {datetime.now().strftime('%H:%M:%S')}: Active Positions: {positions_count}, P&L: ${total_pnl:.2f}")
                     
                     # Update positions with current prices
-                    self._update_positions(user_email)
+                    try:
+                        self._update_positions(user_email)
+                        self.logger.debug(f"✅ Updated positions for {user_email}")
+                    except Exception as e:
+                        self.logger.error(f"❌ Error updating positions: {e}")
+                        # Continue despite error
                     
                     # Check for exit signals
-                    self._check_exit_signals(user_email)
+                    try:
+                        self._check_exit_signals(user_email)
+                        self.logger.debug(f"✅ Checked exit signals for {user_email}")
+                    except Exception as e:
+                        self.logger.error(f"❌ Error checking exit signals: {e}")
+                        # Continue despite error
                     
                     # Check for new entry signals
-                    self._check_entry_signals(user_email)
+                    try:
+                        self._check_entry_signals(user_email)
+                        self.logger.debug(f"✅ Checked entry signals for {user_email}")
+                    except Exception as e:
+                        self.logger.error(f"❌ Error checking entry signals: {e}")
+                        # Continue despite error
                     
                     # Apply risk management - CHECK FOR AUTO-STOP CONDITIONS
-                    stop_reason = self._apply_risk_management(user_email)
-                    if stop_reason:
-                        self.logger.warning(f"🛑 Auto-stopping trading for {user_email}: {stop_reason}")
-                        # Properly stop the session
-                        self.stop_continuous_trading(user_email, stop_reason)
-                        break  # Exit the monitoring loop
+                    try:
+                        stop_reason = self._apply_risk_management(user_email)
+                        if stop_reason:
+                            self.logger.warning(f"🛑 Auto-stopping trading for {user_email}: {stop_reason}")
+                            # Properly stop the session
+                            self.stop_continuous_trading(user_email, stop_reason)
+                            break  # Exit the monitoring loop
+                        else:
+                            self.logger.debug(f"✅ Risk management passed for {user_email}")
+                    except Exception as e:
+                        self.logger.error(f"❌ Error in risk management: {e}")
+                        # Continue despite error
                     
                 except Exception as e:
                     self.logger.error(f"Error in monitoring loop: {e}")
