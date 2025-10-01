@@ -459,7 +459,7 @@ def home():
             <h1>AI-Powered Trading Revolution</h1>
             <p>Generate consistent profits with our advanced AI trading algorithms. Connect multiple exchanges, automate your trades, and watch your portfolio grow 24/7.</p>
             <div class="cta-buttons">
-                <a href="/login" class="btn btn-primary btn-large">🚀 Start Trading Now</a>
+                <a href="/login" class="btn btn-primary btn-large">🚀 Start Trading Now (FIXED)</a>
                 <a href="#features" class="btn btn-outline btn-large">📊 Learn More</a>
             </div>
         </div>
