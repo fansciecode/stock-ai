@@ -826,10 +826,10 @@ def trading_dashboard():
         return redirect(url_for('login_page'))
     
     # CHECK IF NEW USER NEEDS ONBOARDING
-    # Skip onboarding check for demo user or if skip_onboarding parameter is present
+    # Skip onboarding only if skip_onboarding parameter is present
     skip_onboarding = request.args.get('skip_onboarding') == '1'
     
-    if user_email != 'kirannaik@unitednewdigitalmedia.com' and not skip_onboarding:
+    if not skip_onboarding:
         try:
             # Check if user has completed onboarding (has API keys OR subscription)
             user_api_keys = get_user_api_keys_from_db(user_email)
