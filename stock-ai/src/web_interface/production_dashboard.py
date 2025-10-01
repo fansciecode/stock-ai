@@ -796,6 +796,20 @@ def api_signup():
             'error': f'Signup failed: {str(e)}'
         })
 
+@app.route('/logout', methods=['GET', 'POST'])
+def logout():
+    """Handle user logout"""
+    # Clear all session data
+    session.clear()
+    
+    # Clear dashboard token
+    dashboard.current_token = None
+    
+    print("🔓 User logged out successfully")
+    
+    # Redirect to login page
+    return redirect(url_for('login_page'))
+
 @app.route('/dashboard')
 def trading_dashboard():
     """Main trading dashboard with forgiving authentication"""
@@ -2194,7 +2208,9 @@ def add_api_key():
     try:
         data = request.get_json()
         
-        user_email = session.get('user_email', 'kirannaik@unitednewdigitalmedia.com')
+        user_email = session.get('user_email')
+        if not user_email:
+            return jsonify({'success': False, 'error': 'User not logged in', 'redirect': '/login'})
         if not user_email:
             return jsonify({'success': False, 'error': 'User email not found'})
         
@@ -2287,7 +2303,9 @@ def delete_api_key():
         if not data or 'key_id' not in data:
             return jsonify({'success': False, 'error': 'key_id is required'})
         
-        user_email = session.get('user_email', 'kirannaik@unitednewdigitalmedia.com')
+        user_email = session.get('user_email')
+        if not user_email:
+            return jsonify({'success': False, 'error': 'User not logged in', 'redirect': '/login'})
         key_id = data['key_id']
         
         # Delete the API key
@@ -2317,7 +2335,9 @@ def delete_api_key():
 def get_user_api_keys():
     """Get current user API keys"""
     try:
-        user_email = session.get('user_email', 'kirannaik@unitednewdigitalmedia.com')
+        user_email = session.get('user_email')
+        if not user_email:
+            return jsonify({'success': False, 'error': 'User not logged in', 'redirect': '/login'})
         
         keys = get_user_api_keys_from_db(user_email)
         return jsonify({
@@ -2507,12 +2527,12 @@ def stop_ai_trading():
     """Stop AI trading for the user"""
     # Allow both authenticated and demo access
     if 'user_token' not in session:
-        print("⚠️ No user token for stop, proceeding with demo access")
+        return jsonify({'success': False, 'error': 'User not logged in', 'redirect': '/login'})
         
     try:
-        user_email = session.get('user_email', 'kirannaik@unitednewdigitalmedia.com')
+        user_email = session.get('user_email')
         if not user_email:
-            return jsonify({'success': False, 'error': 'User email not found'})
+            return jsonify({'success': False, 'error': 'User not logged in', 'redirect': '/login'})
             
         # Stop trading directly
         from fixed_continuous_trading_engine import fixed_continuous_engine
@@ -3080,7 +3100,9 @@ def get_trading_status():
         
     try:
         # Use direct import (simplified)
-        user_email = session.get('user_email', 'kirannaik@unitednewdigitalmedia.com')
+        user_email = session.get('user_email')
+        if not user_email:
+            return jsonify({'success': False, 'error': 'User not logged in', 'redirect': '/login'})
         try:
             from fixed_continuous_trading_engine import fixed_continuous_engine
             status = fixed_continuous_engine.get_trading_status(user_email)
@@ -3099,7 +3121,9 @@ def get_trading_status():
 def get_positions():
     """Get current trading positions with detailed data"""
     try:
-        user_email = session.get('user_email', 'kirannaik@unitednewdigitalmedia.com')
+        user_email = session.get('user_email')
+        if not user_email:
+            return jsonify({'success': False, 'error': 'User not logged in', 'redirect': '/login'})
         
         from fixed_continuous_trading_engine import fixed_continuous_engine
         
@@ -3157,7 +3181,9 @@ def get_positions():
 def get_binance_balance():
     """Get Binance account balance"""
     try:
-        user_email = session.get('user_email', 'kirannaik@unitednewdigitalmedia.com')
+        user_email = session.get('user_email')
+        if not user_email:
+            return jsonify({'success': False, 'error': 'User not logged in', 'redirect': '/login'})
         
         # Get Binance API keys
         import sys
@@ -5896,7 +5922,9 @@ def verify_payment():
 def get_zerodha_balance():
     """Get Zerodha account balance"""
     try:
-        user_email = session.get('user_email', 'kirannaik@unitednewdigitalmedia.com')
+        user_email = session.get('user_email')
+        if not user_email:
+            return jsonify({'success': False, 'error': 'User not logged in', 'redirect': '/login'})
         
         # Get Zerodha API keys
         import sys
@@ -5929,7 +5957,9 @@ def get_zerodha_balance():
 def get_advanced_analytics():
     """Get advanced trading analytics"""
     try:
-        user_email = session.get('user_email', 'kirannaik@unitednewdigitalmedia.com')
+        user_email = session.get('user_email')
+        if not user_email:
+            return jsonify({'success': False, 'error': 'User not logged in', 'redirect': '/login'})
         
         # Get trading data from engine
         from fixed_continuous_trading_engine import fixed_continuous_engine
@@ -5996,7 +6026,9 @@ def get_advanced_analytics():
 def test_order_execution():
     """Test order execution endpoint"""
     try:
-        user_email = session.get('user_email', 'kirannaik@unitednewdigitalmedia.com')
+        user_email = session.get('user_email')
+        if not user_email:
+            return jsonify({'success': False, 'error': 'User not logged in', 'redirect': '/login'})
         order_data = request.get_json()
         
         # Simulate order execution for testing
@@ -6447,11 +6479,9 @@ def get_risk_settings():
 @app.route('/real-time-dashboard')
 def real_time_dashboard():
     """Enhanced real-time trading dashboard with live data"""
-    # Allow demo access
+    # Check authentication
     if 'user_token' not in session:
-        session['user_token'] = 'demo_token'
-        session['user_email'] = 'kirannaik@unitednewdigitalmedia.com'
-        session['user_id'] = 'demo_user'
+        return redirect(url_for('login_page'))
     
     return render_template_string("""
 <!DOCTYPE html>
@@ -6608,11 +6638,9 @@ def real_time_dashboard():
 @app.route('/order-execution-test')
 def order_execution_test():
     """Real-time order execution testing interface"""
-    # Allow demo access
+    # Check authentication
     if 'user_token' not in session:
-        session['user_token'] = 'demo_token'
-        session['user_email'] = 'kirannaik@unitednewdigitalmedia.com'
-        session['user_id'] = 'demo_user'
+        return redirect(url_for('login_page'))
     
     return render_template_string("""
 <!DOCTYPE html>
@@ -6887,11 +6915,9 @@ def order_execution_test():
 @app.route('/performance-analytics')
 def performance_analytics():
     """Advanced performance analytics page"""
-    # Allow demo access
+    # Check authentication
     if 'user_token' not in session:
-        session['user_token'] = 'demo_token'
-        session['user_email'] = 'kirannaik@unitednewdigitalmedia.com'
-        session['user_id'] = 'demo_user'
+        return redirect(url_for('login_page'))
     
     return render_template_string("""
 <!DOCTYPE html>
@@ -7328,11 +7354,7 @@ def live_signals():
     """Live trading signals page"""
     # Allow both authenticated and demo access (like portfolio)
     if 'user_token' not in session:
-        print("⚠️ No user token for live signals, proceeding with demo access")
-        # Set demo session for live signals access
-        session['user_token'] = 'demo_token'
-        session['user_email'] = 'kirannaik@unitednewdigitalmedia.com'
-        session['user_id'] = 'demo_user'
+        return jsonify({'success': False, 'error': 'User not logged in', 'redirect': '/login'})
         
     # Get real AI signals from trading engine
     try:
@@ -7673,14 +7695,12 @@ def portfolio():
     """Portfolio management page"""
     # Allow both authenticated and demo access (like dashboard)
     if 'user_token' not in session:
-        print("⚠️ No user token for portfolio, proceeding with demo access")
-        # Set demo session for portfolio access
-        session['user_token'] = 'demo_token'
-        session['user_email'] = 'kirannaik@unitednewdigitalmedia.com'
-        session['user_id'] = 'demo_user'
+        return redirect(url_for('login_page'))
         
     # Force LIVE trading mode for all users
-    user_email = session.get('user_email', 'kirannaik@unitednewdigitalmedia.com')
+    user_email = session.get('user_email')
+    if not user_email:
+        return redirect(url_for('login_page'))
     current_mode = 'LIVE'  # Always use LIVE mode
     print(f"📊 Portfolio: User {user_email} trading mode: {current_mode} (FORCED LIVE)")
     
@@ -8447,12 +8467,7 @@ def risk_settings():
 </html>
     """)
 
-@app.route('/logout')
-def logout():
-    """Logout user"""
-    session.clear()
-    dashboard.current_token = None
-    return redirect(url_for('login_page'))
+# Logout route is defined earlier in the file
 
 
 @app.route('/api/user-exchanges', methods=['GET'])
