@@ -2074,6 +2074,51 @@ def trading_dashboard():
             checkExistingTradingSession();
         });
         
+        function updateButtonsToStopState() {
+            console.log('🔴 Updating buttons to STOP state');
+            
+            // Find all trading buttons and update them
+            document.querySelectorAll('button, .btn, input[type="button"]').forEach(element => {
+                const onclick = element.getAttribute('onclick');
+                const text = element.textContent || element.innerText || '';
+                
+                if ((onclick && onclick.includes('startAITrading')) || 
+                    (text.includes('Start AI Trading') && element.tagName !== 'HTML' && element.tagName !== 'BODY' && element.tagName !== 'SCRIPT')) {
+                    
+                    console.log('🎯 Converting start button to stop:', element.tagName, element.className);
+                    element.textContent = '🛑 Stop AI Trading';
+                    element.style.background = '#e53e3e';
+                    element.style.color = 'white';
+                    element.className = element.className.replace('btn-success', 'btn-danger');
+                    element.setAttribute('onclick', 'stopAITrading()');
+                    element.disabled = false;
+                }
+            });
+        }
+        
+        function updateButtonsToStartState() {
+            console.log('🟢 Updating buttons to START state');
+            
+            // Find all trading buttons and update them
+            document.querySelectorAll('button, .btn, input[type="button"]').forEach(element => {
+                const onclick = element.getAttribute('onclick');
+                const text = element.textContent || element.innerText || '';
+                
+                if ((onclick && onclick.includes('stopAITrading')) || 
+                    (text.includes('Stop AI Trading') && element.tagName !== 'HTML' && element.tagName !== 'BODY' && element.tagName !== 'SCRIPT') ||
+                    (text.includes('🛑') && element.tagName !== 'HTML' && element.tagName !== 'BODY' && element.tagName !== 'SCRIPT')) {
+                    
+                    console.log('🎯 Converting stop button to start:', element.tagName, element.className);
+                    element.textContent = '🚀 Start AI Trading';
+                    element.style.background = '#48bb78';
+                    element.style.color = 'white';
+                    element.className = element.className.replace('btn-danger', 'btn-success');
+                    element.setAttribute('onclick', 'startAITrading()');
+                    element.disabled = false;
+                }
+            });
+        }
+        
         function checkExistingTradingSession() {
             console.log('🔄 Checking for existing trading session...');
             
