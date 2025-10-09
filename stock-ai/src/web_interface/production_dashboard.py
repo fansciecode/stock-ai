@@ -12,7 +12,7 @@ import time
 import sqlite3
 import os
 from datetime import datetime, timedelta
-from flask import Flask, render_template_string, jsonify, request, session, redirect, url_for
+from flask import Flask, render_template_string, jsonify, request, session, redirect, url_for, make_response
 from flask_cors import CORS
 import secrets
 from subscription_system import subscription_manager
@@ -1495,16 +1495,16 @@ def verify_email():
 
 @app.route('/logout', methods=['GET', 'POST'])
 def logout():
-    """Handle user logout"""
+    """Logout user and clear all session data"""
+    print(f'🔓 Logging out user: {session.get("user_email", "Unknown")}')
+    
     # Clear all session data
     session.clear()
     
     # Clear dashboard token
     dashboard.current_token = None
     
-    print("🔓 User logged out successfully")
-    
-    # Redirect to login page
+    print('✅ User logged out successfully')
     return redirect(url_for('login_page'))
 
 @app.route('/dashboard')
