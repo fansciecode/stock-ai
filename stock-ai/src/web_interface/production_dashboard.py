@@ -521,69 +521,11 @@ def api_login():
             print(f"⚠️ Error during authentication: {e}")
         
         if not user_found:
-            # Create new user if not found (for demo purposes)
-            user_id = f"user_{int(time.time())}"
-            try:
-                # Create user in database  
-                db_paths = [
-                    'data/users.db',
-                    'src/web_interface/data/users.db', 
-                    'src/web_interface/users.db',
-                    'users.db'
-                ]
-                
-                db_conn = None
-                for db_path in db_paths:
-                    if os.path.exists(db_path):
-                        db_conn = sqlite3.connect(db_path)
-                        break
-                
-                if not db_conn:
-                    db_conn = sqlite3.connect('src/web_interface/users.db')
-                    # Create tables if needed
-                    cursor = db_conn.cursor()
-                    cursor.execute("""
-                        CREATE TABLE IF NOT EXISTS users (
-                            user_id TEXT PRIMARY KEY,
-                            email TEXT UNIQUE,
-                            password_hash TEXT,
-                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            last_login TIMESTAMP,
-                            subscription_tier TEXT DEFAULT 'basic',
-                            is_active BOOLEAN DEFAULT 1
-                        )
-                    """)
-                    cursor.execute("""
-                        CREATE TABLE IF NOT EXISTS api_keys (
-                            key_id TEXT PRIMARY KEY,
-                            user_id TEXT,
-                            exchange TEXT,
-                            api_key TEXT,
-                            secret_key TEXT,
-                            passphrase TEXT,
-                            is_testnet BOOLEAN DEFAULT 1,
-                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            last_used TIMESTAMP,
-                            is_active BOOLEAN DEFAULT 1,
-                            FOREIGN KEY (user_id) REFERENCES users (user_id)
-                        )
-                    """)
-                    db_conn.commit()
-                
-                cursor = db_conn.cursor()
-                cursor.execute("""
-                    INSERT OR REPLACE INTO users 
-                    (user_id, email, password_hash, last_login, is_active)
-                    VALUES (?, ?, ?, datetime('now'), 1)
-                """, (user_id, email, password))
-                
-                db_conn.commit()
-                db_conn.close()
-                user_found = True
-                print(f"✅ Created new user during login: {email}")
-                
-            except Exception as e:
-                print(f"⚠️ Error creating user during login: {e}")
+            # Don't create new users in login - they must register first
+            return jsonify({
+                'success': False,
+                'error': 'Invalid email or password. Please check your credentials or sign up if you don\'t have an account.'
+            })
         
         # Generate session data
         user_token = f"token_{int(time.time())}"
