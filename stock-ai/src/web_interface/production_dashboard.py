@@ -680,12 +680,16 @@ def api_signup():
             
             cursor = db_conn.cursor()
             
+            # Hash password before storing
+            import hashlib
+            password_hash = hashlib.sha256(password.encode()).hexdigest()
+            
             # Insert or update user
             cursor.execute("""
                 INSERT OR REPLACE INTO users 
                 (user_id, email, password_hash, last_login, is_active)
                 VALUES (?, ?, ?, datetime('now'), 1)
-            """, (user_id, email, password))
+            """, (user_id, email, password_hash))
             
             db_conn.commit()
             db_conn.close()
