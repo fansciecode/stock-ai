@@ -1085,6 +1085,45 @@ class FixedContinuousTradingEngine:
             self.logger.error(f"Error in risk management: {e}")
             return None
     
+    def get_trading_status(self, user_email: str) -> dict:
+        """Get current trading status for a user"""
+        try:
+            if user_email not in self.active_sessions:
+                return {
+                    'active': False,
+                    'message': 'No active trading session',
+                    'positions_count': 0,
+                    'total_pnl': 0
+                }
+            
+            session_data = self.active_sessions[user_email]
+            positions = session_data.get('positions', [])
+            
+            # Calculate total P&L
+            total_pnl = sum(position.get('profit_loss', 0) for position in positions)
+            
+            # Count open positions
+            open_positions = [p for p in positions if p.get('status') == 'OPEN']
+            
+            return {
+                'active': True,
+                'message': 'Trading session active',
+                'positions_count': len(open_positions),
+                'total_positions': len(positions),
+                'total_pnl': total_pnl,
+                'session_start': session_data.get('start_time'),
+                'trading_mode': session_data.get('trading_mode', 'UNKNOWN')
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Error getting trading status: {e}")
+            return {
+                'active': False,
+                'error': str(e),
+                'positions_count': 0,
+                'total_pnl': 0
+            }
+
     def _get_user_risk_settings(self, user_email: str) -> dict:
         """Get user's risk settings from database"""
         try:

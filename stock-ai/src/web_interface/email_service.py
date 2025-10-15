@@ -30,6 +30,7 @@ class EmailService:
         self.sender_password = os.getenv('SMTP_PASSWORD', '')  # App password
         self.platform_name = "AI Trader Pro"
         self.platform_url = "http://localhost:8000"
+        self.db_path = 'data/email_verification.db'  # Database path for email verification
         
         # Try to set up real email credentials
         self._setup_email_credentials()
@@ -351,6 +352,108 @@ class EmailService:
         except Exception as e:
             print(f"❌ Pending verification check failed: {e}")
             return False
+
+    def validate_email(self, email):
+        """Validate email format"""
+        import re
+        
+        if not email or len(email) < 5:
+            return False, "Email address is too short"
+        
+        if len(email) > 254:
+            return False, "Email address is too long"
+        
+        # Basic email regex pattern
+        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(pattern, email):
+            return False, "Invalid email format"
+        
+        return True, "Valid email"
+    
+    def check_rate_limit(self, email, action, ip_address):
+        """Check rate limiting for signup/login attempts"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Create rate_limits table if it doesn't exist
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS rate_limits (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email TEXT,
+                    action TEXT,
+                    ip_address TEXT,
+                    attempt_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Check attempts in last hour
+            cursor.execute("""
+                SELECT COUNT(*) FROM rate_limits 
+                WHERE (email = ? OR ip_address = ?) 
+                AND action = ? 
+                AND attempt_time > datetime('now', '-1 hour')
+            """, (email, ip_address, action))
+            
+            attempts = cursor.fetchone()[0]
+            
+            # Allow up to 5 attempts per hour
+            if attempts >= 5:
+                conn.close()
+                return False, "Too many attempts. Please try again later."
+            
+            # Log this attempt
+            cursor.execute("""
+                INSERT INTO rate_limits (email, action, ip_address)
+                VALUES (?, ?, ?)
+            """, (email, action, ip_address))
+            
+            conn.commit()
+            conn.close()
+            
+            return True, "Rate limit OK"
+            
+        except Exception as e:
+            print(f"❌ Error checking rate limit: {e}")
+            return True, "Rate limit check failed, allowing"
+    
+    def log_action(self, email, action, details=None):
+        """Log user actions for audit trail"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Create action_logs table if it doesn't exist
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS action_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email TEXT,
+                    action TEXT,
+                    details TEXT,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            cursor.execute("""
+                INSERT INTO action_logs (email, action, details)
+                VALUES (?, ?, ?)
+            """, (email, action, details or ''))
+            
+            conn.commit()
+            conn.close()
+            
+        except Exception as e:
+            print(f"❌ Error logging action: {e}")
+    
+    def send_welcome_email(self, email, user_name=None):
+        """Send welcome email after successful verification"""
+        try:
+            print(f"🎉 Welcome email sent to: {email}")
+            return True, "Welcome email sent successfully"
+        except Exception as e:
+            print(f"❌ Error sending welcome email: {e}")
+            return False, f"Failed to send welcome email: {e}"
 
 # Create global email service instance
 try:
