@@ -582,6 +582,7 @@ def api_login():
 @app.route('/api/signup', methods=['POST'])
 def api_signup():
     """Handle user signup - supports both JSON and form data"""
+    import hashlib
     # Handle both JSON and form data
     if request.content_type == 'application/json':
         data = request.get_json()
