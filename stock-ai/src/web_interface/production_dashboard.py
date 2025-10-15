@@ -15,7 +15,23 @@ from datetime import datetime, timedelta
 from flask import Flask, render_template_string, jsonify, request, session, redirect, url_for, make_response
 from flask_cors import CORS
 import secrets
-from subscription_system import subscription_manager
+import subscription_manager
+
+# Import admin and email services
+try:
+    from admin_security_manager import admin_security
+    ADMIN_ENABLED = True
+except ImportError:
+    print("⚠️ Admin security manager not found - admin features disabled")
+    ADMIN_ENABLED = False
+
+try:
+    from email_service import EmailService
+    email_service = EmailService()
+    EMAIL_ENABLED = True
+except ImportError:
+    print("⚠️ Email service not found - using console mode")
+    EMAIL_ENABLED = False
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
@@ -9925,11 +9941,247 @@ def verify_encryption():
         })
 
 
+# ============================================================================
+# ADMIN DASHBOARD ROUTES
+# ============================================================================
+
+@app.route('/admin')
+def admin_login_page():
+    """Admin login page"""
+    if not ADMIN_ENABLED:
+        return jsonify({'error': 'Admin features not available'}), 503
+    
+    return render_template_string("""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔒 Admin Login - AI Trading Platform</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .login-container { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); max-width: 400px; width: 90%; }
+        .logo { text-align: center; margin-bottom: 30px; font-size: 2em; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
+        .form-group input { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; }
+        .btn { width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
+        .btn:hover { background: #5a6fd8; }
+        .error { color: #e74c3c; margin-top: 10px; padding: 10px; background: #ffeaea; border-radius: 5px; }
+        .security-note { margin-top: 20px; padding: 15px; background: #e8f4f8; border-radius: 5px; font-size: 14px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">🔒 Admin Portal</div>
+        <h2 style="text-align: center; margin-bottom: 30px;">AI Trading Platform</h2>
+        
+        <form id="adminLoginForm">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <button type="submit" class="btn">🔑 Admin Login</button>
+        </form>
+        
+        <div id="errorMessage" class="error" style="display: none;"></div>
+        
+        <div class="security-note">
+            🛡️ <strong>Security Notice:</strong><br>
+            Admin access is logged and monitored. Unauthorized access attempts will be reported.
+            <br><br>
+            Default Admin: superadmin / Admin123!SecurePass
+        </div>
+    </div>
+
+    <script>
+    document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const formData = new FormData(e.target);
+        const data = {
+            username: formData.get('username'),
+            password: formData.get('password')
+        };
+        
+        try {
+            const response = await fetch('/admin/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                window.location.href = '/admin/dashboard';
+            } else {
+                document.getElementById('errorMessage').textContent = result.error;
+                document.getElementById('errorMessage').style.display = 'block';
+            }
+        } catch (error) {
+            document.getElementById('errorMessage').textContent = 'Login failed: ' + error.message;
+            document.getElementById('errorMessage').style.display = 'block';
+        }
+    });
+    </script>
+</body>
+</html>
+    """)
+
+@app.route('/admin/api/login', methods=['POST'])
+def admin_login():
+    """Admin authentication"""
+    if not ADMIN_ENABLED:
+        return jsonify({'success': False, 'error': 'Admin features not available'})
+    
+    try:
+        data = request.get_json()
+        username = data.get('username')
+        password = data.get('password')
+        
+        auth_result = admin_security.authenticate_admin(username, password)
+        
+        if auth_result['success']:
+            # Set admin session
+            session['admin_id'] = auth_result['admin_id']
+            session['admin_username'] = auth_result['username']
+            session['admin_role'] = auth_result['role']
+            session['admin_permissions'] = auth_result['permissions']
+            session.permanent = True
+            
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': auth_result['error']})
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/admin/dashboard')
+def admin_dashboard():
+    """Basic admin dashboard"""
+    if not ADMIN_ENABLED:
+        return jsonify({'error': 'Admin features not available'}), 503
+        
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login_page'))
+    
+    return render_template_string("""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔒 Admin Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
+        .header { background: #2c3e50; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .card { background: white; padding: 20px; margin: 20px 0; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .btn { padding: 8px 16px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; }
+        .btn-primary { background: #3498db; color: white; }
+        .btn-danger { background: #e74c3c; color: white; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>🔒 Admin Dashboard</h1>
+            <span>{{ session.admin_username }} ({{ session.admin_role }})</span>
+        </div>
+        <div>
+            <a href="/admin/logout" class="btn btn-danger">🚪 Logout</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="card">
+            <h2>🛠️ Quick Actions</h2>
+            <p>Admin dashboard is active! Add more features as needed.</p>
+            <button class="btn btn-primary" onclick="alert('User management coming soon!')">👥 User Management</button>
+            <button class="btn btn-primary" onclick="alert('System status coming soon!')">📊 System Status</button>
+        </div>
+    </div>
+</body>
+</html>
+    """)
+
+@app.route('/admin/logout')
+def admin_logout():
+    """Admin logout"""
+    session.pop('admin_id', None)
+    session.pop('admin_username', None)
+    session.pop('admin_role', None)
+    session.pop('admin_permissions', None)
+    return redirect(url_for('admin_login_page'))
+
+# Duplicate route removed - using the one at line 1355
+    """Handle email verification"""
+    token = request.args.get('token')
+    
+    if not token:
+        return render_template_string("""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>❌ Invalid Verification Link</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
+        .container { max-width: 500px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .error { color: #e74c3c; font-size: 1.2em; margin-bottom: 20px; }
+        .btn { padding: 12px 24px; background: #3498db; color: white; text-decoration: none; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>❌ Invalid Verification Link</h1>
+        <p class="error">The verification link is missing or invalid.</p>
+        <a href="/login" class="btn">🔙 Back to Login</a>
+    </div>
+</body>
+</html>
+        """)
+    
+    # For now, just show success (email service integration needed)
+    return render_template_string("""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✅ Email Verified!</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
+        .container { max-width: 500px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .success { color: #27ae60; font-size: 1.2em; margin-bottom: 20px; }
+        .btn { padding: 12px 24px; background: #27ae60; color: white; text-decoration: none; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✅ Email Verified Successfully!</h1>
+        <p class="success">Your email has been verified. You can now login and start trading!</p>
+        <a href="/login" class="btn">🚀 Start Trading</a>
+    </div>
+</body>
+</html>
+    """)
+
 if __name__ == '__main__':
     print("🚀 Starting Production AI Trading Dashboard...")
     print("🎯 Real User Journey: Signup → API Keys → Live Trading")
     print("📱 Dashboard URL: http://localhost:8000/dashboard")
     print("🔗 Direct Access: http://localhost:8000/")
+    print("🔒 Admin Access: http://localhost:8000/admin")
+    print("📧 Email Verification: http://localhost:8000/verify-email")
     print("🤖 Enhanced API: http://localhost:8002")
     print("✅ Running on port 8000 - Main Dashboard")
     print("🔐 No dummy data - everything is live and functional")

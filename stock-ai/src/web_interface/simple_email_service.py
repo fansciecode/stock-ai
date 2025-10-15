@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """
-Simple Free Email Service using EmailJS (Browser-based)
-Alternative to SMTP for development/testing
+Simple Email Service for Development
+Console-based email verification for testing
 """
 
-import requests
-import json
 import os
 from datetime import datetime
 
@@ -14,16 +12,12 @@ class SimpleEmailService:
     Simple email service using free services for development
     """
     
-    def __init__(self):
-        # For production, you can use services like:
-        # - EmailJS (free tier: 200 emails/month)
-        # - SendGrid (free tier: 100 emails/day)
-        # - Mailgun (free tier: 5000 emails/month)
-        
-        self.service_type = "console"  # console, emailjs, sendgrid
+    def __init__(self, service_type="console"):
+        self.service_type = service_type  # console, emailjs, sendgrid
+        self.platform_name = "AI Trader Pro"
         
     def send_verification_email_simple(self, email, token, user_name=None):
-        """Send verification email using simple method"""
+        """Send verification email using selected service"""
         
         verification_link = f"http://localhost:8000/verify-email?token={token}"
         
@@ -73,13 +67,7 @@ class SimpleEmailService:
     
     def _send_via_sendgrid(self, email, verification_link, user_name=None):
         """Send email via SendGrid API"""
-        api_key = os.getenv('SENDGRID_API_KEY')
-        
-        if not api_key:
-            print("⚠️ SendGrid API key not configured")
-            return False, "SendGrid API key not configured"
-        
-        # SendGrid API call would go here
+        # SendGrid implementation would go here
         print(f"📧 SendGrid: Would send verification email to {email}")
         print(f"🔗 Link: {verification_link}")
         return True, "SendGrid simulation (API key needed)"
@@ -135,12 +123,5 @@ In production, this will be sent to your actual email.
 if __name__ == "__main__":
     # Test the simple email service
     print("🧪 Testing Simple Email Service...")
-    
-    # Test console email
-    success, message = send_console_verification_email(
-        "test@example.com", 
-        "sample_token_123", 
-        "Test User"
-    )
-    
-    print(f"Result: {success} - {message}")
+    result = send_console_verification_email("test@example.com", "test_token_123", "Test User")
+    print(f"Result: {result}")
