@@ -16,6 +16,24 @@ from flask import Flask, render_template, render_template_string, jsonify, reque
 from flask_cors import CORS
 import secrets
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    print("✅ Environment variables loaded from .env file")
+except ImportError:
+    print("⚠️ python-dotenv not installed, loading .env manually")
+    # Manual .env loading
+    if os.path.exists('.env'):
+        with open('.env', 'r') as f:
+            for line in f:
+                if line.strip() and not line.startswith('#'):
+                    key, value = line.strip().split('=', 1)
+                    os.environ[key] = value
+        print("✅ Environment variables loaded manually from .env file")
+    else:
+        print("⚠️ No .env file found")
+
 # Import subscription management and security
 import sys
 sys.path.append('..')
