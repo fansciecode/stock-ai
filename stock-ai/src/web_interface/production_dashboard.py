@@ -526,9 +526,9 @@ def api_login():
                     # In production, you'd hash and compare passwords properly
                     # For demo, we'll just check if password matches
                     # Fix authentication - check proper password hash
-                    import hashlib
-                    password_hash = hashlib.sha256(password.encode()).hexdigest()
-                    if password == stored_password or password_hash == stored_password:
+                    import bcrypt
+                    # Use bcrypt for password verification
+                    if bcrypt.checkpw(password.encode('utf-8'), stored_password if isinstance(stored_password, bytes) else stored_password.encode('utf-8')):
                         user_id = stored_user_id
                         user_found = True
                         
@@ -703,8 +703,8 @@ def api_signup():
             cursor = db_conn.cursor()
             
             # Hash password before storing
-            import hashlib
-            password_hash = hashlib.sha256(password.encode()).hexdigest()
+            import bcrypt
+            password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
             
             # Insert or update user
             cursor.execute("""
