@@ -15,7 +15,7 @@ class TradingModeManager:
         self.db_path = db_path
         self._ensure_trading_modes_table()
     
-    def _ensure_trading_modes_table(self):
+        def _ensure_trading_modes_table(self):
         """Ensure trading_modes table exists"""
         try:
             with sqlite3.connect(self.db_path) as conn:
