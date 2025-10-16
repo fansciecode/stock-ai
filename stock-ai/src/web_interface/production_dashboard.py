@@ -6431,6 +6431,168 @@ def force_status_update():
         return jsonify({'error': str(e)})
 
 
+        return jsonify({'success': False, 'error': f'Failed to get portfolio: {e}'})
+
+# Password Reset Routes
+@app.route('/forgot-password')
+def forgot_password_page():
+    return render_template_string('''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Password - AI Trading Platform</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .reset-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .logo { font-size: 2.5rem; margin-bottom: 10px; }
+        h1 { color: #333; margin-bottom: 10px; }
+        .subtitle { color: #666; margin-bottom: 30px; }
+        .form-group { margin-bottom: 20px; text-align: left; }
+        label { display: block; margin-bottom: 5px; color: #333; font-weight: 500; }
+        input { width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 16px; }
+        input:focus { outline: none; border-color: #667eea; }
+        .btn { width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 10px; }
+        .btn:hover { background: #5a6fd8; }
+        .back-link { margin-top: 20px; }
+        .back-link a { color: #667eea; text-decoration: none; }
+        .message { padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+    <div class="reset-container">
+        <div class="logo">🔐</div>
+        <h1>Reset Password</h1>
+        <p class="subtitle">Enter your email to receive reset instructions</p>
+        
+        <div id="message"></div>
+        
+        <form id="resetForm">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <button type="submit" class="btn">Send Reset Link</button>
+        </form>
+        
+        <div class="back-link">
+            <a href="/login">← Back to Login</a>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('resetForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const messageDiv = document.getElementById('message');
+            
+            try {
+                const response = await fetch('/api/forgot-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    messageDiv.innerHTML = '<div class="success">✅ Reset link sent! Check your email.</div>';
+                    document.getElementById('resetForm').style.display = 'none';
+                } else {
+                    messageDiv.innerHTML = '<div class="error">❌ ' + result.error + '</div>';
+                }
+            } catch (error) {
+                messageDiv.innerHTML = '<div class="error">❌ Network error. Please try again.</div>';
+            }
+        });
+    </script>
+</body>
+</html>
+    ''')
+
+@app.route('/api/forgot-password', methods=['POST'])
+def forgot_password_api():
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip().lower()
+        
+        if not email:
+            return jsonify({'success': False, 'error': 'Email is required'})
+        
+        # Check if user exists
+        conn = sqlite3.connect('users.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT user_id FROM users WHERE email = ?', (email,))
+        user = cursor.fetchone()
+        
+        if not user:
+            conn.close()
+            return jsonify({'success': False, 'error': 'No account found with this email address'})
+        
+        # Generate reset token
+        import secrets
+        reset_token = secrets.token_urlsafe(32)
+        
+        # Store reset token in database
+        cursor.execute('''CREATE TABLE IF NOT EXISTS password_resets (
+            email TEXT PRIMARY KEY,
+            token TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        cursor.execute('INSERT OR REPLACE INTO password_resets (email, token) VALUES (?, ?)', (email, reset_token))
+        conn.commit()
+        conn.close()
+        
+        # Use existing email service for sending
+        try:
+            from email_service import EmailService
+            email_service = EmailService()
+            
+            # Send password reset email using existing service
+            reset_url = f'https://trading.ibcm.app/reset-password?token={reset_token}'
+            
+            success, message = email_service.send_password_reset_email(email, reset_token, reset_url)
+            
+            if success:
+                print(f'✅ Password reset email sent to {email}')
+                return jsonify({'success': True, 'message': 'Password reset link sent to your email'})
+            else:
+                print(f'⚠️ Email sending failed: {message}')
+                return jsonify({'success': True, 'message': 'Password reset link sent (check server console)'})
+                
+        except Exception as email_error:
+            print(f'Email service error: {email_error}')
+            # Fallback to console mode
+            reset_url = f'https://trading.ibcm.app/reset-password?token={reset_token}'
+            print(f'📧 PASSWORD RESET FALLBACK')
+            print(f'Email: {email}')
+            print(f'Reset URL: {reset_url}')
+            return jsonify({'success': True, 'message': 'Password reset link generated (check server console)'})
+        
+    except Exception as e:
+        print(f'Forgot password error: {e}')
+        return jsonify({'success': False, 'error': 'Server error. Please try again.'})
 if __name__ == '__main__':
     print("🚀 Starting Production AI Trading Dashboard...")
     print("🎯 Real User Journey: Signup → API Keys → Live Trading")
@@ -6608,165 +6770,3 @@ def get_portfolio_api():
         
     except Exception as e:
         print(f"❌ Error getting portfolio: {e}")
-        return jsonify({'success': False, 'error': f'Failed to get portfolio: {e}'})
-
-# Password Reset Routes
-@app.route('/forgot-password')
-def forgot_password_page():
-    return render_template_string('''
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reset Password - AI Trading Platform</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        .reset-container {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-        }
-        .logo { font-size: 2.5rem; margin-bottom: 10px; }
-        h1 { color: #333; margin-bottom: 10px; }
-        .subtitle { color: #666; margin-bottom: 30px; }
-        .form-group { margin-bottom: 20px; text-align: left; }
-        label { display: block; margin-bottom: 5px; color: #333; font-weight: 500; }
-        input { width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 16px; }
-        input:focus { outline: none; border-color: #667eea; }
-        .btn { width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 10px; }
-        .btn:hover { background: #5a6fd8; }
-        .back-link { margin-top: 20px; }
-        .back-link a { color: #667eea; text-decoration: none; }
-        .message { padding: 10px; border-radius: 5px; margin-bottom: 20px; }
-        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-    </style>
-</head>
-<body>
-    <div class="reset-container">
-        <div class="logo">🔐</div>
-        <h1>Reset Password</h1>
-        <p class="subtitle">Enter your email to receive reset instructions</p>
-        
-        <div id="message"></div>
-        
-        <form id="resetForm">
-            <div class="form-group">
-                <label for="email">Email Address</label>
-                <input type="email" id="email" name="email" required>
-            </div>
-            <button type="submit" class="btn">Send Reset Link</button>
-        </form>
-        
-        <div class="back-link">
-            <a href="/login">← Back to Login</a>
-        </div>
-    </div>
-    
-    <script>
-        document.getElementById('resetForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const email = document.getElementById('email').value;
-            const messageDiv = document.getElementById('message');
-            
-            try {
-                const response = await fetch('/api/forgot-password', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: email })
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    messageDiv.innerHTML = '<div class="success">✅ Reset link sent! Check your email.</div>';
-                    document.getElementById('resetForm').style.display = 'none';
-                } else {
-                    messageDiv.innerHTML = '<div class="error">❌ ' + result.error + '</div>';
-                }
-            } catch (error) {
-                messageDiv.innerHTML = '<div class="error">❌ Network error. Please try again.</div>';
-            }
-        });
-    </script>
-</body>
-</html>
-    ''')
-
-@app.route('/api/forgot-password', methods=['POST'])
-def forgot_password_api():
-    try:
-        data = request.get_json()
-        email = data.get('email', '').strip().lower()
-        
-        if not email:
-            return jsonify({'success': False, 'error': 'Email is required'})
-        
-        # Check if user exists
-        conn = sqlite3.connect('users.db')
-        cursor = conn.cursor()
-        cursor.execute('SELECT user_id FROM users WHERE email = ?', (email,))
-        user = cursor.fetchone()
-        
-        if not user:
-            conn.close()
-            return jsonify({'success': False, 'error': 'No account found with this email address'})
-        
-        # Generate reset token
-        import secrets
-        reset_token = secrets.token_urlsafe(32)
-        
-        # Store reset token in database
-        cursor.execute('''CREATE TABLE IF NOT EXISTS password_resets (
-            email TEXT PRIMARY KEY,
-            token TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )''')
-        cursor.execute('INSERT OR REPLACE INTO password_resets (email, token) VALUES (?, ?)', (email, reset_token))
-        conn.commit()
-        conn.close()
-        
-        # Use existing email service for sending
-        try:
-            from email_service import EmailService
-            email_service = EmailService()
-            
-            # Send password reset email using existing service
-            reset_url = f'https://trading.ibcm.app/reset-password?token={reset_token}'
-            
-            success, message = email_service.send_password_reset_email(email, reset_token, reset_url)
-            
-            if success:
-                print(f'✅ Password reset email sent to {email}')
-                return jsonify({'success': True, 'message': 'Password reset link sent to your email'})
-            else:
-                print(f'⚠️ Email sending failed: {message}')
-                return jsonify({'success': True, 'message': 'Password reset link sent (check server console)'})
-                
-        except Exception as email_error:
-            print(f'Email service error: {email_error}')
-            # Fallback to console mode
-            reset_url = f'https://trading.ibcm.app/reset-password?token={reset_token}'
-            print(f'📧 PASSWORD RESET FALLBACK')
-            print(f'Email: {email}')
-            print(f'Reset URL: {reset_url}')
-            return jsonify({'success': True, 'message': 'Password reset link generated (check server console)'})
-        
-    except Exception as e:
-        print(f'Forgot password error: {e}')
-        return jsonify({'success': False, 'error': 'Server error. Please try again.'})
