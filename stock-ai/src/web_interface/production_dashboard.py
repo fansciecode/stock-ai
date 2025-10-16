@@ -6770,7 +6770,7 @@ def reset_password_api():
         hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
         
         # Update user password
-        cursor.execute('UPDATE users SET password = ? WHERE email = ?', (hashed_password, email))
+        cursor.execute('UPDATE users SET password_hash = ? WHERE email = ?', (hashed_password, email))
         
         # Delete used token
         cursor.execute('DELETE FROM password_resets WHERE token = ?', (token,))
