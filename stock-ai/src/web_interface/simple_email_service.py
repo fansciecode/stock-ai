@@ -19,7 +19,7 @@ class SimpleEmailService:
     def send_verification_email_simple(self, email, token, user_name=None):
         """Send verification email using selected service"""
         
-        verification_link = f"http://localhost:8000/verify-email?token={token}"
+        verification_link = f"https://trading.ibcm.app/verify-email?token={token}"
         
         if self.service_type == "console":
             # For development - print to console
@@ -80,7 +80,7 @@ def send_console_verification_email(email, token, user_name=None):
     Simple function to send verification email to console
     Use this for immediate testing without SMTP setup
     """
-    verification_link = f"http://localhost:8000/verify-email?token={token}"
+    verification_link = f"https://trading.ibcm.app/verify-email?token={token}"
     
     print("\n" + "🚀" * 30)
     print("📧 EMAIL VERIFICATION REQUIRED")

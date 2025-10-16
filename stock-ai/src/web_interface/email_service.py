@@ -29,7 +29,7 @@ class EmailService:
         self.sender_email = os.getenv('SMTP_EMAIL', 'ai.trader.pro.platform@gmail.com')
         self.sender_password = os.getenv('SMTP_PASSWORD', '')  # App password
         self.platform_name = "AI Trader Pro"
-        self.platform_url = "http://localhost:8000"
+        self.platform_url = os.getenv('BASE_URL', 'https://trading.ibcm.app')
         self.db_path = 'data/email_verification.db'  # Database path for email verification
         
         # Try to set up real email credentials
