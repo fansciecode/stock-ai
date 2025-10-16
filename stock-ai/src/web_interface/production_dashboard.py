@@ -39,13 +39,31 @@ import sys
 sys.path.append('..')
 sys.path.append('.')
 try:
-    from subscription_manager import subscription_manager
-    from payment_gateway import payment_gateway
+    from subscription_manager import SubscriptionManager
+    subscription_manager = SubscriptionManager()
+    print("✅ Subscription manager initialized")
     SUBSCRIPTION_ENABLED = True
-    print("✅ Subscription management enabled")
 except ImportError as e:
     print(f"⚠️ Subscription management disabled: {e}")
-    SUBSCRIPTION_ENABLED = True  # Force enable for complete flow testing
+    SUBSCRIPTION_ENABLED = False
+
+try:
+    from payment_gateway import PaymentGateway
+    payment_gateway = PaymentGateway()
+    print("✅ Payment gateway initialized")
+except ImportError as e:
+    print(f"⚠️ Payment gateway disabled: {e}")
+    # Create a dummy payment gateway for testing
+    class DummyPaymentGateway:
+        def create_razorpay_order(self, amount, user_email, description):
+            return {
+                'success': True,
+                'order': {'id': f'demo_order_{int(time.time())}'},
+                'demo_mode': True,
+                'expected_result': 'success'
+            }
+    payment_gateway = DummyPaymentGateway()
+    print("✅ Dummy payment gateway created for testing")
 
 try:
     from admin_security_manager import admin_security
@@ -2910,8 +2928,9 @@ def create_subscription_api():
         if not user_id:
             return jsonify({'success': False, 'error': 'User ID not found'})
         
-        # Create subscription
-        result = subscription_manager.create_subscription(user_id, tier, 'ACTIVE', payment_model)
+        # Create subscription with correct parameters
+        user_email = session.get('user_email')
+        result = subscription_manager.create_subscription(user_id, user_email, tier)
         
         if result['success']:
             return jsonify({
