@@ -168,6 +168,38 @@ class EmailService:
             except:
                 return False, f"Email sending failed: {str(e)}"
     
+    def send_password_reset_email(self, email, token, reset_url):
+        """Send password reset email using same infrastructure as verification"""
+        try:
+            if not self.sender_password:
+                print("⚠️ SMTP password not configured - using console mode")
+                # Use console mode for immediate testing
+                print(f"🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀")
+                print(f"📧 PASSWORD RESET REQUIRED")
+                print(f"🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀")
+                print(f"")
+                print(f"📧 TO: {email}")
+                print(f"📋 SUBJECT: Reset Your AI Trader Pro Password")
+                print(f"")
+                print(f"🔗 PASSWORD RESET LINK:")
+                print(f"{reset_url}")
+                print(f"")
+                print(f"⏰ This link expires in 1 hour.")
+                print(f"🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀")
+                return True, "Password reset email displayed in console"
+            
+            # Try to send real email using existing SMTP setup
+            print(f"📧 Attempting to send password reset email to: {email}")
+            return self._send_real_password_reset_email(email, token, reset_url)
+            
+        except Exception as e:
+            print(f"❌ Password reset email sending failed: {e}")
+            # Fallback to console mode
+            print(f"📧 FALLBACK - PASSWORD RESET")
+            print(f"Email: {email}")
+            print(f"Reset URL: {reset_url}")
+            return True, f"Password reset email fallback: {str(e)}"
+    
     def _send_real_email(self, recipient_email, token, user_name=None, email_type='verification'):
         """Send real email via SMTP"""
         try:
@@ -454,6 +486,91 @@ class EmailService:
         except Exception as e:
             print(f"❌ Error sending welcome email: {e}")
             return False, f"Failed to send welcome email: {e}"
+    
+    def _send_real_password_reset_email(self, recipient_email, token, reset_url):
+        """Send actual password reset email via SMTP"""
+        try:
+            import smtplib
+            import ssl
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+            
+            # Create message
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = f"🔐 Reset Your {self.platform_name} Password"
+            msg['From'] = self.sender_email
+            msg['To'] = recipient_email
+            
+            # HTML email content
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Password Reset</title>
+            </head>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                    <h1 style="color: white; margin: 0; font-size: 28px;">🔐 Password Reset</h1>
+                    <p style="color: #f0f0f0; margin: 10px 0 0 0; font-size: 16px;">{self.platform_name}</p>
+                </div>
+                
+                <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e9ecef;">
+                    <h2 style="color: #2d3748; margin-top: 0;">Reset Your Password</h2>
+                    <p style="font-size: 16px; margin-bottom: 25px;">
+                        You requested a password reset for your AI Trading Platform account. 
+                        Click the button below to set a new password:
+                    </p>
+                    
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="{reset_url}" 
+                           style="background: #4299e1; color: white; padding: 15px 30px; text-decoration: none; 
+                                  border-radius: 8px; display: inline-block; font-weight: bold; font-size: 16px;">
+                            🔑 Reset Password
+                        </a>
+                    </div>
+                    
+                    <p style="font-size: 14px; color: #666; margin-top: 25px;">
+                        Or copy and paste this link in your browser:<br>
+                        <a href="{reset_url}" style="color: #4299e1; word-break: break-all;">{reset_url}</a>
+                    </p>
+                    
+                    <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 20px 0;">
+                        <p style="margin: 0; font-size: 14px; color: #856404;">
+                            ⏰ <strong>This link expires in 1 hour.</strong><br>
+                            🔒 If you didn't request this reset, please ignore this email.
+                        </p>
+                    </div>
+                    
+                    <hr style="border: none; border-top: 1px solid #e9ecef; margin: 25px 0;">
+                    
+                    <p style="font-size: 12px; color: #6c757d; text-align: center; margin: 0;">
+                        {self.platform_name} | Secure AI Trading Solutions<br>
+                        This is an automated message, please do not reply.
+                    </p>
+                </div>
+            </body>
+            </html>
+            """
+            
+            # Attach HTML content
+            html_part = MIMEText(html_content, 'html')
+            msg.attach(html_part)
+            
+            # Send email
+            context = ssl.create_default_context()
+            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+                server.starttls(context=context)
+                server.login(self.sender_email, self.sender_password)
+                server.send_message(msg)
+            
+            print(f"✅ Password reset email sent successfully to {recipient_email}")
+            return True, "Password reset email sent successfully"
+            
+        except Exception as e:
+            print(f"❌ SMTP error sending password reset email: {e}")
+            return False, f"Failed to send email: {str(e)}"
 
 # Create global email service instance
 try:

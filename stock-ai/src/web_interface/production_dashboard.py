@@ -316,6 +316,9 @@ def login_page():
                 <input type="password" id="loginPassword" name="password" required>
             </div>
             <button type="submit" class="btn">🔑 Login & Start Trading</button>
+            <div style="text-align: center; margin-top: 15px;">
+                <a href="/forgot-password" style="color: #4299e1; text-decoration: none; font-size: 14px;">🔒 Forgot Password?</a>
+            </div>
         </form>
         
         <!-- Signup Form -->
@@ -6719,21 +6722,50 @@ def forgot_password_api():
         cursor = conn.cursor()
         cursor.execute('SELECT user_id FROM users WHERE email = ?', (email,))
         user = cursor.fetchone()
-        conn.close()
         
         if not user:
+            conn.close()
             return jsonify({'success': False, 'error': 'No account found with this email address'})
         
         # Generate reset token
         import secrets
         reset_token = secrets.token_urlsafe(32)
         
-        # For console mode - print reset link
-        print(f'📧 PASSWORD RESET REQUEST')
-        print(f'Email: {email}')
-        print(f'Reset URL: https://trading.ibcm.app/reset-password?token={reset_token}')
+        # Store reset token in database
+        cursor.execute('''CREATE TABLE IF NOT EXISTS password_resets (
+            email TEXT PRIMARY KEY,
+            token TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        cursor.execute('INSERT OR REPLACE INTO password_resets (email, token) VALUES (?, ?)', (email, reset_token))
+        conn.commit()
+        conn.close()
         
-        return jsonify({'success': True, 'message': 'Password reset link sent to your email'})
+        # Use existing email service for sending
+        try:
+            from email_service import EmailService
+            email_service = EmailService()
+            
+            # Send password reset email using existing service
+            reset_url = f'https://trading.ibcm.app/reset-password?token={reset_token}'
+            
+            success, message = email_service.send_password_reset_email(email, reset_token, reset_url)
+            
+            if success:
+                print(f'✅ Password reset email sent to {email}')
+                return jsonify({'success': True, 'message': 'Password reset link sent to your email'})
+            else:
+                print(f'⚠️ Email sending failed: {message}')
+                return jsonify({'success': True, 'message': 'Password reset link sent (check server console)'})
+                
+        except Exception as email_error:
+            print(f'Email service error: {email_error}')
+            # Fallback to console mode
+            reset_url = f'https://trading.ibcm.app/reset-password?token={reset_token}'
+            print(f'📧 PASSWORD RESET FALLBACK')
+            print(f'Email: {email}')
+            print(f'Reset URL: {reset_url}')
+            return jsonify({'success': True, 'message': 'Password reset link generated (check server console)'})
         
     except Exception as e:
         print(f'Forgot password error: {e}')
