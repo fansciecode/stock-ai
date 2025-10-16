@@ -6572,13 +6572,18 @@ def forgot_password_api():
         import secrets
         reset_token = secrets.token_urlsafe(32)
         
-        # Store reset token in database
+        # Store reset token in database with expiration
+        from datetime import datetime, timedelta
+        expires_at = datetime.now() + timedelta(hours=1)  # Token expires in 1 hour
+        
         cursor.execute('''CREATE TABLE IF NOT EXISTS password_resets (
             email TEXT PRIMARY KEY,
             token TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP
         )''')
-        cursor.execute('INSERT OR REPLACE INTO password_resets (email, token) VALUES (?, ?)', (email, reset_token))
+        cursor.execute('INSERT OR REPLACE INTO password_resets (email, token, expires_at) VALUES (?, ?, ?)', 
+                      (email, reset_token, expires_at))
         conn.commit()
         conn.close()
         
@@ -6611,6 +6616,175 @@ def forgot_password_api():
     except Exception as e:
         print(f'Forgot password error: {e}')
         return jsonify({'success': False, 'error': 'Server error. Please try again.'})
+
+# Reset password page
+@app.route('/reset-password')
+def reset_password_page():
+    token = request.args.get('token')
+    if not token:
+        return redirect('/login')
+    return render_template_string('''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Password - AI Trading Platform</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .reset-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .logo { font-size: 2.5rem; margin-bottom: 10px; }
+        h1 { color: #333; margin-bottom: 10px; }
+        .subtitle { color: #666; margin-bottom: 30px; }
+        .form-group { margin-bottom: 20px; text-align: left; }
+        label { display: block; margin-bottom: 5px; color: #333; font-weight: 500; }
+        input { width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 16px; }
+        input:focus { outline: none; border-color: #667eea; }
+        .btn { width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 10px; }
+        .btn:hover { background: #5a6fd8; }
+        .back-link { margin-top: 20px; }
+        .back-link a { color: #667eea; text-decoration: none; }
+        .message { padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+    <div class="reset-container">
+        <div class="logo">🔐</div>
+        <h1>Reset Password</h1>
+        <p class="subtitle">Enter your new password</p>
+        
+        <div id="message"></div>
+        
+        <form id="resetForm">
+            <input type="hidden" id="token" value="{{ token }}">
+            <div class="form-group">
+                <label for="password">New Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" required>
+            </div>
+            <button type="submit" class="btn">Reset Password</button>
+        </form>
+        
+        <div class="back-link">
+            <a href="/login">← Back to Login</a>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('resetForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const token = document.getElementById('token').value;
+            const messageDiv = document.getElementById('message');
+            
+            if (password !== confirmPassword) {
+                messageDiv.innerHTML = '<div class="error">❌ Passwords do not match</div>';
+                return;
+            }
+            
+            if (password.length < 6) {
+                messageDiv.innerHTML = '<div class="error">❌ Password must be at least 6 characters</div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: token, password: password })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    messageDiv.innerHTML = '<div class="success">✅ Password reset successfully! <a href="/login">Login here</a></div>';
+                    document.getElementById('resetForm').style.display = 'none';
+                } else {
+                    messageDiv.innerHTML = '<div class="error">❌ ' + result.error + '</div>';
+                }
+            } catch (error) {
+                messageDiv.innerHTML = '<div class="error">❌ Network error. Please try again.</div>';
+            }
+        });
+    </script>
+</body>
+</html>
+    ''', token=token)
+
+# Reset password API
+@app.route('/api/reset-password', methods=['POST'])
+def reset_password_api():
+    try:
+        data = request.get_json()
+        token = data.get('token')
+        new_password = data.get('password')
+        
+        if not token or not new_password:
+            return jsonify({'success': False, 'error': 'Token and password required'})
+        
+        if len(new_password) < 6:
+            return jsonify({'success': False, 'error': 'Password must be at least 6 characters'})
+        
+        # Connect to database
+        conn = sqlite3.connect('users.db')
+        cursor = conn.cursor()
+        
+        # Verify token and get email (check expiration)
+        from datetime import datetime
+        cursor.execute('SELECT email FROM password_resets WHERE token = ? AND expires_at > ?', 
+                      (token, datetime.now()))
+        result = cursor.fetchone()
+        
+        if not result:
+            conn.close()
+            return jsonify({'success': False, 'error': 'Invalid or expired token'})
+        
+        email = result[0]
+        
+        # Hash new password
+        import bcrypt
+        hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+        
+        # Update user password
+        cursor.execute('UPDATE users SET password = ? WHERE email = ?', (hashed_password, email))
+        
+        # Delete used token
+        cursor.execute('DELETE FROM password_resets WHERE token = ?', (token,))
+        
+        conn.commit()
+        conn.close()
+        
+        print(f'✅ Password reset successfully for {email}')
+        return jsonify({'success': True, 'message': 'Password reset successfully'})
+        
+    except Exception as e:
+        print(f'Reset password error: {e}')
+        return jsonify({'success': False, 'error': 'Server error. Please try again.'})
+
 if __name__ == '__main__':
     print("🚀 Starting Production AI Trading Dashboard...")
     print("🎯 Real User Journey: Signup → API Keys → Live Trading")
