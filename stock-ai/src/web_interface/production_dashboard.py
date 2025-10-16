@@ -1160,6 +1160,7 @@ def trading_dashboard():
                     <button class="btn btn-success" onclick="startAITrading()">🤖 Start AI Trading</button>
                 {% endif %}
                 <button class="btn btn-primary" onclick="openAddAPIKeyModal()">🔑 Add Exchange</button>
+                <button class="btn btn-info" onclick="viewSubscription()">💳 Subscription</button>
                 <button class="btn btn-warning" onclick="viewPerformance()">📊 Performance</button>
                 <a href="/logout" class="btn btn-danger">🚪 Logout</a>
             </div>
@@ -2222,6 +2223,10 @@ def trading_dashboard():
         
         function viewPerformance() {
             window.open('/performance', '_blank');
+        }
+        
+        function viewSubscription() {
+            window.location.href = '/subscription';
         }
         
         // Close modal when clicking outside
