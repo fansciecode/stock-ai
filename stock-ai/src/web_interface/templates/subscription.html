@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Choose Your Trading Plan - AI Trading System</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <style>
         * {
             margin: 0;
@@ -550,38 +551,90 @@
         }
 
         function simulatePayment(orderId, amount) {
-            // Simulate payment success/failure based on amount
-            const isSuccess = amount % 2 === 0; // Even amounts succeed, odd fail
+            const paymentMethod = document.getElementById('paymentMethod').value;
             
-            setTimeout(() => {
-                if (isSuccess) {
-                    // Payment successful
-                    fetch('/api/payment-webhook', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            order_id: orderId,
-                            status: 'SUCCESS',
-                            amount: amount,
-                            payment_method: document.getElementById('paymentMethod').value
+            if (paymentMethod === 'razorpay') {
+                // Use Razorpay for payment
+                const options = {
+                    "key": "rzp_test_cWh6GDRBvmXQ8N", // Razorpay key
+                    "amount": amount * 100, // Amount in paise
+                    "currency": "INR",
+                    "name": "AI Trading Platform",
+                    "description": `${selectedPlanData.tier} Plan Subscription`,
+                    "order_id": orderId,
+                    "handler": function (response) {
+                        // Payment successful
+                        fetch('/api/payment-webhook', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                order_id: orderId,
+                                status: 'SUCCESS',
+                                amount: amount,
+                                payment_method: 'razorpay',
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_signature: response.razorpay_signature
+                            })
                         })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert('🎉 Payment Successful! Your subscription is now active.');
-                            closePaymentModal();
-                            window.location.href = '/dashboard';
-                        } else {
-                            alert('Payment webhook error: ' + data.error);
-                        }
-                    });
-                } else {
-                    alert('❌ Payment Failed! Please try again with a different amount or payment method.');
-                }
-            }, 2000);
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                alert('🎉 Payment Successful! Your subscription is now active.');
+                                closePaymentModal();
+                                window.location.href = '/dashboard';
+                            } else {
+                                alert('Payment webhook error: ' + data.error);
+                            }
+                        });
+                    },
+                    "prefill": {
+                        "name": "Trading User",
+                        "email": "user@example.com"
+                    },
+                    "theme": {
+                        "color": "#667eea"
+                    }
+                };
+                
+                const rzp = new Razorpay(options);
+                rzp.open();
+            } else {
+                // Simulate other payment methods
+                const isSuccess = amount % 2 === 0; // Even amounts succeed, odd fail
+                
+                setTimeout(() => {
+                    if (isSuccess) {
+                        // Payment successful
+                        fetch('/api/payment-webhook', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                order_id: orderId,
+                                status: 'SUCCESS',
+                                amount: amount,
+                                payment_method: paymentMethod
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                alert('🎉 Payment Successful! Your subscription is now active.');
+                                closePaymentModal();
+                                window.location.href = '/dashboard';
+                            } else {
+                                alert('Payment webhook error: ' + data.error);
+                            }
+                        });
+                    } else {
+                        alert('❌ Payment Failed! Please try again with a different amount or payment method.');
+                    }
+                }, 2000);
+            }
         }
 
         function createSubscription(tier, amount, paymentModel) {

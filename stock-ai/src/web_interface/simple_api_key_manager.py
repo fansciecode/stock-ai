@@ -11,7 +11,25 @@ from typing import List, Dict, Optional
 class SimpleAPIKeyManager:
     """Simple API key manager for dashboard"""
     
-    def __init__(self, db_path: str = "users.db"):
+    def __init__(self, db_path: str = None):
+        # Use the same database search logic as the main dashboard
+        if db_path is None:
+            db_paths = [
+                'data/users.db',
+                'src/web_interface/data/users.db', 
+                'src/web_interface/users.db',
+                'users.db'
+            ]
+            
+            # Find the first existing database
+            for path in db_paths:
+                if os.path.exists(path):
+                    db_path = path
+                    break
+            else:
+                # Default to users.db if none found
+                db_path = "users.db"
+        
         # Ensure we use the absolute path to avoid directory issues
         if not os.path.isabs(db_path):
             # Get the directory of this script
@@ -243,6 +261,8 @@ class SimpleAPIKeyManager:
                 return self._test_binance_connection(api_key, secret_key, bool(is_testnet))
             elif exchange.lower() == 'zerodha':
                 return self._test_zerodha_connection(api_key, secret_key, bool(is_testnet))
+            elif exchange.lower() == 'upstox':
+                return self._test_upstox_connection(api_key, secret_key, bool(is_testnet))
             elif exchange.lower() == 'coinbase':
                 return self._test_coinbase_connection(api_key, secret_key, passphrase, bool(is_testnet))
             elif exchange.lower() == 'kraken':
@@ -384,6 +404,44 @@ class SimpleAPIKeyManager:
             return {
                 'success': False,
                 'error': f'Zerodha connection failed: {str(e)}'
+            }
+    
+    def _test_upstox_connection(self, api_key: str, secret_key: str, is_testnet: bool) -> Dict:
+        """Test Upstox API connection"""
+        try:
+            # Basic validation - check key format and length
+            if not api_key or not secret_key:
+                return {
+                    'success': False,
+                    'error': 'Upstox API key or secret key is empty'
+                }
+            
+            # Upstox API keys are typically alphanumeric strings
+            if len(api_key) < 10:
+                return {
+                    'success': False,
+                    'error': f'Upstox API key too short (got {len(api_key)}, need ≥10)'
+                }
+            
+            if len(secret_key) < 15:
+                return {
+                    'success': False,
+                    'error': f'Upstox secret key too short (got {len(secret_key)}, need ≥15)'
+                }
+            
+            # For now, just validate format since Upstox requires OAuth flow
+            return {
+                'success': True,
+                'message': 'Upstox API key format valid',
+                'details': f'API key validated (Length: {len(api_key)}, Secret: {len(secret_key)})',
+                'note': 'Full validation requires OAuth login flow',
+                'balance': 'Login required for balance'
+            }
+                    
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Upstox connection failed: {str(e)}'
             }
     
     def _test_coinbase_connection(self, api_key: str, secret_key: str, passphrase: str, is_testnet: bool) -> Dict:
