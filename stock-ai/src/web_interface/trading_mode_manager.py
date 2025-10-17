@@ -73,13 +73,13 @@ class TradingModeManager:
                 if result:
                     return result[0]
                 else:
-                    # Default to LIVE for new users
-                    self.set_trading_mode(user_email, 'LIVE')
-                    return 'LIVE'
+                    # Default to TESTNET for new users (safer)
+                    self.set_trading_mode(user_email, 'TESTNET')
+                    return 'TESTNET'
                     
         except Exception as e:
             print(f"Error getting trading mode: {e}")
-            return 'LIVE'  # Default to LIVE trading
+            return 'TESTNET'  # Default to TESTNET trading (safer)
     
     def get_trading_modes_info(self, user_email: str) -> Dict:
         """Get comprehensive trading mode information"""
